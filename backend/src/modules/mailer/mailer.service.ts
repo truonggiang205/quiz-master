@@ -1,5 +1,9 @@
 import { Injectable, Logger } from '@nestjs/common';
 import * as nodemailer from 'nodemailer';
+import * as dns from 'dns';
+
+// Fix ENETUNREACH for IPv6 on some cloud platforms (like Render)
+dns.setDefaultResultOrder('ipv4first');
 
 @Injectable()
 export class MailerService {

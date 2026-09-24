@@ -9,9 +9,13 @@ export class MailerService {
   constructor() {
     // Ethereal fake SMTP configuration for testing. 
     // In production, replace with real SMTP credentials (e.g. Gmail App Password, SendGrid, etc) via process.env
+    const port = Number(process.env.SMTP_PORT) || 587;
     this.transporter = nodemailer.createTransport({
       host: process.env.SMTP_HOST || 'smtp.ethereal.email',
-      port: Number(process.env.SMTP_PORT) || 587,
+      port: port,
+      secure: port === 465, // true for 465, false for 587
+      connectionTimeout: 10000, // 10 seconds max wait for connection
+      greetingTimeout: 10000, // 10 seconds max wait for greeting
       auth: {
         user: process.env.SMTP_USER || 'zwkprilkn3d5vcu5@ethereal.email', // Replace with a newly generated ethereal account if this fails, or use real SMTP
         pass: process.env.SMTP_PASS || 'E8Qxz5sXp9FT7Kbbun'

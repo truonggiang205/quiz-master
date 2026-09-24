@@ -18,5 +18,5 @@ COPY . .
 # Expose port 8000
 EXPOSE 8000
 
-# Lệnh khởi chạy server FastAPI
-CMD ["uvicorn", "main:app", "--host", "0.0.0.0", "--port", "8000"]
+# Lệnh khởi chạy server FastAPI (Hỗ trợ Render tự động gán Port)
+CMD uvicorn main:app --host 0.0.0.0 --port ${PORT:-8000}

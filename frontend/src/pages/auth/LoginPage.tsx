@@ -44,7 +44,7 @@ export const LoginPage: React.FC = () => {
         const res = await AuthService.forgotPassword(email);
         setStep('RESET_PASSWORD');
         if (res.devOtp) {
-          addToast({ type: 'warning', title: 'Môi trường thử nghiệm Render', message: `Mã OTP của bạn là: ${res.devOtp}` });
+          addToast({ type: 'warning', title: 'Môi trường thử nghiệm Render', message: `Mã OTP của bạn là: ${res.devOtp}`, duration: 0 });
         } else {
           addToast({ type: 'success', title: 'Mã OTP đã được gửi đến email của bạn' });
         }

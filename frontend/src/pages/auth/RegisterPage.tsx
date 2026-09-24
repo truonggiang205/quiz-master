@@ -34,7 +34,7 @@ export const RegisterPage: React.FC = () => {
         if (res.requireOtp) {
           setStep('OTP');
           if (res.devOtp) {
-            addToast({ type: 'warning', title: 'Môi trường thử nghiệm Render (chặn SMTP)', message: `Mã OTP của bạn là: ${res.devOtp}` });
+            addToast({ type: 'warning', title: 'Môi trường thử nghiệm Render', message: `Mã OTP của bạn là: ${res.devOtp}`, duration: 0 });
           } else {
             addToast({ type: 'success', title: 'Vui lòng kiểm tra email để nhận mã OTP' });
           }

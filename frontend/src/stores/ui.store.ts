@@ -7,6 +7,7 @@ export interface ToastMessage {
   message?: string;
   avatar?: string;
   payload?: any;
+  duration?: number;
 }
 
 interface UiState {
@@ -63,10 +64,13 @@ export const useUiStore = create<UiState>((set, get) => ({
     const id = `toast-${Date.now()}-${Math.random().toString(36).substring(2, 5)}`;
     set((state) => ({ toasts: [...state.toasts, { ...toast, id }] }));
 
-    // Auto dismiss after 4 seconds
-    setTimeout(() => {
-      get().removeToast(id);
-    }, 4000);
+    // Auto dismiss
+    const duration = toast.duration !== undefined ? toast.duration : 4000;
+    if (duration > 0) {
+      setTimeout(() => {
+        get().removeToast(id);
+      }, duration);
+    }
   },
 
   removeToast: (id: string) => {

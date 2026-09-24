@@ -57,7 +57,7 @@ export const ToastContainer: React.FC = () => {
           )}
           
           <div className="flex-1 min-w-0 pt-0.5">
-            <h4 className="text-[13px] sm:text-sm font-bold text-slate-800 dark:text-slate-100 truncate flex items-center gap-2">
+            <h4 className="text-[13px] sm:text-sm font-bold text-slate-800 dark:text-slate-100 line-clamp-2 flex items-center gap-2 leading-snug">
               {toast.title}
               {toast.type === 'message' && <span className="text-[10px] bg-rose-500 text-white px-1.5 py-0.5 rounded-full animate-pulse shadow-sm shadow-rose-200">MỚI</span>}
             </h4>

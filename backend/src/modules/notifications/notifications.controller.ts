@@ -6,6 +6,7 @@ import {
   Post,
   Body,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { NotificationsService } from './notifications.service.js';
@@ -13,9 +14,11 @@ import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { UserEntity } from '../../entities/user.entity.js';
 import { NotificationTargetRole } from '../../entities/notification.entity.js';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 
 @ApiTags('Notifications')
 @Controller('notifications')
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class NotificationsController {
   constructor(private readonly notificationsService: NotificationsService) {}

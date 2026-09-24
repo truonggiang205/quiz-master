@@ -45,17 +45,11 @@ export const Navbar: React.FC<NavbarProps> = ({ showSidebarToggle = false }) => 
           )}
 
           <Link to="/" className="flex items-center gap-2.5 group">
-            <div className="w-9 h-9 rounded-2xl bg-gradient-to-tr from-indigo-500 via-indigo-400 to-sky-300 flex items-center justify-center shadow-md shadow-indigo-200 dark:shadow-none text-white transition-transform group-hover:scale-105">
-              <GraduationCap className="w-5 h-5" />
-            </div>
-            <div className="flex flex-col">
-              <span className="font-extrabold text-lg text-slate-800 dark:text-white tracking-tight leading-none group-hover:text-indigo-600 dark:group-hover:text-indigo-400 transition-colors">
-                Quiz<span className="text-indigo-500">Master</span>
-              </span>
-              <span className="text-[10px] font-medium text-slate-400 dark:text-slate-500 tracking-wider uppercase mt-0.5">
-                E-Learning Suite
-              </span>
-            </div>
+            <img 
+              src="/logo.png" 
+              alt="QuizMaster Logo" 
+              className="h-8 md:h-10 w-auto object-contain transition-transform group-hover:scale-105" 
+            />
           </Link>
         </div>
 

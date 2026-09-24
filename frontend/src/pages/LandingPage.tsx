@@ -30,8 +30,12 @@ export const LandingPage: React.FC = () => {
 
       {/* Navigation Bar */}
       <nav className="relative z-50 flex items-center justify-between px-6 py-6 md:px-8 max-w-7xl mx-auto w-full">
-        <Link to="/" className="text-2xl md:text-3xl tracking-tight font-instrument-serif text-black">
-          QuizMaster®
+        <Link to="/" className="flex items-center">
+          <img 
+            src="/logo.png" 
+            alt="QuizMaster Logo" 
+            className="h-10 md:h-12 w-auto object-contain" 
+          />
         </Link>
         
         <div className="hidden md:flex items-center gap-8 text-sm font-medium">

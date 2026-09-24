@@ -16,7 +16,7 @@ export const LoginPage: React.FC = () => {
   const [newPassword, setNewPassword] = useState('');
 
   const { login, quickLoginAs } = useAuthStore();
-  const { addToast } = useUiStore();
+  const { addToast, clearToasts } = useUiStore();
   const navigate = useNavigate();
 
   const handleFormSubmit = async (e: React.FormEvent) => {
@@ -32,6 +32,7 @@ export const LoginPage: React.FC = () => {
         const res = await AuthService.login(email, password);
         useAuthStore.getState().setAuthSession(res.user, res.token);
         
+        clearToasts(); // Clear in case they came back from a persistent toast
         addToast({ type: 'success', title: 'Đăng nhập thành công', message: `Chào mừng bạn quay trở lại!` });
         if (res.user.role === 'ADMIN') {
           navigate('/admin/dashboard');
@@ -50,6 +51,7 @@ export const LoginPage: React.FC = () => {
         }
       } else if (step === 'RESET_PASSWORD') {
         await AuthService.resetPassword(email, otp, newPassword);
+        clearToasts(); // Clear the persistent toast
         setStep('LOGIN');
         setPassword('');
         setOtp('');
@@ -163,7 +165,14 @@ export const LoginPage: React.FC = () => {
                 {isLoading ? 'ĐANG GỬI...' : 'GỬI MÃ KHÔI PHỤC'}
               </button>
               <div className="w-full text-center pt-2">
-                <button type="button" onClick={() => setStep('LOGIN')} className="text-[11px] text-slate-500 hover:text-slate-700 underline transition-colors">
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    clearToasts();
+                    setStep('LOGIN');
+                  }} 
+                  className="text-[11px] text-slate-500 hover:text-slate-700 underline transition-colors"
+                >
                   Quay lại đăng nhập
                 </button>
               </div>

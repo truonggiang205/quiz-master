@@ -20,6 +20,7 @@ interface UiState {
   setSidebarOpen: (isOpen: boolean) => void;
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   removeToast: (id: string) => void;
+  clearToasts: () => void;
 }
 
 const getInitialTheme = (): 'light' | 'dark' => {
@@ -75,5 +76,9 @@ export const useUiStore = create<UiState>((set, get) => ({
 
   removeToast: (id: string) => {
     set((state) => ({ toasts: state.toasts.filter((t) => t.id !== id) }));
+  },
+
+  clearToasts: () => {
+    set({ toasts: [] });
   },
 }));

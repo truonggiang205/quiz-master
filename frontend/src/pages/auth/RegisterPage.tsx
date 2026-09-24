@@ -18,7 +18,7 @@ export const RegisterPage: React.FC = () => {
   const [otp, setOtp] = useState('');
 
   const { login } = useAuthStore();
-  const { addToast } = useUiStore();
+  const { addToast, clearToasts } = useUiStore();
   const navigate = useNavigate();
 
   const handleRegister = async (e: React.FormEvent) => {
@@ -52,6 +52,7 @@ export const RegisterPage: React.FC = () => {
         // Sync to store
         useAuthStore.getState().setAuthSession(res.user, res.token);
         
+        clearToasts(); // Clear the persistent toast when successful
         addToast({ type: 'success', title: 'Tạo tài khoản thành công', message: `Chào mừng ${res.user.name} đến với QuizMaster!` });
         navigate(res.user.role === 'TEACHER' ? '/teacher/dashboard' : '/student/dashboard');
       } catch (err: any) {
@@ -230,7 +231,14 @@ export const RegisterPage: React.FC = () => {
               </button>
               
               <div className="w-full mt-4 text-center">
-                <button type="button" onClick={() => setStep('REGISTER')} className="text-[11px] text-slate-500 hover:text-slate-700 underline transition-colors">
+                <button 
+                  type="button" 
+                  onClick={() => {
+                    clearToasts();
+                    setStep('REGISTER');
+                  }} 
+                  className="text-[11px] text-slate-500 hover:text-slate-700 underline transition-colors"
+                >
                   Quay lại đăng ký
                 </button>
               </div>

@@ -1,4 +1,4 @@
-import { Injectable, UnauthorizedException, OnModuleInit, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, UnauthorizedException, OnModuleInit, NotFoundException, BadRequestException, InternalServerErrorException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../../entities/user.entity.js';
@@ -110,7 +110,13 @@ export class AuthService implements OnModuleInit {
     await this.userRepo.save(user);
 
     // Send email
-    await this.mailerService.sendOtpEmail(user.email, otpCode, 'REGISTER');
+    const emailSent = await this.mailerService.sendOtpEmail(user.email, otpCode, 'REGISTER');
+    
+    if (!emailSent) {
+       // Delete the unverified user to allow retrying without getting "Email already registered"
+       await this.userRepo.remove(user);
+       throw new InternalServerErrorException('Không thể gửi email OTP. Vui lòng kiểm tra lại cấu hình SMTP (Tài khoản/Mật khẩu/Port) trên server.');
+    }
 
     return {
       requireOtp: true,
@@ -163,7 +169,11 @@ export class AuthService implements OnModuleInit {
     user.otpExpiresAt = new Date(Date.now() + 5 * 60000); // 5 mins
     await this.userRepo.save(user);
 
-    await this.mailerService.sendOtpEmail(user.email, otpCode, 'FORGOT_PASSWORD');
+    const emailSent = await this.mailerService.sendOtpEmail(user.email, otpCode, 'FORGOT_PASSWORD');
+    
+    if (!emailSent) {
+      throw new InternalServerErrorException('Không thể gửi email OTP. Vui lòng kiểm tra lại cấu hình SMTP trên server.');
+    }
 
     return { requireOtp: true, email: user.email };
   }

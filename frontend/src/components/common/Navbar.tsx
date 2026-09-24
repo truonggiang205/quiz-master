@@ -48,7 +48,7 @@ export const Navbar: React.FC<NavbarProps> = ({ showSidebarToggle = false }) => 
             <img 
               src="/logo.png" 
               alt="QuizMaster Logo" 
-              className="h-8 md:h-10 w-auto object-contain transition-transform group-hover:scale-105" 
+              className="h-10 md:h-12 w-auto object-contain transition-transform transform scale-[1.75] origin-left group-hover:scale-[1.85]" 
             />
           </Link>
         </div>

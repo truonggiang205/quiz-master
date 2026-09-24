@@ -34,7 +34,7 @@ export const LandingPage: React.FC = () => {
           <img 
             src="/logo.png" 
             alt="QuizMaster Logo" 
-            className="h-10 md:h-12 w-auto object-contain" 
+            className="h-12 md:h-16 w-auto object-contain transition-transform transform scale-[2] origin-left hover:scale-[2.1]" 
           />
         </Link>
         

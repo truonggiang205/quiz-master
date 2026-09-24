@@ -8,13 +8,12 @@ export const AuthLayout: React.FC = () => {
     <div className="min-h-screen bg-pastel-mesh dark:bg-slate-950 flex flex-col justify-between p-4 md:p-8 font-sans transition-colors relative">
       {/* Header with logo & theme toggle */}
       <div className="max-w-6xl w-full mx-auto flex items-center justify-between py-2">
-        <Link to="/" className="flex items-center gap-2.5">
-          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 via-indigo-400 to-sky-300 flex items-center justify-center shadow-md shadow-indigo-200 dark:shadow-none text-white">
-            <GraduationCap className="w-6 h-6" />
-          </div>
-          <span className="font-extrabold text-xl text-slate-800 dark:text-white tracking-tight">
-            Quiz<span className="text-indigo-500">Master</span>
-          </span>
+        <Link to="/" className="flex items-center">
+          <img 
+            src="/logo.png" 
+            alt="QuizMaster Logo" 
+            className="h-10 md:h-12 w-auto object-contain transition-transform transform scale-[1.75] origin-left hover:scale-[1.85]" 
+          />
         </Link>
         <ThemeToggle />
       </div>

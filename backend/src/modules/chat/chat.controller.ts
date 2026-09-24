@@ -5,16 +5,19 @@ import {
   Param,
   Body,
   Query,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiBearerAuth } from '@nestjs/swagger';
 import { ChatService } from './chat.service.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { UserEntity } from '../../entities/user.entity.js';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 
 @ApiTags('Chat')
 @Controller('chat')
 @ApiBearerAuth()
+@UseGuards(JwtAuthGuard)
 export class ChatController {
   constructor(private readonly chatService: ChatService) {}
 
@@ -31,8 +34,8 @@ export class ChatController {
   }
 
   @Get('search-users')
-  async searchUsers(@Query('q') q: string) {
-    const data = await this.chatService.searchUsers(q, 'dummy-id');
+  async searchUsers(@CurrentUser() user: UserEntity, @Query('q') q: string) {
+    const data = await this.chatService.searchUsers(q, user.id);
     return createSuccessResponse(data);
   }
 }

@@ -50,13 +50,7 @@ export class ChatService {
     return result;
   }
 
-  async getMessages(userId: string, conversationId: string) {
-    const conv = await this.convRepo.findOneBy({ id: conversationId });
-    if (!conv || !conv.participants.includes(userId)) {
-      throw new NotFoundException('Không tìm thấy cuộc hội thoại');
-    }
-
-    // Mark messages from other as read
+  async markAsRead(userId: string, conversationId: string) {
     await this.msgRepo
       .createQueryBuilder()
       .update(MessageEntity)
@@ -64,6 +58,16 @@ export class ChatService {
       .where('conversationId = :cid', { cid: conversationId })
       .andWhere('senderId != :uid', { uid: userId })
       .execute();
+  }
+
+  async getMessages(userId: string, conversationId: string) {
+    const conv = await this.convRepo.findOneBy({ id: conversationId });
+    if (!conv || !conv.participants.includes(userId)) {
+      throw new NotFoundException('Không tìm thấy cuộc hội thoại');
+    }
+
+    // Mark messages from other as read
+    await this.markAsRead(userId, conversationId);
 
     return await this.msgRepo.find({
       where: { conversationId },
@@ -75,9 +79,10 @@ export class ChatService {
   async sendMessage(senderId: string, receiverId: string, content: string) {
     if (senderId === receiverId) throw new Error('Cannot send message to yourself');
 
-    // Find existing conversation
     let conv = null;
-    const allConvs = await this.convRepo.find();
+    const allConvs = await this.convRepo.find({
+      order: { lastMessageAt: 'DESC' }
+    });
     for (const c of allConvs) {
       if (c.participants.includes(senderId) && c.participants.includes(receiverId)) {
         conv = c;

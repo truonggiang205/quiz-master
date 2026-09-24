@@ -5,6 +5,7 @@ import { User, Mail, Phone, School, GraduationCap, Save, Camera, Loader2 } from 
 import { formatUserName } from '../../utils/user.utils';
 import { uploadService } from '../../services/upload.service';
 import { AuthService } from '../../services/auth.service';
+import { AvatarCropperModal } from '../../components/common/AvatarCropperModal';
 
 export const StudentProfilePage: React.FC = () => {
   const { user, setUser } = useAuthStore();
@@ -17,20 +18,34 @@ export const StudentProfilePage: React.FC = () => {
   const [avatar, setAvatar] = useState(user?.avatar || '');
   const [isSaving, setIsSaving] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
+  
+  const [isCropperOpen, setIsCropperOpen] = useState(false);
+  const [tempImageSrc, setTempImageSrc] = useState<string | null>(null);
 
-  const handleUploadAvatar = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleUploadAvatar = (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      setIsUploading(true);
-      try {
-        const res = await uploadService.uploadFile(file);
-        setAvatar(res.url);
-        addToast({ type: 'success', title: 'Tải ảnh lên thành công!' });
-      } catch (err) {
-        addToast({ type: 'error', title: 'Lỗi tải ảnh lên' });
-      } finally {
-        setIsUploading(false);
-      }
+      const reader = new FileReader();
+      reader.onload = () => {
+        setTempImageSrc(reader.result as string);
+        setIsCropperOpen(true);
+      };
+      reader.readAsDataURL(file);
+    }
+    // reset input so the same file can be selected again
+    e.target.value = '';
+  };
+
+  const handleCroppedUpload = async (file: File) => {
+    setIsUploading(true);
+    try {
+      const res = await uploadService.uploadFile(file);
+      setAvatar(res.url);
+      addToast({ type: 'success', title: 'Tải ảnh lên thành công!' });
+    } catch (err) {
+      addToast({ type: 'error', title: 'Lỗi tải ảnh lên' });
+    } finally {
+      setIsUploading(false);
     }
   };
 
@@ -158,6 +173,15 @@ export const StudentProfilePage: React.FC = () => {
           </div>
         </form>
       </div>
+      
+      {/* Avatar Cropper Modal */}
+      {isCropperOpen && tempImageSrc && (
+        <AvatarCropperModal
+          imageSrc={tempImageSrc}
+          onClose={() => setIsCropperOpen(false)}
+          onCropCompleteAction={handleCroppedUpload}
+        />
+      )}
     </div>
   );
 };

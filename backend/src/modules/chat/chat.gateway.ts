@@ -75,4 +75,23 @@ export class ChatGateway {
       this.server.to(receiverSocket).emit('userTyping', { userId: senderId, isTyping: payload.isTyping });
     }
   }
+
+  @SubscribeMessage('readMessages')
+  async handleReadMessages(
+    @ConnectedSocket() client: Socket,
+    @MessageBody() payload: { receiverId: string; conversationId: string }
+  ) {
+    const senderId = client.handshake.query.userId as string;
+    if (!senderId || !payload.receiverId || !payload.conversationId) return;
+
+    await this.chatService.markAsRead(senderId, payload.conversationId);
+
+    const receiverSocket = this.activeUsers.get(payload.receiverId);
+    if (receiverSocket) {
+      this.server.to(receiverSocket).emit('messagesRead', { 
+        userId: senderId, 
+        conversationId: payload.conversationId 
+      });
+    }
+  }
 }

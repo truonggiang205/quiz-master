@@ -2,9 +2,11 @@ import { create } from 'zustand';
 
 export interface ToastMessage {
   id: string;
-  type: 'success' | 'error' | 'warning' | 'info';
+  type: 'success' | 'error' | 'warning' | 'info' | 'message';
   title: string;
   message?: string;
+  avatar?: string;
+  payload?: any;
 }
 
 interface UiState {

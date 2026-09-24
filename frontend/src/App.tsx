@@ -1,5 +1,6 @@
 import React, { useEffect } from 'react';
 import { BrowserRouter } from 'react-router-dom';
+import { Analytics } from '@vercel/analytics/react';
 import { AppRoutes } from './routes/AppRoutes';
 import { useUiStore } from './stores/ui.store';
 import { ToastContainer } from './components/common/ToastContainer';
@@ -21,6 +22,7 @@ export const App: React.FC = () => {
       <BrowserRouter>
         <AppRoutes />
         <ToastContainer />
+        <Analytics />
       </BrowserRouter>
     </ErrorBoundary>
   );

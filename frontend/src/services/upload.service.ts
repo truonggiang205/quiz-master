@@ -23,8 +23,10 @@ export const uploadService = {
 
   async uploadBase64(base64Str: string): Promise<{ url: string }> {
     const token = localStorage.getItem('quizmaster_auth_token');
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const baseUrl = apiUrl.replace(/\/+$/, '');
     const response = await axios.post(
-      `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/upload/base64`,
+      `${baseUrl}/upload/base64`,
       { image: base64Str },
       {
         headers: {

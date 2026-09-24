@@ -41,9 +41,13 @@ export const LoginPage: React.FC = () => {
           navigate('/student/dashboard');
         }
       } else if (step === 'FORGOT_PASSWORD') {
-        await AuthService.forgotPassword(email);
+        const res = await AuthService.forgotPassword(email);
         setStep('RESET_PASSWORD');
-        addToast({ type: 'success', title: 'Mã OTP đã được gửi đến email của bạn' });
+        if (res.devOtp) {
+          addToast({ type: 'warning', title: 'Môi trường thử nghiệm Render', message: `Mã OTP của bạn là: ${res.devOtp}` });
+        } else {
+          addToast({ type: 'success', title: 'Mã OTP đã được gửi đến email của bạn' });
+        }
       } else if (step === 'RESET_PASSWORD') {
         await AuthService.resetPassword(email, otp, newPassword);
         setStep('LOGIN');

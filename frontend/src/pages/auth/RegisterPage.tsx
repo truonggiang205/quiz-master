@@ -33,7 +33,11 @@ export const RegisterPage: React.FC = () => {
         const res = await AuthService.register(name, email, role, password, dob || undefined, gender || undefined);
         if (res.requireOtp) {
           setStep('OTP');
-          addToast({ type: 'success', title: 'Vui lòng kiểm tra email để nhận mã OTP' });
+          if (res.devOtp) {
+            addToast({ type: 'warning', title: 'Môi trường thử nghiệm Render (chặn SMTP)', message: `Mã OTP của bạn là: ${res.devOtp}` });
+          } else {
+            addToast({ type: 'success', title: 'Vui lòng kiểm tra email để nhận mã OTP' });
+          }
         }
       } catch (err: any) {
         addToast({ type: 'error', title: err?.response?.data?.message || 'Đăng ký thất bại' });

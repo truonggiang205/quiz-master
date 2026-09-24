@@ -1,4 +1,4 @@
-import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException, UseGuards } from '@nestjs/common';
+import { Controller, Post, UseInterceptors, UploadedFile, BadRequestException, UseGuards, Body } from '@nestjs/common';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { memoryStorage } from 'multer';
 import { UploadService } from './upload.service.js';
@@ -30,6 +30,20 @@ export class UploadController {
     
     const result = await this.uploadService.uploadFile(file);
     console.log(`[Upload] Tải ảnh lên thành công: ${result.secure_url || result.url}`);
+    
+    return createSuccessResponse({
+      url: result.secure_url || result.url,
+    }, 'Upload successful');
+  }
+
+  @Post('base64')
+  async uploadBase64Controller(@Body() body: { image: string }) {
+    if (!body || !body.image) {
+      throw new BadRequestException('No image provided');
+    }
+    
+    const result = await this.uploadService.uploadBase64(body.image);
+    console.log(`[Upload] Tải ảnh lên thành công (base64): ${result.secure_url || result.url}`);
     
     return createSuccessResponse({
       url: result.secure_url || result.url,

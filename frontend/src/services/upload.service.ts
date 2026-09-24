@@ -21,6 +21,20 @@ export const uploadService = {
     return response.data?.data || response.data;
   },
 
+  async uploadBase64(base64Str: string): Promise<{ url: string }> {
+    const token = localStorage.getItem('quizmaster_auth_token');
+    const response = await axios.post(
+      `${import.meta.env.VITE_API_URL || 'http://localhost:3000/api'}/upload/base64`,
+      { image: base64Str },
+      {
+        headers: {
+          Authorization: token ? `Bearer ${token}` : '',
+        },
+      }
+    );
+    return response.data?.data || response.data;
+  },
+
   async parseDocument(file: File): Promise<any> {
     const formData = new FormData();
     formData.append('file', file);

@@ -36,10 +36,10 @@ export const TeacherProfilePage: React.FC = () => {
     e.target.value = '';
   };
 
-  const handleCroppedUpload = async (file: File | Blob) => {
+  const handleCroppedUpload = async (file: string) => {
     setIsUploading(true);
     try {
-      const res = await uploadService.uploadFile(file);
+      const res = await uploadService.uploadBase64(file);
       setAvatar(res.url);
       addToast({ type: 'success', title: 'Tải ảnh lên thành công!' });
     } catch (err) {

@@ -1,0 +1,35 @@
+import React from 'react';
+import { Outlet, Link } from 'react-router-dom';
+import { GraduationCap } from 'lucide-react';
+import { ThemeToggle } from '../components/common/ThemeToggle';
+
+export const AuthLayout: React.FC = () => {
+  return (
+    <div className="min-h-screen bg-pastel-mesh dark:bg-slate-950 flex flex-col justify-between p-4 md:p-8 font-sans transition-colors relative">
+      {/* Header with logo & theme toggle */}
+      <div className="max-w-6xl w-full mx-auto flex items-center justify-between py-2">
+        <Link to="/" className="flex items-center gap-2.5">
+          <div className="w-10 h-10 rounded-2xl bg-gradient-to-tr from-indigo-500 via-indigo-400 to-sky-300 flex items-center justify-center shadow-md shadow-indigo-200 dark:shadow-none text-white">
+            <GraduationCap className="w-6 h-6" />
+          </div>
+          <span className="font-extrabold text-xl text-slate-800 dark:text-white tracking-tight">
+            Quiz<span className="text-indigo-500">Master</span>
+          </span>
+        </Link>
+        <ThemeToggle />
+      </div>
+
+      {/* Auth Content */}
+      <div className="flex-1 flex items-center justify-center py-8">
+        <div className="w-full max-w-md">
+          <Outlet />
+        </div>
+      </div>
+
+      {/* Footer */}
+      <div className="text-center py-4 text-xs text-slate-400 dark:text-slate-500">
+        © 2026 QuizMaster. Nền tảng kiểm tra trực tuyến thế hệ mới.
+      </div>
+    </div>
+  );
+};

@@ -1,0 +1,247 @@
+import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository, In } from 'typeorm';
+import { QuestionEntity, QuestionOption } from '../../entities/index.js';
+import { CreateQuestionDto } from './dto/create-question.dto.js';
+import { UpdateQuestionDto } from './dto/update-question.dto.js';
+import { QuizzesService } from '../quizzes/quizzes.service.js';
+import * as mammoth from 'mammoth';
+import * as cheerio from 'cheerio';
+
+@Injectable()
+export class QuestionsService {
+  constructor(
+    @InjectRepository(QuestionEntity)
+    private readonly questionRepo: Repository<QuestionEntity>,
+    private readonly quizzesService: QuizzesService,
+  ) { }
+
+  async getQuestionsByQuizId(quizId: string, userRole?: string, isExamMode?: boolean) {
+    const questions = await this.questionRepo.find({
+      where: { quizId },
+      order: { order: 'ASC' },
+    });
+
+    // ALWAYS mask answers and explanation for students
+    if (userRole !== 'TEACHER') {
+      return questions.map((q) => ({
+        id: q.id,
+        quizId: q.quizId,
+        content: q.content,
+        type: q.type,
+        score: q.score,
+        order: q.order,
+        options: (q.options || []).map((opt) => ({
+          id: opt.id,
+          text: opt.text,
+        })),
+      }));
+    }
+
+    return questions;
+  }
+
+  async getQuestionBank(teacherId: string) {
+    return this.questionRepo.find({
+      where: { teacherId, isBank: true },
+      order: { createdAt: 'DESC' },
+    });
+  }
+
+  async saveToBank(teacherId: string, dto: CreateQuestionDto) {
+    const optionsWithIds: QuestionOption[] = (dto.options || []).map((opt, idx) => ({
+      id: opt.id || `opt-${Date.now()}-${idx}`,
+      text: opt.text,
+      isCorrect: opt.isCorrect,
+    }));
+
+    const newQuestion = this.questionRepo.create({
+      id: `q-bank-${Date.now()}`,
+      teacherId,
+      isBank: true,
+      content: dto.content,
+      type: dto.type as any,
+      options: optionsWithIds,
+      score: dto.score ?? 2.0,
+      explanation: dto.explanation || '',
+      order: 0, // order doesn't matter much in bank
+    });
+
+    return this.questionRepo.save(newQuestion);
+  }
+
+  async importFromBank(quizId: string, questionIds: string[]) {
+    if (!questionIds.length) return [];
+
+    const existingCount = await this.questionRepo.count({ where: { quizId } });
+
+    // Fetch bank questions
+    const bankQuestions = await this.questionRepo.findBy({ id: In(questionIds) });
+
+    // Clone them
+    const newQuestions = bankQuestions.map((bankQ: QuestionEntity, idx: number) => {
+      return this.questionRepo.create({
+        id: `q-${Date.now()}-${idx}`,
+        quizId,
+        content: bankQ.content,
+        type: bankQ.type,
+        options: bankQ.options.map((opt: any) => ({ ...opt, id: `opt-${Date.now()}-${idx}-${Math.random().toString(36).substring(7)}` })),
+        score: bankQ.score,
+        explanation: bankQ.explanation,
+        order: existingCount + idx + 1,
+      });
+    });
+
+    const saved = await this.questionRepo.save(newQuestions);
+    await this.syncQuizStats(quizId);
+    return saved;
+  }
+
+  async createQuestion(quizId: string, dto: CreateQuestionDto, teacherId?: string) {
+    const optionsWithIds: QuestionOption[] = (dto.options || []).map((opt, idx) => ({
+      id: opt.id || `opt-${Date.now()}-${idx}`,
+      text: opt.text,
+      isCorrect: opt.isCorrect,
+    }));
+
+    const existingCount = await this.questionRepo.count({ where: { quizId } });
+
+    const newQuestion = this.questionRepo.create({
+      id: `q-${Date.now()}`,
+      quizId,
+      content: dto.content,
+      type: dto.type as any,
+      options: optionsWithIds,
+      score: dto.score ?? 2.0,
+      explanation: dto.explanation || '',
+      order: dto.order || existingCount + 1,
+      teacherId,
+    });
+
+    const saved = await this.questionRepo.save(newQuestion);
+    await this.syncQuizStats(quizId);
+    return saved;
+  }
+
+  async updateQuestion(id: string, dto: UpdateQuestionDto) {
+    const question = await this.questionRepo.findOneBy({ id });
+    if (!question) {
+      throw new NotFoundException('Không tìm thấy câu hỏi để cập nhật');
+    }
+
+    if (dto.options) {
+      question.options = dto.options.map((opt, idx) => ({
+        id: opt.id || `opt-${Date.now()}-${idx}`,
+        text: opt.text,
+        isCorrect: opt.isCorrect,
+      }));
+    }
+
+    if (dto.content !== undefined) question.content = dto.content;
+    if (dto.type !== undefined) question.type = dto.type as any;
+    if (dto.score !== undefined) question.score = dto.score;
+    if (dto.explanation !== undefined) question.explanation = dto.explanation;
+    if (dto.order !== undefined) question.order = dto.order;
+
+    const saved = await this.questionRepo.save(question);
+    await this.syncQuizStats(question.quizId);
+    return saved;
+  }
+
+  async deleteQuestion(id: string) {
+    const question = await this.questionRepo.findOneBy({ id });
+    if (!question) {
+      throw new NotFoundException('Không tìm thấy câu hỏi để xóa');
+    }
+
+    const quizId = question.quizId;
+    await this.questionRepo.delete({ id });
+    if (quizId) {
+      await this.syncQuizStats(quizId);
+    }
+    return { id, deleted: true };
+  }
+
+  async parseDocxQuestions(fileBuffer: Buffer) {
+    if (!fileBuffer) {
+      throw new BadRequestException('File không hợp lệ hoặc rỗng');
+    }
+
+    try {
+      const result = await mammoth.convertToHtml({ buffer: fileBuffer });
+      const html = result.value;
+      const $ = cheerio.load(html);
+
+      const questions: any[] = [];
+      let currentQuestion: any = null;
+
+      $('p').each((_, el) => {
+        const text = $(el).text().trim();
+
+        if (!text) return;
+
+        // Bắt đầu bằng Câu 1:, 1., Bài 1:
+        const isQuestionMatch = text.match(/^(Câu\s*\d+|Bài\s*\d+|\d+)\s*[:\.]\s*(.*)/i);
+        
+        if (isQuestionMatch) {
+          if (currentQuestion) {
+            questions.push(currentQuestion);
+          }
+          
+          currentQuestion = {
+            id: `q-docx-${Date.now()}-${questions.length}`,
+            content: isQuestionMatch[2].trim() || text,
+            type: 'SINGLE_CHOICE',
+            score: 2,
+            explanation: '',
+            options: [],
+          };
+        } else if (currentQuestion) {
+          // Bắt đầu bằng A., B., C., D. hoặc A), B), C), D)
+          const isOptionMatch = text.match(/^([A-Z])\s*[\.\)]\s*(.*)/i);
+          
+          if (isOptionMatch) {
+            // Kiểm tra thẻ <strong> hoặc <b>
+            const hasStrong = $(el).find('strong').length > 0 || $(el).find('b').length > 0;
+            
+            currentQuestion.options.push({
+              id: `opt-docx-${Date.now()}-${currentQuestion.options.length}`,
+              text: isOptionMatch[2].trim() || text,
+              isCorrect: hasStrong,
+            });
+          } else if (currentQuestion.options.length === 0) {
+            // Nội dung phụ của câu hỏi
+            currentQuestion.content += '\n' + text;
+          }
+        }
+      });
+
+      if (currentQuestion) {
+        questions.push(currentQuestion);
+      }
+
+      // Xử lý type MULTIPLE_CHOICE nếu có nhiều đáp án đúng
+      questions.forEach((q) => {
+        const correctCount = q.options.filter((opt: any) => opt.isCorrect).length;
+        if (correctCount > 1) {
+          q.type = 'MULTIPLE_CHOICE';
+        } else if (correctCount === 0 && q.options.length > 0) {
+          // Mặc định chọn A nếu không có đáp án in đậm
+          q.options[0].isCorrect = true;
+        }
+      });
+
+      return questions;
+    } catch (error) {
+      throw new BadRequestException('Lỗi phân tích file DOCX. Vui lòng đảm bảo file đúng định dạng.');
+    }
+  }
+
+  private async syncQuizStats(quizId: string) {
+    if (!quizId) return;
+    const quizQuestions = await this.questionRepo.find({ where: { quizId } });
+    const count = quizQuestions.length;
+    const totalScore = quizQuestions.reduce((sum, q) => sum + (Number(q.score) || 0), 0);
+    await this.quizzesService.updateQuestionStats(quizId, count, totalScore);
+  }
+}

@@ -1,9 +1,10 @@
 import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { QuizEntity, QuizStatus, QuestionEntity, SubmissionEntity, ClassEntity, UserEntity } from '../../entities/index.js';
 import { CreateQuizDto } from './dto/create-quiz.dto.js';
 import { UpdateQuizDto } from './dto/update-quiz.dto.js';
+import { UploadService } from '../upload/upload.service.js';
 
 @Injectable()
 export class QuizzesService {
@@ -16,6 +17,7 @@ export class QuizzesService {
     private readonly submissionRepo: Repository<SubmissionEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
+    private readonly uploadService: UploadService,
   ) {}
 
   async getAllQuizzes(userRole?: string, userId?: string) {
@@ -47,7 +49,20 @@ export class QuizzesService {
       });
     }
 
-    return qb.getMany();
+    const quizzes = await qb.getMany();
+    if (userId) {
+      // Filter out quizzes where the user has reached totalAttempts
+      const submissions = await this.submissionRepo.find({
+        where: { studentId: userId, quizId: In(quizzes.map(q => q.id)) },
+      });
+      const submissionCounts = submissions.reduce((acc, sub) => {
+        acc[sub.quizId] = (acc[sub.quizId] || 0) + 1;
+        return acc;
+      }, {} as Record<string, number>);
+
+      return quizzes.filter(q => (submissionCounts[q.id] || 0) < (q.totalAttempts || 1));
+    }
+    return quizzes;
   }
 
   async getQuizById(id: string, userRole?: string) {
@@ -108,6 +123,25 @@ export class QuizzesService {
     }
 
     // Cascade delete questions and submissions
+    const questions = await this.questionRepo.find({ where: { quizId: id } });
+    for (const q of questions) {
+      if (q.imageUrl) await this.uploadService.deleteFileByUrl(q.imageUrl);
+    }
+
+    const submissions = await this.submissionRepo.find({ where: { quizId: id } });
+    for (const sub of submissions) {
+      if (sub.answers) {
+        for (const ans of sub.answers) {
+          if (ans.essayImageUrl) {
+            const urls = ans.essayImageUrl.split('|||');
+            for (const url of urls) {
+              await this.uploadService.deleteFileByUrl(url);
+            }
+          }
+        }
+      }
+    }
+
     await this.questionRepo.delete({ quizId: id });
     await this.submissionRepo.delete({ quizId: id });
     await this.quizRepo.delete({ id });

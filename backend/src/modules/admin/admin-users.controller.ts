@@ -1,3 +1,5 @@
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import {
   Controller,
   Get,
@@ -8,11 +10,13 @@ import {
   Headers,
   UnauthorizedException,
 } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { AdminUsersService } from './admin-users.service.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
 
 @ApiTags('Admin Users')
+@UseGuards(JwtAuthGuard)
 @Controller('admin/users')
 export class AdminUsersController {
   constructor(private readonly adminUsersService: AdminUsersService) {}

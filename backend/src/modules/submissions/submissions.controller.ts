@@ -27,7 +27,7 @@ export class SubmissionsController {
   ) {
     const student = {
       id: user.id,
-      name: user.name,
+      name: user.name || 'Học sinh',
     };
     const res = await this.submissionsService.startQuiz(quizId, student);
     return createSuccessResponse(res, 'Bắt đầu làm bài thi');
@@ -42,7 +42,7 @@ export class SubmissionsController {
   ) {
     const student = {
       id: user.id,
-      name: user.name,
+      name: user.name || 'Học sinh',
       email: user.email,
       avatar: user.avatar,
     };
@@ -72,5 +72,16 @@ export class SubmissionsController {
   async getMySubmissions(@CurrentUser() user: any) {
     const res = await this.submissionsService.getStudentSubmissions(user.id);
     return createSuccessResponse(res);
+  }
+
+  @Post('submissions/:id/grade')
+  @ApiOperation({ summary: 'Chấm điểm tự luận cho học sinh' })
+  async gradeSubmission(
+    @Param('id') id: string,
+    @Body() dto: { grades: { questionId: string; scoreAwarded: number }[] },
+    @CurrentUser() user: any,
+  ) {
+    const res = await this.submissionsService.gradeSubmission(id, dto.grades, user.id);
+    return createSuccessResponse(res, 'Chấm điểm thành công');
   }
 }

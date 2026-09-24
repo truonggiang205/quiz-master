@@ -1,4 +1,6 @@
-import { Controller, Post, Get, Body, Headers } from '@nestjs/common';
+import { Controller, Post, Get, Body, Headers, UseGuards } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import { ApiTags, ApiOperation, ApiResponse as SwaggerResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service.js';
 import { LoginDto, RegisterDto, VerifyOtpDto, ForgotPasswordDto, ResetPasswordDto } from './dto/login.dto.js';
@@ -47,9 +49,10 @@ export class AuthController {
   }
 
   @Get('me')
+  @UseGuards(JwtAuthGuard)
   @ApiOperation({ summary: 'Lấy thông tin người dùng hiện tại' })
-  async getMe(@Headers('x-user-role') roleHeader?: string) {
-    const user = await this.authService.getCurrentUser(roleHeader);
-    return createSuccessResponse(user);
+  async getMe(@CurrentUser() user: any) {
+    const fullUser = await this.authService.getCurrentUser(user.id);
+    return createSuccessResponse(fullUser);
   }
 }

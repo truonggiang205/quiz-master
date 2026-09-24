@@ -1,3 +1,5 @@
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import {
   Controller,
   Get,
@@ -6,11 +8,13 @@ import {
   Headers,
   UnauthorizedException,
 } from '@nestjs/common';
+import { UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { AdminSettingsService, SystemSettings } from './admin-settings.service.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
 
 @ApiTags('Admin Settings')
+@UseGuards(JwtAuthGuard)
 @Controller('admin/settings')
 export class AdminSettingsController {
   constructor(private readonly settingsService: AdminSettingsService) {}

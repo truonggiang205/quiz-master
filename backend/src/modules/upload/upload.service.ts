@@ -19,11 +19,53 @@ export class UploadService {
           folder: 'quiz_master_essays',
         },
         (error, result) => {
-          if (error) return reject(error);
+          if (error) {
+            console.error('Cloudinary Upload Error:', error);
+            return reject(error);
+          }
           resolve(result);
         },
       );
       streamifier.createReadStream(file.buffer).pipe(uploadStream);
     });
+  }
+
+  uploadBase64(base64Str: string): Promise<any> {
+    return new Promise((resolve, reject) => {
+      cloudinary.uploader.upload(
+        base64Str,
+        { folder: 'quiz_master_essays' },
+        (error, result) => {
+          if (error) {
+            console.error('Cloudinary Base64 Upload Error:', error);
+            return reject(error);
+          }
+          resolve(result);
+        },
+      );
+    });
+  }
+
+  async deleteFileByUrl(url: string): Promise<void> {
+    if (!url || !url.includes('cloudinary.com')) return;
+    try {
+      const parts = url.split('/');
+      const lastPart = parts.pop(); 
+      const folderPart = parts.pop(); 
+      if (!lastPart || !folderPart) return;
+      const filename = lastPart.split('.')[0];
+      const publicId = `${folderPart}/${filename}`;
+
+      await new Promise((resolve) => {
+        cloudinary.uploader.destroy(publicId, (error, result) => {
+          if (error) {
+            console.error('Cloudinary Delete Error:', error);
+          }
+          resolve(result);
+        });
+      });
+    } catch (e) {
+      console.error('Error deleting from Cloudinary:', e);
+    }
   }
 }

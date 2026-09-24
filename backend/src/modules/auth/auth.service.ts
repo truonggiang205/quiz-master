@@ -32,8 +32,16 @@ export class AuthService implements OnModuleInit {
 
     if (loginDto.password) {
       const isMatch = await bcrypt.compare(loginDto.password, user.password);
+      
       if (!isMatch) {
-        throw new UnauthorizedException('Mật khẩu không chính xác');
+        // Fallback for legacy plaintext passwords
+        if (loginDto.password === user.password) {
+          // Upgrade password to bcrypt
+          user.password = await bcrypt.hash(loginDto.password, 10);
+          await this.userRepo.save(user);
+        } else {
+          throw new UnauthorizedException('Mật khẩu không chính xác');
+        }
       }
     } else {
         throw new UnauthorizedException('Mật khẩu không chính xác');
@@ -43,7 +51,7 @@ export class AuthService implements OnModuleInit {
        throw new UnauthorizedException('Tài khoản chưa được xác thực. Vui lòng xác thực email.');
     }
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role, name: user.name };
     const token = this.jwtService.sign(payload);
 
     return {
@@ -130,7 +138,7 @@ export class AuthService implements OnModuleInit {
     user.otpExpiresAt = null;
     await this.userRepo.save(user);
 
-    const payload = { sub: user.id, email: user.email, role: user.role };
+    const payload = { sub: user.id, email: user.email, role: user.role, name: user.name };
     const token = this.jwtService.sign(payload);
 
     return {
@@ -181,18 +189,26 @@ export class AuthService implements OnModuleInit {
     return { success: true };
   }
 
-  async getCurrentUser(roleHeader?: string): Promise<UserEntity> {
-    if (roleHeader === 'TEACHER') {
-      const teacher = await this.userRepo.findOneBy({ role: 'TEACHER' });
-      if (teacher) return teacher;
+  async getCurrentUser(userId: string): Promise<UserEntity> {
+    const user = await this.userRepo.findOne({
+      where: { id: userId },
+      select: {
+        id: true,
+        email: true,
+        name: true,
+        role: true,
+        phone: true,
+        school: true,
+        isVerified: true,
+        createdAt: true
+      }
+    });
+    
+    if (!user) {
+      throw new UnauthorizedException('Không tìm thấy thông tin người dùng');
     }
-    const student = await this.userRepo.findOneBy({ role: 'STUDENT' });
-    if (student) return student;
-
-    const anyUser = await this.userRepo.find({ take: 1 });
-    if (anyUser.length > 0) return anyUser[0];
-
-    throw new UnauthorizedException('Chưa có thông tin người dùng');
+    
+    return user;
   }
 }
 

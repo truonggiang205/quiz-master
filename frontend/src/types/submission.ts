@@ -42,6 +42,8 @@ export interface Submission {
   isAnswerReleased?: boolean;
   answerReleaseAt?: string;
   detailedAnswers?: DetailedAnswerReview[];
+  quizType?: 'QUIZ' | 'PRACTICE';
+  isFullyGraded?: boolean;
 }
 
 export interface QuizResultsResponse {
@@ -54,4 +56,10 @@ export interface QuizResultsResponse {
     completionRate: number;
   };
   submissions: Submission[];
+  unsubmittedStudents: {
+    id: string;
+    name: string;
+    email: string;
+    avatar?: string;
+  }[];
 }

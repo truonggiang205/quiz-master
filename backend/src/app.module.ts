@@ -1,4 +1,4 @@
-import { Module } from '@nestjs/common';
+import { Module, MiddlewareConsumer, NestModule } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import dotenv from 'dotenv';
 import {
@@ -7,7 +7,6 @@ import {
   QuestionEntity,
   SubmissionEntity,
   ClassEntity,
-  DocumentImportEntity,
 } from './entities/index.js';
 import { NotificationEntity } from './entities/notification.entity.js';
 import { AppealEntity } from './entities/appeal.entity.js';
@@ -25,7 +24,7 @@ import { AdminModule } from './modules/admin/admin.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { AppealsModule } from './modules/appeals/appeals.module.js';
 import { ChatModule } from './modules/chat/chat.module.js';
-import { DocumentImportModule } from './modules/document-import/document-import.module.js';
+import { LoggerMiddleware } from './common/middleware/logger.middleware.js';
 
 dotenv.config();
 
@@ -41,7 +40,7 @@ dotenv.config();
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [UserEntity, QuizEntity, QuestionEntity, SubmissionEntity, ClassEntity, NotificationEntity, AppealEntity, ConversationEntity, MessageEntity, DocumentImportEntity],
+      entities: [UserEntity, QuizEntity, QuestionEntity, SubmissionEntity, ClassEntity, NotificationEntity, AppealEntity, ConversationEntity, MessageEntity],
       synchronize: true, // Auto creates and syncs tables with Aiven MySQL
       logging: false,
     }),
@@ -58,7 +57,10 @@ dotenv.config();
     NotificationsModule,
     AppealsModule,
     ChatModule,
-    DocumentImportModule,
   ],
 })
-export class AppModule {}
+export class AppModule implements NestModule {
+  configure(consumer: MiddlewareConsumer) {
+    consumer.apply(LoggerMiddleware).forRoutes('{*path}');
+  }
+}

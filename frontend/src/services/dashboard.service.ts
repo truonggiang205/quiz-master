@@ -64,29 +64,12 @@ export const dashboardService = {
         return res.data.data;
       }
     } catch {
-      // Fallback
+      // Ignored
     }
-
-    const mySubs = MOCK_SUBMISSIONS.filter((s) => s.studentId === 'user-student-1');
-    const completedIds = new Set(mySubs.map((s) => s.quizId));
-    const available = MOCK_QUIZZES.filter(
-      (q) => q.status === 'PUBLISHED' && !completedIds.has(q.id),
-    );
-
-    const avg =
-      mySubs.length > 0
-        ? Number((mySubs.reduce((s, item) => s + item.score, 0) / mySubs.length).toFixed(1))
-        : 0;
-
     return {
-      stats: {
-        availableCount: available.length,
-        completedCount: mySubs.length,
-        averageScore: avg,
-        highestScore: mySubs.length > 0 ? Math.max(...mySubs.map((s) => s.score)) : 0,
-      },
-      availableQuizzes: available,
-      recentSubmissions: mySubs,
+      stats: { availableCount: 0, completedCount: 0, averageScore: 0, highestScore: 0 },
+      availableQuizzes: [],
+      recentSubmissions: [],
     };
   },
 };

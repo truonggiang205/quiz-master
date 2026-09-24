@@ -6,16 +6,19 @@ import {
   Param,
   Body,
   UnauthorizedException,
+  UseGuards,
 } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiBearerAuth } from '@nestjs/swagger';
 import { AppealsService } from './appeals.service.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { UserEntity } from '../../entities/user.entity.js';
 import { AppealStatus } from '../../entities/appeal.entity.js';
 
 @ApiTags('Appeals')
 @Controller('appeals')
+@UseGuards(JwtAuthGuard)
 @ApiBearerAuth()
 export class AppealsController {
   constructor(private readonly appealsService: AppealsService) {}

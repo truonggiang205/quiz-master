@@ -6,8 +6,10 @@ import {
   QuizEntity,
   QuestionEntity,
   StudentAnswer,
+  UserEntity,
 } from '../../entities/index.js';
 import { SubmitQuizDto } from './dto/submit-quiz.dto.js';
+import { UploadService } from '../upload/upload.service.js';
 
 @Injectable()
 export class SubmissionsService {
@@ -18,6 +20,9 @@ export class SubmissionsService {
     private readonly quizRepo: Repository<QuizEntity>,
     @InjectRepository(QuestionEntity)
     private readonly questionRepo: Repository<QuestionEntity>,
+    @InjectRepository(UserEntity)
+    private readonly userRepo: Repository<UserEntity>,
+    private readonly uploadService: UploadService,
   ) {}
 
   async startQuiz(quizId: string, student: { id: string; name: string }) {
@@ -36,6 +41,13 @@ export class SubmissionsService {
     }
     if (quiz.endTime && new Date(quiz.endTime) < now) {
       throw new BadRequestException('Bài kiểm tra này đã kết thúc thời gian nộp bài');
+    }
+
+    const previousAttempts = await this.submissionRepo.count({
+        where: { quizId, studentId: student.id }
+    });
+    if (previousAttempts >= (quiz.totalAttempts || 1)) {
+        throw new BadRequestException('Bạn đã hết số lần làm bài cho phép');
     }
 
     const startedAt = now.toISOString();
@@ -82,9 +94,27 @@ export class SubmissionsService {
     for (const q of quizQuestions) {
       const studentAns = (dto.answers || []).find((a) => a.questionId === q.id);
       const selected = studentAns ? studentAns.selectedOptionIds || [] : [];
-      const essayImageUrl = studentAns ? studentAns.essayImageUrl : undefined;
+      let essayImageUrl = studentAns ? studentAns.essayImageUrl : undefined;
 
       if (q.type === 'ESSAY') {
+        if (essayImageUrl) {
+          const urls = essayImageUrl.split('|||');
+          const uploadedUrls = [];
+          for (let url of urls) {
+            if (url.startsWith('data:image/')) {
+              try {
+                const uploadResult = await this.uploadService.uploadBase64(url);
+                uploadedUrls.push(uploadResult.secure_url || uploadResult.url);
+              } catch (e) {
+                console.error('Lỗi khi tải ảnh tự luận lên Cloudinary:', e);
+                uploadedUrls.push(url); // fallback
+              }
+            } else {
+              uploadedUrls.push(url);
+            }
+          }
+          essayImageUrl = uploadedUrls.join('|||');
+        }
         answers.push({
           questionId: q.id,
           essayImageUrl,
@@ -191,6 +221,7 @@ export class SubmissionsService {
         questionContent: q.content,
         questionImageUrl: q.imageUrl,
         questionType: q.type,
+        score: Number(q.score) || 2,
         options: (q.options || []).map((opt) => ({
           id: opt.id,
           text: opt.text,
@@ -220,6 +251,24 @@ export class SubmissionsService {
       order: { createdAt: 'DESC' },
     });
 
+    let unsubmittedStudents: any[] = [];
+    if (quiz.teacherId) {
+      const teacher = await this.userRepo.findOne({
+        where: { id: quiz.teacherId },
+        relations: { students: true },
+      });
+      if (teacher && teacher.students) {
+        unsubmittedStudents = teacher.students.filter(
+          (stu) => !submissions.some((sub) => sub.studentId === stu.id)
+        ).map(s => ({
+          id: s.id,
+          name: s.name,
+          email: s.email,
+          avatar: s.avatar,
+        }));
+      }
+    }
+
     const totalSubmissions = submissions.length;
     const avgScore =
       totalSubmissions > 0
@@ -246,13 +295,76 @@ export class SubmissionsService {
         passRate,
       },
       submissions,
+      unsubmittedStudents,
     };
   }
 
   async getStudentSubmissions(studentId: string) {
-    return this.submissionRepo.find({
+    const submissions = await this.submissionRepo.find({
       where: { studentId },
       order: { createdAt: 'DESC' },
     });
+    
+    // Attach quiz type and grading status
+    const result = [];
+    for (const sub of submissions) {
+      const quiz = await this.quizRepo.findOneBy({ id: sub.quizId });
+      const hasUngradedEssay = sub.answers?.some(a => a.isCorrect === undefined && a.scoreAwarded === 0);
+      result.push({
+        ...sub,
+        quizType: quiz?.mode || 'QUIZ',
+        isFullyGraded: !hasUngradedEssay,
+      });
+    }
+    return result;
+  }
+
+  async gradeSubmission(
+    submissionId: string,
+    grades: { questionId: string; scoreAwarded: number }[],
+    teacherId: string
+  ) {
+    const sub = await this.submissionRepo.findOneBy({ id: submissionId });
+    if (!sub) {
+      throw new NotFoundException('Không tìm thấy bài nộp');
+    }
+    
+    // Verify teacher owns the quiz
+    const quiz = await this.quizRepo.findOneBy({ id: sub.quizId });
+    if (!quiz || quiz.teacherId !== teacherId) {
+      throw new UnauthorizedException('Bạn không có quyền chấm bài nộp này');
+    }
+
+    const quizQuestions = await this.questionRepo.find({
+      where: { quizId: sub.quizId },
+    });
+
+    let totalRawScore = 0;
+
+    // Update answers
+    sub.answers = sub.answers.map(ans => {
+      const q = quizQuestions.find(ques => ques.id === ans.questionId);
+      if (!q) return ans;
+
+      // If this is an essay and there's a manual grade for it
+      const manualGrade = grades.find(g => g.questionId === ans.questionId);
+      if (manualGrade && q.type === 'ESSAY') {
+        ans.scoreAwarded = Number(manualGrade.scoreAwarded) || 0;
+        // Optionally mark as correct if score > 0
+        if (ans.scoreAwarded > 0) ans.isCorrect = true;
+      }
+
+      totalRawScore += Number(ans.scoreAwarded) || 0;
+      return ans;
+    });
+
+    const maxScore = quizQuestions.reduce((sum, q) => sum + (Number(q.score) || 0), 0) || 10;
+    const percentage = maxScore > 0 ? Number(((totalRawScore / maxScore) * 100).toFixed(1)) : 0;
+    const scaledScore = maxScore > 0 ? Number(((totalRawScore / maxScore) * 10).toFixed(1)) : 0;
+
+    sub.score = scaledScore;
+    sub.percentage = percentage;
+    
+    return await this.submissionRepo.save(sub);
   }
 }

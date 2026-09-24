@@ -5,6 +5,7 @@ import { Navbar } from '../components/common/Navbar';
 import { Sidebar } from '../components/common/Sidebar';
 import { FloatingChat } from '../components/common/FloatingChat';
 import { PageWrapper } from '../components/common/PageWrapper';
+import { GlobalQuizTimer } from '../components/quiz/GlobalQuizTimer';
 
 export const StudentLayout: React.FC = () => {
   const location = useLocation();
@@ -21,6 +22,7 @@ export const StudentLayout: React.FC = () => {
           </AnimatePresence>
         </main>
       </div>
+      <GlobalQuizTimer />
       <FloatingChat />
     </div>
   );

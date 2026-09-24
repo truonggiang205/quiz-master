@@ -26,7 +26,8 @@ export const StudentQuizTakingPage: React.FC = () => {
     initQuizTaking,
     selectSingleAnswer,
     toggleMultipleAnswer,
-    setEssayAnswer,
+    addEssayAnswer,
+    removeEssayAnswer,
     toggleFlagQuestion,
     nextQuestion,
     prevQuestion,
@@ -53,6 +54,19 @@ export const StudentQuizTakingPage: React.FC = () => {
           return;
         }
 
+        // Verify start conditions (e.g. attempt limits)
+        try {
+          await submissionService.startQuiz(id);
+        } catch (error: any) {
+          addToast({ 
+            type: 'error', 
+            title: 'Không thể làm bài', 
+            message: error.response?.data?.message || 'Bạn đã hết số lần làm bài hoặc bài thi chưa mở'
+          });
+          navigate('/student/quizzes');
+          return;
+        }
+
         initQuizTaking(quizData, questionsData);
       } finally {
         setLoading(false);
@@ -64,6 +78,16 @@ export const StudentQuizTakingPage: React.FC = () => {
       // Don't reset exam if navigating to results
     };
   }, [id, initQuizTaking, navigate, addToast]);
+
+  // Prevent accidental refresh or tab close
+  useEffect(() => {
+    const handleBeforeUnload = (e: BeforeUnloadEvent) => {
+      e.preventDefault();
+      e.returnValue = 'Bạn có chắc chắn muốn rời khỏi trang? Bài làm của bạn có thể sẽ chưa được lưu nếu chưa nộp!';
+    };
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, []);
 
   const handleSelectOption = (optionId: string) => {
     const currentQ = questions[currentQuestionIndex];
@@ -80,12 +104,19 @@ export const StudentQuizTakingPage: React.FC = () => {
     if (!id || !currentQuiz || isSubmitting) return;
 
     setIsSubmitting(true);
+    addToast({ type: 'info', title: 'Đang nộp bài...', message: 'Hệ thống đang xử lý bài làm của bạn, vui lòng không tắt trang' });
     try {
-      const formattedAnswers = questions.map((q) => ({
-        questionId: q.id,
-        selectedOptionIds: answers[q.id] || [],
-        essayImageUrl: essayAnswers[q.id],
-      }));
+      const formattedAnswers = questions.map((q) => {
+        const essayArr = Array.isArray(essayAnswers[q.id]) 
+          ? essayAnswers[q.id] 
+          : (essayAnswers[q.id] ? [essayAnswers[q.id] as unknown as string] : []);
+          
+        return {
+          questionId: q.id,
+          selectedOptionIds: answers[q.id] || [],
+          essayImageUrl: essayArr.join('|||'),
+        };
+      });
 
       const totalExamSeconds = currentQuiz.durationMinutes * 60;
       const timeUsed = Math.max(1, totalExamSeconds - remainingSeconds);
@@ -104,8 +135,12 @@ export const StudentQuizTakingPage: React.FC = () => {
 
       resetExam();
       navigate(`/student/quizzes/${id}/result?submissionId=${submission.id}`);
-    } catch {
-      addToast({ type: 'error', title: 'Nộp bài thi thất bại' });
+    } catch (error: any) {
+      addToast({ 
+        type: 'error', 
+        title: 'Nộp bài thi thất bại',
+        message: error.response?.data?.message || 'Có lỗi xảy ra khi nộp bài'
+      });
       setIsSubmitting(false);
     }
   }, [id, currentQuiz, isSubmitting, answers, essayAnswers, questions, remainingSeconds, addToast, resetExam, navigate]);
@@ -192,8 +227,13 @@ export const StudentQuizTakingPage: React.FC = () => {
             selectedOptionIds={selectedOptions}
             isFlagged={isFlagged}
             onSelectOption={handleSelectOption}
-            onUploadEssayImage={(url) => setEssayAnswer(currentQ.id, url)}
-            essayImageUrl={essayAnswers[currentQ.id]}
+            onUploadEssayImage={(url) => addEssayAnswer(currentQ.id, url)}
+            onRemoveEssayImage={(index) => removeEssayAnswer(currentQ.id, index)}
+            essayImageUrls={
+              Array.isArray(essayAnswers[currentQ.id]) 
+                ? essayAnswers[currentQ.id] 
+                : (essayAnswers[currentQ.id] ? [essayAnswers[currentQ.id] as unknown as string] : [])
+            }
             onToggleFlag={() => toggleFlagQuestion(currentQ.id)}
           />
 

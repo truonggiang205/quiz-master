@@ -4,6 +4,7 @@ import { Repository, In } from 'typeorm';
 import { QuestionEntity, QuestionOption } from '../../entities/index.js';
 import { CreateQuestionDto } from './dto/create-question.dto.js';
 import { UpdateQuestionDto } from './dto/update-question.dto.js';
+import { UploadService } from '../upload/upload.service.js';
 import { QuizzesService } from '../quizzes/quizzes.service.js';
 import * as mammoth from 'mammoth';
 import * as cheerio from 'cheerio';
@@ -14,6 +15,7 @@ export class QuestionsService {
     @InjectRepository(QuestionEntity)
     private readonly questionRepo: Repository<QuestionEntity>,
     private readonly quizzesService: QuizzesService,
+    private readonly uploadService: UploadService,
   ) { }
 
   async getQuestionsByQuizId(quizId: string, userRole?: string, isExamMode?: boolean) {
@@ -28,6 +30,7 @@ export class QuestionsService {
         id: q.id,
         quizId: q.quizId,
         content: q.content,
+        imageUrl: q.imageUrl,
         type: q.type,
         score: q.score,
         order: q.order,
@@ -55,16 +58,28 @@ export class QuestionsService {
       isCorrect: opt.isCorrect,
     }));
 
+    let finalImageUrl = dto.imageUrl;
+    if (finalImageUrl && finalImageUrl.startsWith('data:image/')) {
+      try {
+        const uploadResult = await this.uploadService.uploadBase64(finalImageUrl);
+        finalImageUrl = uploadResult.secure_url || uploadResult.url;
+      } catch (e) {
+        console.error('Lỗi tải ảnh:', e);
+      }
+    }
+
     const newQuestion = this.questionRepo.create({
       id: `q-bank-${Date.now()}`,
       teacherId,
       isBank: true,
       content: dto.content,
+      imageUrl: finalImageUrl,
       type: dto.type as any,
       options: optionsWithIds,
       score: dto.score ?? 2.0,
       explanation: dto.explanation || '',
       order: 0, // order doesn't matter much in bank
+      subject: dto.subject || 'Chưa phân loại',
     });
 
     return this.questionRepo.save(newQuestion);
@@ -84,6 +99,7 @@ export class QuestionsService {
         id: `q-${Date.now()}-${idx}`,
         quizId,
         content: bankQ.content,
+        imageUrl: bankQ.imageUrl,
         type: bankQ.type,
         options: bankQ.options.map((opt: any) => ({ ...opt, id: `opt-${Date.now()}-${idx}-${Math.random().toString(36).substring(7)}` })),
         score: bankQ.score,
@@ -106,10 +122,21 @@ export class QuestionsService {
 
     const existingCount = await this.questionRepo.count({ where: { quizId } });
 
+    let finalImageUrl = dto.imageUrl;
+    if (finalImageUrl && finalImageUrl.startsWith('data:image/')) {
+      try {
+        const uploadResult = await this.uploadService.uploadBase64(finalImageUrl);
+        finalImageUrl = uploadResult.secure_url || uploadResult.url;
+      } catch (e) {
+        console.error('Lỗi tải ảnh:', e);
+      }
+    }
+
     const newQuestion = this.questionRepo.create({
       id: `q-${Date.now()}`,
       quizId,
       content: dto.content,
+      imageUrl: finalImageUrl,
       type: dto.type as any,
       options: optionsWithIds,
       score: dto.score ?? 2.0,
@@ -137,7 +164,18 @@ export class QuestionsService {
       }));
     }
 
+    let finalImageUrl = dto.imageUrl !== undefined ? dto.imageUrl : question.imageUrl;
+    if (finalImageUrl && finalImageUrl.startsWith('data:image/')) {
+      try {
+        const uploadResult = await this.uploadService.uploadBase64(finalImageUrl);
+        finalImageUrl = uploadResult.secure_url || uploadResult.url;
+      } catch (e) {
+        console.error('Lỗi tải ảnh:', e);
+      }
+    }
+
     if (dto.content !== undefined) question.content = dto.content;
+    if (dto.imageUrl !== undefined) question.imageUrl = finalImageUrl;
     if (dto.type !== undefined) question.type = dto.type as any;
     if (dto.score !== undefined) question.score = dto.score;
     if (dto.explanation !== undefined) question.explanation = dto.explanation;
@@ -152,6 +190,10 @@ export class QuestionsService {
     const question = await this.questionRepo.findOneBy({ id });
     if (!question) {
       throw new NotFoundException('Không tìm thấy câu hỏi để xóa');
+    }
+
+    if (question.imageUrl) {
+      await this.uploadService.deleteFileByUrl(question.imageUrl);
     }
 
     const quizId = question.quizId;

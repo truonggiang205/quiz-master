@@ -102,7 +102,7 @@ export const StudentDashboard: React.FC = () => {
         <StatCard
           title="Bài đã hoàn thành"
           value={stats.completedCount}
-          subtitle="Đã chấm điểm"
+          subtitle="Đã nộp"
           icon={<CheckCircle2 className="w-5 h-5" />}
           variant="mint"
           delay={0.1}

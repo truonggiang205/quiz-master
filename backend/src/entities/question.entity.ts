@@ -22,6 +22,9 @@ export class QuestionEntity {
   @Column({ type: 'boolean', default: false })
   isBank: boolean;
 
+  @Column({ type: 'varchar', length: 100, nullable: true })
+  subject?: string;
+
   @Column({ type: 'text' })
   content: string;
 

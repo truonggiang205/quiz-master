@@ -64,6 +64,7 @@ export const TeacherQuizListPage: React.FC = () => {
 
   const handleDelete = async () => {
     if (!deleteQuizId) return;
+    addToast({ type: 'info', title: 'Đang xóa bài thi...', message: 'Hệ thống đang xử lý, vui lòng chờ trong giây lát' });
     try {
       await quizService.deleteQuiz(deleteQuizId);
       addToast({ type: 'success', title: 'Đã xóa đề thi thành công' });

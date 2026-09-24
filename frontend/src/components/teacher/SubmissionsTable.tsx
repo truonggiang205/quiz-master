@@ -62,6 +62,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({ submissions 
               <th className="px-6 py-3.5">Đúng / Sai</th>
               <th className="px-6 py-3.5">Thời gian</th>
               <th className="px-6 py-3.5">Đánh giá</th>
+              <th className="px-6 py-3.5 text-right">Thao tác</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-slate-100 dark:divide-slate-700/60 text-slate-700 dark:text-slate-200">
@@ -108,6 +109,14 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({ submissions 
                   >
                     {s.percentage >= 80 ? 'Giỏi' : s.percentage >= 50 ? 'Đạt' : 'Cần cố gắng'}
                   </Badge>
+                </td>
+                <td className="px-6 py-4 text-right">
+                  <button
+                    onClick={() => window.location.href = `/teacher/quizzes/${s.quizId}/grade/${s.id}`}
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                  >
+                    Chấm bài
+                  </button>
                 </td>
               </tr>
             ))}

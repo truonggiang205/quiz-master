@@ -5,6 +5,7 @@ import { quizService } from '../../services/quiz.service';
 import { Quiz } from '../../types/quiz';
 import { QuizResultsResponse } from '../../types/submission';
 import { SubmissionsTable } from '../../components/teacher/SubmissionsTable';
+import { UnsubmittedTable } from '../../components/teacher/UnsubmittedTable';
 import { StatCard } from '../../components/common/StatCard';
 import { ArrowLeft, Award, TrendingUp, Users, CheckCircle2 } from 'lucide-react';
 
@@ -13,6 +14,7 @@ export const TeacherQuizResultsPage: React.FC = () => {
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [results, setResults] = useState<QuizResultsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [activeTab, setActiveTab] = useState<'submitted' | 'unsubmitted'>('submitted');
 
   useEffect(() => {
     if (!id) return;
@@ -42,7 +44,7 @@ export const TeacherQuizResultsPage: React.FC = () => {
     );
   }
 
-  const { statistics, submissions } = results;
+  const { statistics, submissions, unsubmittedStudents } = results;
 
   return (
     <div className="space-y-6 max-w-6xl mx-auto pb-12">
@@ -89,14 +91,40 @@ export const TeacherQuizResultsPage: React.FC = () => {
         <StatCard
           title="Tổng lượt nộp"
           value={submissions.length}
-          subtitle="Tỷ lệ hoàn thành 100%"
+          subtitle={`Tỷ lệ hoàn thành ${statistics.completionRate}%`}
           icon={<Users className="w-5 h-5" />}
           variant="sky"
         />
       </div>
 
-      {/* Detailed Submissions Table */}
-      <SubmissionsTable submissions={submissions} />
+      <div className="flex space-x-2 border-b border-slate-200 dark:border-slate-700">
+        <button
+          onClick={() => setActiveTab('submitted')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'submitted'
+              ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          Học sinh đã làm ({submissions.length})
+        </button>
+        <button
+          onClick={() => setActiveTab('unsubmitted')}
+          className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
+            activeTab === 'unsubmitted'
+              ? 'border-rose-500 text-rose-600 dark:text-rose-400'
+              : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
+          }`}
+        >
+          Học sinh chưa làm ({(unsubmittedStudents || []).length})
+        </button>
+      </div>
+
+      {activeTab === 'submitted' ? (
+        <SubmissionsTable submissions={submissions} />
+      ) : (
+        <UnsubmittedTable students={unsubmittedStudents || []} />
+      )}
     </div>
   );
 };

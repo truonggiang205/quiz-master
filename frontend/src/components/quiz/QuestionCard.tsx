@@ -3,7 +3,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { Question } from '../../types/question';
 import { AnswerOptionCard } from './AnswerOptionCard';
 import { Badge } from '../common/Badge';
-import { Flag, Upload, Image as ImageIcon } from 'lucide-react';
+import { Flag, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { uploadService } from '../../services/upload.service';
 import 'katex/dist/katex.min.css';
 import Latex from 'react-latex-next';
@@ -16,8 +16,9 @@ interface QuestionCardProps {
   isFlagged: boolean;
   onSelectOption: (optionId: string) => void;
   onToggleFlag: () => void;
-  essayImageUrl?: string;
+  essayImageUrls?: string[];
   onUploadEssayImage?: (url: string) => void;
+  onRemoveEssayImage?: (index: number) => void;
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -28,8 +29,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   isFlagged,
   onSelectOption,
   onToggleFlag,
-  essayImageUrl,
+  essayImageUrls = [],
   onUploadEssayImage,
+  onRemoveEssayImage,
 }) => {
   const [isUploading, setIsUploading] = React.useState(false);
   const isMultiple = question.type === 'MULTIPLE_CHOICE';
@@ -47,12 +49,15 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
     try {
       setIsUploading(true);
-      const data = await uploadService.uploadFile(file);
-      onUploadEssayImage(data.url);
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        onUploadEssayImage(reader.result as string);
+        setIsUploading(false);
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
-      console.error('Upload failed', err);
-      alert('Tải ảnh lên thất bại!');
-    } finally {
+      console.error('Failed to read file', err);
+      alert('Tải ảnh thất bại!');
       setIsUploading(false);
     }
   };
@@ -107,26 +112,41 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <Latex>{question.content}</Latex>
           </h2>
           {question.imageUrl && (
-            <img src={question.imageUrl.startsWith('http') ? question.imageUrl : `http://localhost:3000${question.imageUrl}`} alt="Đề bài" className="max-h-64 rounded-xl object-contain border border-slate-200 dark:border-slate-700" />
+            <img src={question.imageUrl.startsWith('http') ? question.imageUrl : `http://localhost:3000${question.imageUrl}`} alt="Đề bài" className="w-full max-h-[800px] rounded-xl object-contain border border-slate-200 dark:border-slate-700" />
           )}
         </div>
 
         {/* Answer Options or Essay Upload */}
         {question.type === 'ESSAY' ? (
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-6 flex flex-col items-center justify-center bg-slate-50 dark:bg-slate-900/50">
-              {essayImageUrl ? (
-                <div className="relative group">
-                  <img src={essayImageUrl.startsWith('http') ? essayImageUrl : `http://localhost:3000${essayImageUrl}`} alt="Bài làm" className="max-h-64 rounded-xl object-contain border border-slate-200 dark:border-slate-700" />
-                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center rounded-xl">
-                    <label className="cursor-pointer bg-white text-slate-800 px-4 py-2 rounded-lg font-semibold text-sm hover:bg-slate-100 flex items-center gap-2">
-                      <Upload className="w-4 h-4" /> Đổi ảnh
+            <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-6 bg-slate-50 dark:bg-slate-900/50">
+              {essayImageUrls.length > 0 ? (
+                <div className="space-y-4">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {essayImageUrls.map((url, idx) => (
+                      <div key={idx} className="relative group rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2">
+                        <img src={url.startsWith('http') || url.startsWith('data:') ? url : `http://localhost:3000${url}`} alt={`Bài làm ${idx + 1}`} className="w-full h-40 object-cover rounded-lg" />
+                        <button
+                          type="button"
+                          onClick={() => onRemoveEssayImage && onRemoveEssayImage(idx)}
+                          className="absolute -top-2 -right-2 bg-rose-500 text-white rounded-full p-1 opacity-0 group-hover:opacity-100 transition-opacity shadow-md hover:bg-rose-600"
+                          title="Xóa ảnh này"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                  
+                  <div className="flex justify-center mt-4">
+                    <label className={`cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${isUploading ? 'bg-slate-200 text-slate-500' : 'bg-slate-100 hover:bg-slate-200 text-indigo-600 border border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-indigo-400 dark:hover:bg-slate-700'}`}>
+                      <Upload className="w-4 h-4" /> {isUploading ? 'Đang tải...' : 'Thêm ảnh khác'}
                       <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
                     </label>
                   </div>
                 </div>
               ) : (
-                <>
+                <div className="flex flex-col items-center justify-center py-4">
                   <ImageIcon className="w-10 h-10 text-slate-400 mb-3" />
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-center">
                     Tải ảnh chụp bài làm tự luận của bạn lên đây (Định dạng: JPG, PNG)
@@ -135,7 +155,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                     <Upload className="w-4 h-4" /> {isUploading ? 'Đang tải...' : 'Chọn ảnh tải lên'}
                     <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
                   </label>
-                </>
+                </div>
               )}
             </div>
           </div>

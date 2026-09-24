@@ -13,7 +13,8 @@ export const submissionService = {
       if (res.data?.data) {
         return res.data.data;
       }
-    } catch {
+    } catch (error: any) {
+      if (error.response) throw error;
       // Fallback
     }
     return { startedAt: new Date().toISOString() };
@@ -32,7 +33,8 @@ export const submissionService = {
       if (res.data?.data) {
         return res.data.data;
       }
-    } catch {
+    } catch (error: any) {
+      if (error.response) throw error;
       // Fallback calculation
     }
 
@@ -149,7 +151,20 @@ export const submissionService = {
     try {
       const res = await apiClient.get(`/quizzes/${quizId}/results`);
       if (res.data?.data) {
-        return res.data.data;
+        const d = res.data.data;
+        // Map backend format to frontend format
+        return {
+          quizId: d.quiz?.id || quizId,
+          totalSubmissions: d.stats?.totalSubmissions || d.totalSubmissions || 0,
+          statistics: {
+            averageScore: d.stats?.avgScore ?? d.statistics?.averageScore ?? 0,
+            highestScore: d.stats?.highestScore ?? d.statistics?.highestScore ?? 0,
+            lowestScore: d.stats?.lowestScore ?? d.statistics?.lowestScore ?? 0,
+            completionRate: d.stats?.passRate ?? d.statistics?.completionRate ?? 100,
+          },
+          submissions: d.submissions || [],
+          unsubmittedStudents: d.unsubmittedStudents || [],
+        };
       }
     } catch {
       // Fallback
@@ -169,6 +184,7 @@ export const submissionService = {
         completionRate: 100,
       },
       submissions: subs,
+      unsubmittedStudents: [],
     };
   },
 
@@ -182,5 +198,13 @@ export const submissionService = {
       // Fallback
     }
     return localSubmissions.filter((s) => s.studentId === 'user-student-1');
+  },
+
+  async gradeSubmission(
+    submissionId: string,
+    grades: { questionId: string; scoreAwarded: number }[]
+  ): Promise<Submission> {
+    const res = await apiClient.post(`/submissions/${submissionId}/grade`, { grades });
+    return res.data?.data;
   },
 };

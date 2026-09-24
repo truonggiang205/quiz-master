@@ -1,10 +1,13 @@
-import { Controller, Post, Get, Body, Param, Headers, Delete } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Controller, Post, Get, Body, Param, Headers, Delete , UseGuards} from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { ClassroomsService } from './classrooms.service.js';
 import { CreateClassDto, JoinClassDto } from './dto/classroom.dto.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
 
 @ApiTags('Classrooms')
+@UseGuards(JwtAuthGuard)
 @Controller('classrooms')
 export class ClassroomsController {
   constructor(private readonly classroomsService: ClassroomsService) {}
@@ -12,34 +15,34 @@ export class ClassroomsController {
   @Post()
   @ApiOperation({ summary: 'Giáo viên tạo lớp học mới' })
   async createClass(
-    @Headers('x-user-id') teacherId: string,
+    @CurrentUser() user: any,
     @Body() dto: CreateClassDto,
   ) {
-    const result = await this.classroomsService.createClass(teacherId, dto);
+    const result = await this.classroomsService.createClass(user.id, dto);
     return createSuccessResponse(result, 'Tạo lớp học thành công');
   }
 
   @Post('join')
   @ApiOperation({ summary: 'Học sinh tham gia lớp học bằng mã code' })
   async joinClass(
-    @Headers('x-user-id') studentId: string,
+    @CurrentUser() user: any,
     @Body() dto: JoinClassDto,
   ) {
-    const result = await this.classroomsService.joinClass(studentId, dto);
+    const result = await this.classroomsService.joinClass(user.id, dto);
     return createSuccessResponse(result, 'Tham gia lớp học thành công');
   }
 
   @Get('teacher')
   @ApiOperation({ summary: 'Lấy danh sách lớp học của giáo viên' })
-  async getTeacherClasses(@Headers('x-user-id') teacherId: string) {
-    const result = await this.classroomsService.getClassesForTeacher(teacherId);
+  async getTeacherClasses(@CurrentUser() user: any) {
+    const result = await this.classroomsService.getClassesForTeacher(user.id);
     return createSuccessResponse(result);
   }
 
   @Get('student')
   @ApiOperation({ summary: 'Lấy danh sách lớp học của học sinh' })
-  async getStudentClasses(@Headers('x-user-id') studentId: string) {
-    const result = await this.classroomsService.getClassesForStudent(studentId);
+  async getStudentClasses(@CurrentUser() user: any) {
+    const result = await this.classroomsService.getClassesForStudent(user.id);
     return createSuccessResponse(result);
   }
 
@@ -47,9 +50,9 @@ export class ClassroomsController {
   @ApiOperation({ summary: 'Lấy chi tiết lớp học (chỉ GV hoặc HS trong lớp mới xem được)' })
   async getClassDetails(
     @Param('id') classId: string,
-    @Headers('x-user-id') userId: string,
+    @CurrentUser() user: any,
   ) {
-    const result = await this.classroomsService.getClassDetails(classId, userId);
+    const result = await this.classroomsService.getClassDetails(classId, user.id);
     return createSuccessResponse(result);
   }
 
@@ -58,9 +61,9 @@ export class ClassroomsController {
   async removeStudent(
     @Param('id') classId: string,
     @Param('studentId') studentId: string,
-    @Headers('x-user-id') teacherId: string,
+    @CurrentUser() user: any,
   ) {
-    const result = await this.classroomsService.removeStudentFromClass(classId, studentId, teacherId);
+    const result = await this.classroomsService.removeStudentFromClass(classId, studentId, user.id);
     return createSuccessResponse(result, 'Đã xóa học sinh khỏi lớp');
   }
 }

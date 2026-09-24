@@ -31,8 +31,8 @@ export class ChatController {
   }
 
   @Get('search-users')
-  async searchUsers(@CurrentUser() user: UserEntity, @Query('q') q: string) {
-    const data = await this.chatService.searchUsers(q, user.id);
+  async searchUsers(@Query('q') q: string) {
+    const data = await this.chatService.searchUsers(q, 'dummy-id');
     return createSuccessResponse(data);
   }
 }

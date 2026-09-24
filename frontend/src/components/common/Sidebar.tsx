@@ -16,6 +16,7 @@ import {
   FileText,
   AlertCircle,
   Upload,
+  Database,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -28,10 +29,10 @@ export const Sidebar: React.FC = () => {
     { label: 'Tổng Quan', path: '/teacher/dashboard', icon: Home },
     { label: 'Học Sinh', path: '/teacher/students', icon: Users },
     { label: 'Khóa Học', path: '/teacher/classrooms', icon: BookOpen },
-    { label: 'Bài Thi', path: '/teacher/quizzes', icon: FileText },
-    { label: 'Phúc Khảo', path: '/teacher/appeals', icon: AlertCircle },
+    { label: 'Kết quả ôn tập và kiểm tra', path: '/teacher/quizzes', icon: FileText },
     { label: 'Tạo bài thi mới', path: '/teacher/quizzes/create', icon: PlusCircle },
-    { label: 'Import câu hỏi', path: '/teacher/import', icon: Upload },
+    { label: 'Phúc Khảo', path: '/teacher/appeals', icon: AlertCircle },
+    { label: 'Ngân hàng đề', path: '/teacher/bank', icon: Database },
     { label: 'Hồ sơ cá nhân', path: '/teacher/profile', icon: User },
   ];
 
@@ -39,6 +40,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Bàn học tập', path: '/student/dashboard', icon: LayoutDashboard },
     { label: 'Lớp học', path: '/student/classrooms', icon: Users },
     { label: 'Bài thi khả dụng', path: '/student/quizzes', icon: FileQuestion },
+    { label: 'Bài đã làm', path: '/student/history', icon: FileText },
     { label: 'Hồ sơ cá nhân', path: '/student/profile', icon: User },
   ];
 

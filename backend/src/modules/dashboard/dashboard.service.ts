@@ -103,8 +103,14 @@ export class DashboardService {
       order: { createdAt: 'DESC' },
     });
 
-    const completedQuizIds = new Set(mySubmissions.map((s) => s.quizId));
-    const availableQuizzes = quizzes.filter((q) => !completedQuizIds.has(q.id));
+    const submissionCounts = mySubmissions.reduce((acc, sub) => {
+      acc[sub.quizId] = (acc[sub.quizId] || 0) + 1;
+      return acc;
+    }, {} as Record<string, number>);
+
+    const availableQuizzes = quizzes.filter(
+      (q) => (submissionCounts[q.id] || 0) < (q.totalAttempts || 1)
+    );
 
     const totalCompleted = mySubmissions.length;
     const avgScore =

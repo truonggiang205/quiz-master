@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { quizService } from '../../services/quiz.service';
 import { Quiz } from '../../types/quiz';
+import { useQuizStore } from '../../stores/quiz.store';
 import { ConfirmationModal } from '../../components/common/ConfirmationModal';
 import { Badge } from '../../components/common/Badge';
 import {
@@ -22,7 +23,10 @@ export const StudentQuizDetailPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
+  const { currentQuiz, remainingSeconds, isTimerRunning } = useQuizStore();
   const navigate = useNavigate();
+
+  const isResuming = currentQuiz?.id === id && (remainingSeconds > 0 || isTimerRunning);
 
   useEffect(() => {
     if (!id) return;
@@ -50,6 +54,14 @@ export const StudentQuizDetailPage: React.FC = () => {
 
   const handleStartExam = () => {
     navigate(`/student/quizzes/${quiz.id}/take`);
+  };
+
+  const onButtonClick = () => {
+    if (isResuming) {
+      handleStartExam();
+    } else {
+      setIsConfirmOpen(true);
+    }
   };
 
   return (
@@ -133,12 +145,12 @@ export const StudentQuizDetailPage: React.FC = () => {
         <div className="pt-2">
           <button
             type="button"
-            onClick={() => setIsConfirmOpen(true)}
+            onClick={onButtonClick}
             id="start-exam-confirm-trigger"
             className="w-full flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-2xl font-bold text-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none transition-transform hover:scale-[1.01]"
           >
             <Play className="w-4 h-4 fill-white" />
-            <span>Bắt đầu làm bài thi</span>
+            <span>{isResuming ? 'Tiếp tục làm bài thi' : 'Bắt đầu làm bài thi'}</span>
           </button>
         </div>
       </div>

@@ -1,4 +1,6 @@
-import { Controller, Post, Get, Body, Param, Headers, Delete } from '@nestjs/common';
+import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Controller, Post, Get, Body, Param, Headers, Delete , UseGuards} from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { StudentsService } from './students.service.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
@@ -15,46 +17,47 @@ export class AcceptInviteDto {
 }
 
 @ApiTags('Students')
+@UseGuards(JwtAuthGuard)
 @Controller('students')
 export class StudentsController {
   constructor(private readonly studentsService: StudentsService) {}
 
   @Get('my-students')
   @ApiOperation({ summary: 'Giáo viên lấy danh sách học sinh của mình' })
-  async getMyStudents(@Headers('x-user-id') teacherId: string) {
-    const result = await this.studentsService.getMyStudents(teacherId);
+  async getMyStudents(@CurrentUser() user: any) {
+    const result = await this.studentsService.getMyStudents(user.id);
     return createSuccessResponse(result);
   }
 
   @Post('invite')
   @ApiOperation({ summary: 'Giáo viên mời học sinh qua email' })
   async inviteStudent(
-    @Headers('x-user-id') teacherId: string,
+    @CurrentUser() user: any,
     @Body() dto: InviteDto,
   ) {
     // Should get from config, hardcoding for simplicity
     const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const result = await this.studentsService.inviteStudentByEmail(teacherId, dto.email, frontendUrl);
+    const result = await this.studentsService.inviteStudentByEmail(user.id, dto.email, frontendUrl);
     return createSuccessResponse(result);
   }
 
   @Post('accept-invite')
   @ApiOperation({ summary: 'Học sinh chấp nhận lời mời' })
   async acceptInvite(
-    @Headers('x-user-id') studentId: string,
+    @CurrentUser() user: any,
     @Body() dto: AcceptInviteDto,
   ) {
-    const result = await this.studentsService.acceptInvite(studentId, dto.teacherId);
+    const result = await this.studentsService.acceptInvite(user.id, dto.teacherId);
     return createSuccessResponse(result);
   }
 
   @Delete(':studentId')
   @ApiOperation({ summary: 'Giáo viên xóa học sinh' })
   async removeStudent(
-    @Headers('x-user-id') teacherId: string,
+    @CurrentUser() user: any,
     @Param('studentId') studentId: string,
   ) {
-    const result = await this.studentsService.removeStudent(teacherId, studentId);
+    const result = await this.studentsService.removeStudent(user.id, studentId);
     return createSuccessResponse(result);
   }
 }

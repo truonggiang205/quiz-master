@@ -1,11 +1,13 @@
 import { Module } from '@nestjs/common';
+import { AuthModule } from '../auth/auth.module.js';
+import { UploadModule } from '../upload/upload.module.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { SubmissionEntity, QuizEntity, QuestionEntity } from '../../entities/index.js';
+import { SubmissionEntity, QuizEntity, QuestionEntity, UserEntity } from '../../entities/index.js';
 import { SubmissionsController } from './submissions.controller.js';
 import { SubmissionsService } from './submissions.service.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([SubmissionEntity, QuizEntity, QuestionEntity])],
+  imports: [AuthModule, UploadModule, TypeOrmModule.forFeature([SubmissionEntity, QuizEntity, QuestionEntity, UserEntity])],
   controllers: [SubmissionsController],
   providers: [SubmissionsService],
   exports: [SubmissionsService, TypeOrmModule],

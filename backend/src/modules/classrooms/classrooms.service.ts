@@ -120,13 +120,13 @@ export class ClassroomsService {
     if (!student) return [];
     
     // Map normal classes
-    const normalClasses = student.classes.map(c => ({
+    const normalClasses = (student.classes || []).map(c => ({
       ...c,
       isPrivate: false,
     }));
 
     // Map private teachers to a "Classroom" format
-    const privateClasses = student.teachers.map(t => ({
+    const privateClasses = (student.teachers || []).map(t => ({
       id: `private-${t.id}`,
       name: `Kèm 1-1: ${t.name}`,
       subject: 'Gia sư cá nhân',

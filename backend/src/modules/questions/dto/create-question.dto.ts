@@ -66,4 +66,9 @@ export class CreateQuestionDto {
   @IsOptional()
   @IsNumber()
   order?: number;
+
+  @ApiPropertyOptional({ example: 'Toán Học' })
+  @IsOptional()
+  @IsString()
+  subject?: string;
 }

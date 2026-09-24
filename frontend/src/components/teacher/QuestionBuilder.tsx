@@ -51,12 +51,15 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
     if (!file) return;
     try {
       setUploadingImageFor(index);
-      const data = await uploadService.uploadFile(file);
-      handleUpdateQuestion(index, { imageUrl: data.url });
+      const reader = new FileReader();
+      reader.onloadend = () => {
+        handleUpdateQuestion(index, { imageUrl: reader.result as string });
+        setUploadingImageFor(null);
+      };
+      reader.readAsDataURL(file);
     } catch (err) {
-      console.error('Upload failed', err);
+      console.error('Failed to read file', err);
       alert('Tải ảnh thất bại!');
-    } finally {
       setUploadingImageFor(null);
     }
   };
@@ -156,7 +159,21 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
             Soạn nội dung, thiết lập các lựa chọn đáp án và ghi chú lời giải
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {questions.length > 0 && (
+            <button
+              type="button"
+              onClick={() => {
+                if (window.confirm('Bạn có chắc chắn muốn xoá toàn bộ câu hỏi trong bài thi?')) {
+                  onChange([]);
+                }
+              }}
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold bg-rose-50 dark:bg-rose-900/20 text-rose-600 dark:text-rose-400 border border-rose-200 dark:border-rose-900/60 hover:bg-rose-100 dark:hover:bg-rose-900/40 shadow-sm transition-all"
+            >
+              <Trash2 className="w-4 h-4" />
+              Xoá tất cả
+            </button>
+          )}
           {onImportFromBank && (
             <button
               type="button"

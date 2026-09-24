@@ -12,6 +12,7 @@ export interface Question {
   content: string;
   imageUrl?: string;
   type: QuestionType;
+  subject?: string;
   options: AnswerOption[];
   score: number;
   explanation?: string;

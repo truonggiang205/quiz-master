@@ -8,7 +8,7 @@ import { User } from '../../types/user';
 import { Question } from '../../types/question';
 import { QuestionBuilder } from '../../components/teacher/QuestionBuilder';
 import { useUiStore } from '../../stores/ui.store';
-import { documentImportService } from '../../services/document-import.service';
+import { uploadService } from '../../services/upload.service';
 import { ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Shield, Calendar, Users, UserPlus, Database } from 'lucide-react';
 import Latex from 'react-latex-next';
 export const TeacherQuizCreateEditPage: React.FC = () => {
@@ -164,6 +164,11 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
     }
 
     setIsSaving(true);
+    addToast({
+      type: 'info',
+      title: 'Đang lưu bài kiểm tra...',
+      message: 'Hệ thống đang xử lý, vui lòng chờ trong giây lát',
+    });
     try {
       const releaseTime = computeReleaseDate();
       const quizInput = {
@@ -269,11 +274,11 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
     try {
       addToast({ type: 'success', title: 'Đang xử lý file, vui lòng đợi...' });
 
-      // Upload and parse via the rule-based document-import service
-      const res = await documentImportService.uploadFile(file);
-      const session = res.data;
-      const parsedQs = (session.rawData || []).filter(
-        (q: any) => q.status !== 'ERROR' && q.content?.trim()
+      // Upload and parse via uploadService
+      const parsedData = await uploadService.parseDocument(file);
+      
+      const parsedQs = (parsedData || []).filter(
+        (q: any) => q.content?.trim() && Array.isArray(q.options) && q.options.length > 0
       );
 
       if (!parsedQs.length) {

@@ -60,6 +60,28 @@ def parse_omath(node):
             
     return result
 
+def get_num_fmt(doc, numId, ilvl):
+    try:
+        numbering_part = doc.part.numbering_part
+        if not numbering_part:
+            return None
+        num = numbering_part.element.xpath(f'.//w:num[@w:numId="{numId}"]')
+        if not num:
+            return None
+        abstractNumId = num[0].xpath('.//w:abstractNumId/@w:val')[0]
+        abstractNum = numbering_part.element.xpath(f'.//w:abstractNum[@w:abstractNumId="{abstractNumId}"]')
+        if not abstractNum:
+            return None
+        lvl = abstractNum[0].xpath(f'.//w:lvl[@w:ilvl="{ilvl}"]')
+        if not lvl:
+            return None
+        numFmt = lvl[0].xpath('.//w:numFmt/@w:val')
+        if numFmt:
+            return numFmt[0]
+    except Exception:
+        pass
+    return None
+
 def parse_paragraph_xml(p_element):
     blocks = []
     
@@ -165,12 +187,25 @@ def parse_docx(file_path: str):
                             
                         count = parse_docx.list_counters[numId][ilvl]
                         
-                        if ilvl == '0':
-                            num_text = f"Câu {count}: "
-                        elif ilvl == '1':
+                        numFmt = get_num_fmt(doc, numId, ilvl)
+                        
+                        if numFmt == 'upperLetter':
                             num_text = f"{chr(64 + count)}. " if count <= 26 else f"{count}. "
+                        elif numFmt == 'lowerLetter':
+                            num_text = f"{chr(96 + count)}. " if count <= 26 else f"{count}. "
+                        elif numFmt == 'decimal':
+                            if ilvl == '0':
+                                num_text = f"Câu {count}: "
+                            else:
+                                num_text = f"{count}. "
                         else:
-                            num_text = f"{count}. "
+                            # Fallback to old heuristic if numFmt not found
+                            if ilvl == '0':
+                                num_text = f"Câu {count}: "
+                            elif ilvl == '1':
+                                num_text = f"{chr(64 + count)}. " if count <= 26 else f"{count}. "
+                            else:
+                                num_text = f"{count}. "
                             
                 if num_text:
                     text = num_text + text

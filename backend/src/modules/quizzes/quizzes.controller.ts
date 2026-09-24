@@ -47,7 +47,7 @@ export class QuizzesController {
   ) {
     const teacher = {
       id: user.id,
-      name: user.name,
+      name: user.name || 'Giáo viên',
     };
     const created = await this.quizzesService.createQuiz(dto, teacher);
     return createSuccessResponse(created, 'Tạo bài kiểm tra thành công');

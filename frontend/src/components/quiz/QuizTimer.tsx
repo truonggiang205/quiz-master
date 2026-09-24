@@ -10,21 +10,10 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({ onTimeExpired }) => {
   const { remainingSeconds, decrementTimer, isTimerRunning } = useQuizStore();
 
   useEffect(() => {
-    if (!isTimerRunning) return;
-
-    const timer = setInterval(() => {
-      const current = useQuizStore.getState().remainingSeconds;
-      if (current <= 1) {
-        clearInterval(timer);
-        decrementTimer();
-        onTimeExpired();
-      } else {
-        decrementTimer();
-      }
-    }, 1000);
-
-    return () => clearInterval(timer);
-  }, [isTimerRunning, decrementTimer, onTimeExpired]);
+    if (remainingSeconds <= 0) {
+      onTimeExpired();
+    }
+  }, [remainingSeconds, onTimeExpired]);
 
   // Format mm:ss
   const minutes = Math.floor(remainingSeconds / 60);

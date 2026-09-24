@@ -12,6 +12,7 @@ export const StudentAcceptInvitePage: React.FC = () => {
   const [message, setMessage] = useState('');
 
   const teacherId = searchParams.get('t');
+  const hasFetched = React.useRef(false);
 
   useEffect(() => {
     if (!teacherId) {
@@ -19,6 +20,9 @@ export const StudentAcceptInvitePage: React.FC = () => {
       setMessage('Đường dẫn không hợp lệ. Vui lòng kiểm tra lại link trong email.');
       return;
     }
+    
+    if (hasFetched.current) return;
+    hasFetched.current = true;
 
     const acceptInvite = async () => {
       try {

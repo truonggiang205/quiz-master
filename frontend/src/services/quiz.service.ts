@@ -16,9 +16,9 @@ export const quizService = {
         return res.data.data;
       }
     } catch {
-      // Fallback
+      // Ignored
     }
-    return localQuizzes;
+    return [];
   },
 
   async getQuizById(id: string): Promise<Quiz | undefined> {

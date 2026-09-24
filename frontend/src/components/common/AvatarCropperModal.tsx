@@ -6,7 +6,7 @@ import getCroppedImg from '../../utils/cropImage';
 interface AvatarCropperModalProps {
   imageSrc: string;
   onClose: () => void;
-  onCropCompleteAction: (croppedFile: File) => Promise<void>;
+  onCropCompleteAction: (croppedFile: File | Blob) => Promise<void>;
 }
 
 export const AvatarCropperModal: React.FC<AvatarCropperModalProps> = ({

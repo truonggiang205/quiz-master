@@ -36,7 +36,7 @@ export const TeacherProfilePage: React.FC = () => {
     e.target.value = '';
   };
 
-  const handleCroppedUpload = async (file: File) => {
+  const handleCroppedUpload = async (file: File | Blob) => {
     setIsUploading(true);
     try {
       const res = await uploadService.uploadFile(file);

@@ -63,7 +63,8 @@ export class UploadController {
     formData.append('file', blob, file.originalname);
 
     try {
-      const response = await fetch('http://localhost:8000/parse-document', {
+      const pythonUrl = process.env.PYTHON_SERVICE_URL || 'http://localhost:8000';
+      const response = await fetch(`${pythonUrl}/parse-document`, {
         method: 'POST',
         body: formData,
       });

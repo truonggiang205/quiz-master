@@ -32,7 +32,7 @@ export const AdminLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-slate-50 flex font-sans text-slate-900 selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-[100dvh] bg-slate-50 flex font-sans text-slate-900 selection:bg-indigo-500 selection:text-white overflow-x-hidden w-full relative">
       {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col fixed inset-y-0 left-0 z-50">
         <div className="h-16 flex items-center px-6 border-b border-slate-800">
@@ -89,7 +89,7 @@ export const AdminLayout: React.FC = () => {
       </aside>
 
       {/* Main Content */}
-      <main className="flex-1 ml-64 flex flex-col min-h-screen">
+      <main className="flex-1 ml-64 flex flex-col min-h-[100dvh]">
         <header className="h-16 bg-white border-b border-slate-200 flex items-center px-8 sticky top-0 z-40">
           <div className="flex items-center gap-2 text-sm font-medium text-slate-500">
             <span>Admin</span>

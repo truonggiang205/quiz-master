@@ -72,13 +72,13 @@ export const Sidebar: React.FC = () => {
       {isSidebarOpen && (
         <div
           onClick={() => setSidebarOpen(false)}
-          className="fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-xs md:hidden"
+          className="fixed inset-0 z-[90] bg-slate-900/30 backdrop-blur-xs md:hidden"
         />
       )}
 
       {/* Sidebar container */}
       <aside
-        className={`fixed md:sticky top-16 left-0 z-35 h-[calc(100vh-4rem)] w-64 bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 transition-transform duration-300 ease-in-out flex flex-col justify-between p-4 shadow-[4px_0_24px_rgba(0,0,0,0.05)] ${
+        className={`fixed md:sticky top-0 md:top-[calc(4rem+env(safe-area-inset-top))] left-0 z-[100] md:z-30 h-[100dvh] md:h-[calc(100dvh-4rem-env(safe-area-inset-top))] w-[80vw] max-w-[320px] md:w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-r border-white/50 dark:border-slate-800 rounded-r-[2rem] md:rounded-none transition-transform duration-300 ease-in-out flex flex-col justify-between p-5 md:p-4 pt-[max(2rem,env(safe-area-inset-top))] md:pt-4 pb-[max(2rem,env(safe-area-inset-bottom))] md:pb-4 shadow-[20px_0_40px_rgba(0,0,0,0.1)] md:shadow-[4px_0_24px_rgba(0,0,0,0.05)] ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0 md:w-20 lg:w-64'
         }`}
       >

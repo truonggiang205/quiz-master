@@ -9,7 +9,7 @@ import { PageWrapper } from '../components/common/PageWrapper';
 export const TeacherLayout: React.FC = () => {
   const location = useLocation();
   return (
-    <div className="min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col font-sans">
+    <div className="min-h-[100dvh] bg-slate-50/50 dark:bg-slate-950 flex flex-col font-sans overflow-x-hidden w-full relative">
       <Navbar showSidebarToggle={true} />
       <div className="flex-1 flex max-w-7xl w-full mx-auto">
         <Sidebar />

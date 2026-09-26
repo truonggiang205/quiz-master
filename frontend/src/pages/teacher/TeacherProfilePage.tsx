@@ -111,7 +111,7 @@ export const TeacherProfilePage: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-xs md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-base md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
             </div>
           </div>
@@ -126,7 +126,7 @@ export const TeacherProfilePage: React.FC = () => {
                 type="email"
                 value={email}
                 disabled
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-xs md:text-sm text-slate-500 cursor-not-allowed"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-100 dark:bg-slate-800 text-base md:text-sm text-slate-500 cursor-not-allowed"
               />
             </div>
           </div>
@@ -141,7 +141,7 @@ export const TeacherProfilePage: React.FC = () => {
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-xs md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-base md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
             </div>
           </div>
@@ -156,7 +156,7 @@ export const TeacherProfilePage: React.FC = () => {
                 type="text"
                 value={school}
                 onChange={(e) => setSchool(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-xs md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-base md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
               />
             </div>
           </div>

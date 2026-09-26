@@ -244,7 +244,7 @@ export const FloatingChat: React.FC = () => {
   if (!user) return null;
 
   return (
-    <div className="fixed bottom-6 right-6 z-50 flex flex-col items-end">
+    <div className="fixed bottom-[max(1.5rem,env(safe-area-inset-bottom))] right-[max(1.5rem,env(safe-area-inset-right))] z-50 flex flex-col items-end">
       
       {/* Chat Window */}
       {isOpen && (

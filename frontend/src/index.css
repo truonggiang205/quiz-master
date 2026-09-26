@@ -25,6 +25,13 @@
   .dark body {
     @apply bg-slate-900 text-slate-100 selection:bg-indigo-900 selection:text-indigo-200;
   }
+
+  /* Prevent Safari auto-zoom on mobile */
+  @media (max-width: 768px) {
+    input[type="text"], input[type="email"], input[type="password"], input[type="number"], input[type="tel"], textarea, select {
+      font-size: 16px !important;
+    }
+  }
 }
 
 /* Custom Glassmorphism */

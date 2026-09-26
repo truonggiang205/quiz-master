@@ -5,7 +5,7 @@ import { ThemeToggle } from '../components/common/ThemeToggle';
 
 export const AuthLayout: React.FC = () => {
   return (
-    <div className="min-h-screen bg-pastel-mesh dark:bg-slate-950 flex flex-col justify-between p-4 md:p-8 font-sans transition-colors relative">
+    <div className="min-h-[100dvh] bg-pastel-mesh dark:bg-slate-950 flex flex-col justify-between p-4 md:p-8 font-sans transition-colors relative overflow-x-hidden w-full">
       {/* Header with logo & theme toggle */}
       <div className="max-w-6xl w-full mx-auto flex items-center justify-between py-2">
         <Link to="/" className="flex items-center">

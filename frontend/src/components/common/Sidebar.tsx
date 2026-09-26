@@ -23,8 +23,17 @@ import {
 export const Sidebar: React.FC = () => {
   const { user } = useAuthStore();
   const { isSidebarOpen, setSidebarOpen } = useUiStore();
-
   const isTeacher = user?.role === 'TEACHER';
+
+  React.useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth < 768 && isSidebarOpen) {
+        setSidebarOpen(false);
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [isSidebarOpen, setSidebarOpen]);
 
   const teacherNavItems = [
     { label: 'Tổng Quan', path: '/teacher/dashboard', icon: Home },
@@ -69,7 +78,7 @@ export const Sidebar: React.FC = () => {
 
       {/* Sidebar container */}
       <aside
-        className={`fixed md:sticky top-16 left-0 z-35 h-[calc(100vh-4rem)] w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md border-r border-slate-200/80 dark:border-slate-800 transition-transform duration-300 ease-in-out flex flex-col justify-between p-4 ${
+        className={`fixed md:sticky top-16 left-0 z-35 h-[calc(100vh-4rem)] w-64 bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 transition-transform duration-300 ease-in-out flex flex-col justify-between p-4 shadow-[4px_0_24px_rgba(0,0,0,0.05)] ${
           isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0 md:w-20 lg:w-64'
         }`}
       >

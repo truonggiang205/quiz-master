@@ -248,7 +248,7 @@ export const FloatingChat: React.FC = () => {
       
       {/* Chat Window */}
       {isOpen && (
-        <div className="fixed inset-0 md:static w-full md:w-[350px] h-[100dvh] md:h-[calc(100vh-120px)] md:max-h-[550px] bg-white md:rounded-3xl shadow-none md:shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] border-0 md:border border-slate-100 flex flex-col md:mb-4 overflow-hidden animate-in slide-in-from-bottom-8 duration-300 z-[100] md:z-auto">
+        <div className="w-[350px] max-w-[calc(100vw-3rem)] h-[calc(100vh-120px)] max-h-[550px] bg-white rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] border border-slate-100 flex flex-col mb-4 overflow-hidden animate-in slide-in-from-bottom-8 duration-300">
           
           {/* Header */}
           <div className="h-16 bg-gradient-to-r from-indigo-500 to-indigo-600 px-4 flex items-center justify-between text-white shadow-md z-10 shrink-0">
@@ -271,8 +271,8 @@ export const FloatingChat: React.FC = () => {
                   />
                 )}
                 <div className="flex-1 min-w-0">
-                  <h3 className="font-bold text-sm md:text-base truncate">{activeTab === 'CHAT' ? activeConv?.otherUser?.name : 'Tin nhắn'}</h3>
-                  {activeTab === 'CHAT' && <p className="text-[10px] md:text-xs text-indigo-100 uppercase truncate">{activeConv?.otherUser?.role === 'TEACHER' ? 'Giáo viên' : 'Học sinh'}</p>}
+                  <h3 className="font-bold text-base truncate">{activeTab === 'CHAT' ? activeConv?.otherUser?.name : 'Tin nhắn'}</h3>
+                  {activeTab === 'CHAT' && <p className="text-xs text-indigo-100 uppercase truncate">{activeConv?.otherUser?.role === 'TEACHER' ? 'Giáo viên' : 'Học sinh'}</p>}
                 </div>
               </div>
             </div>

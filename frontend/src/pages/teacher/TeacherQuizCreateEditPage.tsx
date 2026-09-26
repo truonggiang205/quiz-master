@@ -158,10 +158,6 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
       addToast({ type: 'error', title: 'Vui lòng nhập tên bài kiểm tra' });
       return;
     }
-    if (questions.length === 0 && publishImmediately) {
-      addToast({ type: 'error', title: 'Không thể xuất bản bài thi chưa có câu hỏi' });
-      return;
-    }
 
     setIsSaving(true);
     addToast({

@@ -39,7 +39,7 @@ export const StudentProfilePage: React.FC = () => {
   const handleCroppedUpload = async (file: string) => {
     setIsUploading(true);
     try {
-      const res = await uploadService.uploadBase64(file);
+      const res = await uploadService.uploadBase64(file, 'quiz-master/avatar');
       setAvatar(res.url);
       addToast({ type: 'success', title: 'Tải ảnh lên thành công!' });
     } catch (err) {

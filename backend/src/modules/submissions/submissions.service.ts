@@ -25,6 +25,13 @@ export class SubmissionsService {
     private readonly uploadService: UploadService,
   ) {}
 
+  private getSubmissionFolder(quiz: QuizEntity): string {
+    const rootDir = quiz.mode === 'PRACTICE' ? 'ôn tập' : 'bài thi';
+    const subjectDir = (quiz.subject || 'khác').trim().toLowerCase();
+    const titleDir = quiz.title.trim();
+    return `quiz-master/${rootDir}/${subjectDir}/${titleDir}/bài tập`;
+  }
+
   async startQuiz(quizId: string, student: { id: string; name: string }) {
     const quiz = await this.quizRepo.findOneBy({ id: quizId });
     if (!quiz) {
@@ -103,7 +110,8 @@ export class SubmissionsService {
           for (let url of urls) {
             if (url.startsWith('data:image/')) {
               try {
-                const uploadResult = await this.uploadService.uploadBase64(url);
+                const folder = this.getSubmissionFolder(quiz);
+                const uploadResult = await this.uploadService.uploadBase64(url, folder);
                 uploadedUrls.push(uploadResult.secure_url || uploadResult.url);
               } catch (e) {
                 console.error('Lỗi khi tải ảnh tự luận lên Cloudinary:', e);
@@ -255,10 +263,21 @@ export class SubmissionsService {
     if (quiz.teacherId) {
       const teacher = await this.userRepo.findOne({
         where: { id: quiz.teacherId },
-        relations: { students: true },
+        relations: { students: { classes: true } },
       });
       if (teacher && teacher.students) {
-        unsubmittedStudents = teacher.students.filter(
+        // Chỉ lấy những học sinh được giao bài thi
+        const assignedStudents = teacher.students.filter(stu => {
+          if (quiz.assignedStudentIds && quiz.assignedStudentIds.length > 0) {
+            return quiz.assignedStudentIds.includes(stu.id);
+          }
+          if (quiz.classId) {
+            return stu.classes?.some(c => c.id === quiz.classId);
+          }
+          return true; // Dành cho tất cả
+        });
+
+        unsubmittedStudents = assignedStudents.filter(
           (stu) => !submissions.some((sub) => sub.studentId === stu.id)
         ).map(s => ({
           id: s.id,

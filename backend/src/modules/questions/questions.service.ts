@@ -18,6 +18,17 @@ export class QuestionsService {
     private readonly uploadService: UploadService,
   ) { }
 
+  private async getQuestionFolder(quizId: string): Promise<string> {
+    if (!quizId) return 'quiz-master/ngân hàng câu hỏi/đề bài';
+    const quiz = await this.quizzesService.getQuizById(quizId, 'TEACHER');
+    if (!quiz) return 'quiz-master/ngân hàng câu hỏi/đề bài';
+    
+    const rootDir = quiz.mode === 'PRACTICE' ? 'ôn tập' : 'bài thi';
+    const subjectDir = (quiz.subject || 'khác').trim().toLowerCase();
+    const titleDir = quiz.title.trim();
+    return `quiz-master/${rootDir}/${subjectDir}/${titleDir}/đề bài`;
+  }
+
   async getQuestionsByQuizId(quizId: string, userRole?: string, isExamMode?: boolean) {
     const questions = await this.questionRepo.find({
       where: { quizId },
@@ -61,7 +72,7 @@ export class QuestionsService {
     let finalImageUrl = dto.imageUrl;
     if (finalImageUrl && finalImageUrl.startsWith('data:image/')) {
       try {
-        const uploadResult = await this.uploadService.uploadBase64(finalImageUrl);
+        const uploadResult = await this.uploadService.uploadBase64(finalImageUrl, 'quiz-master/ngân hàng câu hỏi/đề bài');
         finalImageUrl = uploadResult.secure_url || uploadResult.url;
       } catch (e) {
         console.error('Lỗi tải ảnh:', e);
@@ -125,7 +136,8 @@ export class QuestionsService {
     let finalImageUrl = dto.imageUrl;
     if (finalImageUrl && finalImageUrl.startsWith('data:image/')) {
       try {
-        const uploadResult = await this.uploadService.uploadBase64(finalImageUrl);
+        const folder = await this.getQuestionFolder(quizId);
+        const uploadResult = await this.uploadService.uploadBase64(finalImageUrl, folder);
         finalImageUrl = uploadResult.secure_url || uploadResult.url;
       } catch (e) {
         console.error('Lỗi tải ảnh:', e);
@@ -167,7 +179,8 @@ export class QuestionsService {
     let finalImageUrl = dto.imageUrl !== undefined ? dto.imageUrl : question.imageUrl;
     if (finalImageUrl && finalImageUrl.startsWith('data:image/')) {
       try {
-        const uploadResult = await this.uploadService.uploadBase64(finalImageUrl);
+        const folder = await this.getQuestionFolder(question.quizId);
+        const uploadResult = await this.uploadService.uploadBase64(finalImageUrl, folder);
         finalImageUrl = uploadResult.secure_url || uploadResult.url;
       } catch (e) {
         console.error('Lỗi tải ảnh:', e);

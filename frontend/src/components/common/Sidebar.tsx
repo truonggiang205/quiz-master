@@ -17,6 +17,7 @@ import {
   AlertCircle,
   Upload,
   Database,
+  Bug,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -34,6 +35,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Phúc Khảo', path: '/teacher/appeals', icon: AlertCircle },
     { label: 'Ngân hàng đề', path: '/teacher/bank', icon: Database },
     { label: 'Hồ sơ cá nhân', path: '/teacher/profile', icon: User },
+    { label: 'Báo Cáo Lỗi', path: '/teacher/report', icon: Bug },
   ];
 
   const studentNavItems = [
@@ -42,6 +44,7 @@ export const Sidebar: React.FC = () => {
     { label: 'Bài thi khả dụng', path: '/student/quizzes', icon: FileQuestion },
     { label: 'Bài đã làm', path: '/student/history', icon: FileText },
     { label: 'Hồ sơ cá nhân', path: '/student/profile', icon: User },
+    { label: 'Báo Cáo Lỗi', path: '/student/report', icon: Bug },
   ];
 
   const navItems = isTeacher ? teacherNavItems : studentNavItems;

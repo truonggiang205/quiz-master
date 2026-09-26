@@ -9,7 +9,8 @@ import {
   Settings,
   LogOut,
   ChevronRight,
-  Shield
+  Shield,
+  Bug
 } from 'lucide-react';
 
 export const AdminLayout: React.FC = () => {
@@ -26,6 +27,7 @@ export const AdminLayout: React.FC = () => {
     { name: 'Tổng quan', path: '/admin/dashboard', icon: LayoutDashboard },
     { name: 'Quản lý người dùng', path: '/admin/users', icon: Users },
     { name: 'Kiểm duyệt nội dung', path: '/admin/content', icon: ShieldAlert },
+    { name: 'Báo cáo người dùng', path: '/admin/reports', icon: Bug },
     { name: 'Cấu hình hệ thống', path: '/admin/settings', icon: Settings },
   ];
 

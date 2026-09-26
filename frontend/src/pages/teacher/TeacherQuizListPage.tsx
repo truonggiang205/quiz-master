@@ -45,14 +45,6 @@ export const TeacherQuizListPage: React.FC = () => {
         await quizService.unpublishQuiz(quiz.id);
         addToast({ type: 'info', title: 'Đã chuyển đề thi về bản thảo' });
       } else {
-        if (quiz.questionCount === 0) {
-          addToast({
-            type: 'error',
-            title: 'Chưa thể xuất bản',
-            message: 'Đề thi phải có ít nhất 1 câu hỏi để có thể xuất bản!',
-          });
-          return;
-        }
         await quizService.publishQuiz(quiz.id);
         addToast({ type: 'success', title: 'Đã xuất bản đề thi thành công' });
       }

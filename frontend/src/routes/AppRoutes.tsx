@@ -29,6 +29,7 @@ const TeacherQuizPreviewPage = React.lazy(() => import('../pages/teacher/Teacher
 const TeacherProfilePage = React.lazy(() => import('../pages/teacher/TeacherProfilePage').then(module => ({ default: module.TeacherProfilePage })));
 const TeacherAppealsPage = React.lazy(() => import('../pages/teacher/TeacherAppealsPage').then(module => ({ default: module.TeacherAppealsPage })));
 const TeacherQuestionBankPage = React.lazy(() => import('../pages/teacher/TeacherQuestionBankPage').then(module => ({ default: module.TeacherQuestionBankPage })));
+const ReportBugPage = React.lazy(() => import('../pages/ReportBugPage').then(module => ({ default: module.ReportBugPage })));
 
 // Student Pages (Lazy Loaded)
 const StudentDashboard = React.lazy(() => import('../pages/student/StudentDashboard').then(module => ({ default: module.StudentDashboard })));
@@ -48,6 +49,7 @@ const AdminDashboard = React.lazy(() => import('../pages/admin/AdminDashboard').
 const UserManagementPage = React.lazy(() => import('../pages/admin/UserManagementPage').then(module => ({ default: module.UserManagementPage })));
 const ContentManagementPage = React.lazy(() => import('../pages/admin/ContentManagementPage').then(module => ({ default: module.ContentManagementPage })));
 const SystemSettingsPage = React.lazy(() => import('../pages/admin/SystemSettingsPage').then(module => ({ default: module.SystemSettingsPage })));
+const AdminReportsPage = React.lazy(() => import('../pages/admin/AdminReportsPage').then(module => ({ default: module.AdminReportsPage })));
 
 export const AppRoutes: React.FC = () => {
   const location = useLocation();
@@ -72,6 +74,7 @@ export const AppRoutes: React.FC = () => {
                 <Route path="/admin/users" element={<UserManagementPage />} />
                 <Route path="/admin/content" element={<ContentManagementPage />} />
                 <Route path="/admin/settings" element={<SystemSettingsPage />} />
+                <Route path="/admin/reports" element={<AdminReportsPage />} />
               </Route>
             </Route>
           </Route>
@@ -93,6 +96,7 @@ export const AppRoutes: React.FC = () => {
                 <Route path="/teacher/bank" element={<TeacherQuestionBankPage />} />
                 <Route path="/teacher/appeals" element={<TeacherAppealsPage />} />
                 <Route path="/teacher/profile" element={<TeacherProfilePage />} />
+                <Route path="/teacher/report" element={<ReportBugPage />} />
               </Route>
             </Route>
           </Route>
@@ -111,6 +115,7 @@ export const AppRoutes: React.FC = () => {
                 <Route path="/student/quizzes/:id/result" element={<StudentQuizResultPage />} />
                 <Route path="/student/history" element={<StudentHistoryPage />} />
                 <Route path="/student/profile" element={<StudentProfilePage />} />
+                <Route path="/student/report" element={<ReportBugPage />} />
               </Route>
             </Route>
           </Route>

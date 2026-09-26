@@ -23,12 +23,12 @@ export class UploadController {
       },
     }),
   )
-  async uploadFile(@UploadedFile() file: Express.Multer.File) {
+  async uploadFile(@UploadedFile() file: Express.Multer.File, @Body('folder') folder?: string) {
     if (!file) {
       throw new BadRequestException('No file uploaded');
     }
     
-    const result = await this.uploadService.uploadFile(file);
+    const result = await this.uploadService.uploadFile(file, folder || 'quiz-master/khac');
     console.log(`[Upload] Tải ảnh lên thành công: ${result.secure_url || result.url}`);
     
     return createSuccessResponse({
@@ -37,12 +37,12 @@ export class UploadController {
   }
 
   @Post('base64')
-  async uploadBase64Controller(@Body() body: { image: string }) {
+  async uploadBase64Controller(@Body() body: { image: string, folder?: string }) {
     if (!body || !body.image) {
       throw new BadRequestException('No image provided');
     }
     
-    const result = await this.uploadService.uploadBase64(body.image);
+    const result = await this.uploadService.uploadBase64(body.image, body.folder || 'quiz-master/khac');
     console.log(`[Upload] Tải ảnh lên thành công (base64): ${result.secure_url || result.url}`);
     
     return createSuccessResponse({

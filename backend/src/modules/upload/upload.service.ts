@@ -12,11 +12,11 @@ export class UploadService {
     });
   }
 
-  uploadFile(file: Express.Multer.File): Promise<any> {
+  uploadFile(file: Express.Multer.File, folder: string = 'quiz-master/khac'): Promise<any> {
     return new Promise((resolve, reject) => {
       const uploadStream = cloudinary.uploader.upload_stream(
         {
-          folder: 'quiz_master_essays',
+          folder: folder.trim(),
         },
         (error, result) => {
           if (error) {
@@ -30,11 +30,11 @@ export class UploadService {
     });
   }
 
-  uploadBase64(base64Str: string): Promise<any> {
+  uploadBase64(base64Str: string, folder: string = 'quiz-master/khac'): Promise<any> {
     return new Promise((resolve, reject) => {
       cloudinary.uploader.upload(
         base64Str,
-        { folder: 'quiz_master_essays' },
+        { folder: folder.trim() },
         (error, result) => {
           if (error) {
             console.error('Cloudinary Base64 Upload Error:', error);
@@ -49,23 +49,38 @@ export class UploadService {
   async deleteFileByUrl(url: string): Promise<void> {
     if (!url || !url.includes('cloudinary.com')) return;
     try {
-      const parts = url.split('/');
-      const lastPart = parts.pop(); 
-      const folderPart = parts.pop(); 
-      if (!lastPart || !folderPart) return;
-      const filename = lastPart.split('.')[0];
-      const publicId = `${folderPart}/${filename}`;
+      const matches = url.match(/\/upload\/(?:v\d+\/)?([^\.]+)/);
+      if (matches && matches[1]) {
+        const publicId = decodeURIComponent(matches[1]);
+        await new Promise((resolve) => {
+          cloudinary.uploader.destroy(publicId, (error, result) => {
+            if (error) {
+              console.error('Cloudinary Delete Error:', error);
+            }
+            resolve(result);
+          });
+        });
+      }
+    } catch (e) {
+      console.error('Error deleting from Cloudinary:', e);
+    }
+  }
 
-      await new Promise((resolve) => {
-        cloudinary.uploader.destroy(publicId, (error, result) => {
+  async deleteFolder(folderPath: string): Promise<void> {
+    try {
+      await new Promise((resolve, reject) => {
+        cloudinary.api.delete_folder(folderPath, (error: any, result: any) => {
           if (error) {
-            console.error('Cloudinary Delete Error:', error);
+            // Ignore if folder doesn't exist (404)
+            if (error.http_code === 404) return resolve(result);
+            console.error('Cloudinary Delete Folder Error:', error);
+            return reject(error);
           }
           resolve(result);
         });
       });
     } catch (e) {
-      console.error('Error deleting from Cloudinary:', e);
+      console.error('Error deleting folder from Cloudinary:', e);
     }
   }
 }

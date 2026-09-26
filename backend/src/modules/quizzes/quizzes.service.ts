@@ -142,6 +142,17 @@ export class QuizzesService {
       }
     }
 
+    // Clean up empty folders in Cloudinary
+    const rootDir = quiz.mode === 'PRACTICE' ? 'ôn tập' : 'bài thi';
+    const subjectDir = (quiz.subject || 'khác').trim().toLowerCase();
+    const titleDir = quiz.title.trim();
+    const quizFolder = `quiz-master/${rootDir}/${subjectDir}/${titleDir}`;
+    
+    // Cloudinary requires subfolders to be empty/deleted before parent can be deleted
+    await this.uploadService.deleteFolder(`${quizFolder}/đề bài`);
+    await this.uploadService.deleteFolder(`${quizFolder}/bài tập`);
+    await this.uploadService.deleteFolder(quizFolder);
+
     await this.questionRepo.delete({ quizId: id });
     await this.submissionRepo.delete({ quizId: id });
     await this.quizRepo.delete({ id });
@@ -153,10 +164,6 @@ export class QuizzesService {
     const quiz = await this.quizRepo.findOneBy({ id });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
-    }
-    // Business rule: If quiz has 0 questions, cannot publish!
-    if (quiz.questionCount === 0) {
-      throw new BadRequestException('Bài kiểm tra phải có ít nhất 1 câu hỏi trước khi xuất bản');
     }
     quiz.status = 'PUBLISHED';
     return this.quizRepo.save(quiz);

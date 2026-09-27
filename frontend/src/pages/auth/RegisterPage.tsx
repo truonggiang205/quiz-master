@@ -17,7 +17,7 @@ export const RegisterPage: React.FC = () => {
   const [step, setStep] = useState<'REGISTER' | 'OTP'>('REGISTER');
   const [otp, setOtp] = useState('');
 
-  const { login } = useAuthStore();
+
   const { addToast, clearToasts } = useUiStore();
   const navigate = useNavigate();
 

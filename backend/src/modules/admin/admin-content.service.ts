@@ -4,6 +4,7 @@ import { Repository } from 'typeorm';
 import { QuizEntity } from '../../entities/quiz.entity.js';
 import { QuestionEntity } from '../../entities/question.entity.js';
 import { SubmissionEntity } from '../../entities/submission.entity.js';
+import { UserEntity } from '../../entities/user.entity.js';
 
 @Injectable()
 export class AdminContentService {
@@ -30,7 +31,7 @@ export class AdminContentService {
     const result = await Promise.all(
       quizzes.map(async (q) => {
         const questionsCount = await this.questionRepo.countBy({ quizId: q.id });
-        const teacher = await this.quizRepo.manager.findOneBy('user_entity', { id: q.teacherId });
+        const teacher = await this.quizRepo.manager.findOneBy(UserEntity, { id: q.teacherId });
         return {
           ...q,
           questionsCount,

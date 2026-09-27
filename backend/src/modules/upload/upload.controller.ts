@@ -85,16 +85,22 @@ export class UploadController {
 
       if (!response.ok) {
         const err = await response.text();
-        throw new BadRequestException('Lỗi từ Python Parser: ' + err);
+        const errorMessage = err.trim().startsWith('<') 
+          ? 'URL API Parser sai hoặc server trả về trang web thay vì JSON.' 
+          : err;
+        throw new BadRequestException('Lỗi từ Python Parser: ' + errorMessage);
       }
 
       const data = await response.json() as any;
       if (data.status !== 'success') {
-        throw new BadRequestException('Lỗi từ Python Parser');
+        throw new BadRequestException('Lỗi từ Python Parser: Phản hồi không thành công');
       }
       
       return createSuccessResponse(data.data, 'Parsed successfully');
     } catch (error: any) {
+      if (error instanceof BadRequestException) {
+        throw error;
+      }
       throw new BadRequestException('Không thể kết nối đến Python Parser: ' + error.message);
     }
   }

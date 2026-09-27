@@ -17,6 +17,12 @@ apiClient.interceptors.request.use((config) => {
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
     }
+    if (userRaw) {
+      const user = JSON.parse(userRaw);
+      if (user?.role) {
+        config.headers['x-user-role'] = user.role;
+      }
+    }
   } catch (err) {
     // Ignore storage parse error
   }

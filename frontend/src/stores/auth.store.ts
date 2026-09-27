@@ -64,7 +64,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   },
 
   quickLoginAs: (role: UserRole) => {
-    const user = role === 'TEACHER' ? MOCK_USERS[0] : MOCK_USERS[1];
+    const user = role === 'TEACHER' ? MOCK_USERS[0] : role === 'ADMIN' ? MOCK_USERS[2] : MOCK_USERS[1];
     const token = `mock-token-${role.toLowerCase()}-${user.id}`;
     localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
     localStorage.setItem(STORAGE_TOKEN_KEY, token);
@@ -79,6 +79,16 @@ export const useAuthStore = create<AuthState>((set) => ({
   checkAuth: async () => {
     const token = localStorage.getItem(STORAGE_TOKEN_KEY);
     if (!token) return;
+    
+    // Skip real API call for mock tokens to prevent 401 redirect loops
+    if (token.startsWith('mock-token-')) {
+      const savedUser = localStorage.getItem(STORAGE_USER_KEY);
+      if (savedUser) {
+        set({ user: JSON.parse(savedUser), isAuthenticated: true });
+      }
+      return;
+    }
+
     try {
       const res = await apiClient.get('/users/me');
       const updatedUser = res.data.data;

@@ -4,32 +4,7 @@ import { PremiumList, PremiumListItem } from '../../components/common/PremiumLis
 
 export const AdminReportsPage: React.FC = () => {
   // Mock data for reports
-  const mockReports = [
-    {
-      id: 1,
-      title: 'Không thể nộp bài khi hết giờ',
-      description: 'Khi thời gian đếm ngược về 0, hệ thống không tự động nộp bài mà hiện lỗi mạng.',
-      type: 'Chức năng',
-      priority: 'Cao',
-      browser: 'Chrome, Windows 11',
-      screenshotUrl: 'https://images.unsplash.com/photo-1555680202-c86f0e12f086?w=100&q=80',
-      status: 'Đang chờ',
-      user: { name: 'Nguyễn Văn A', role: 'STUDENT' },
-      createdAt: '10 phút trước'
-    },
-    {
-      id: 2,
-      title: 'Lỗi hiển thị công thức toán học',
-      description: 'Công thức latex trong đề thi Vật Lý không render đúng trên điện thoại.',
-      type: 'Giao diện (UI)',
-      priority: 'Trung bình',
-      browser: 'Safari, iOS 16',
-      screenshotUrl: null,
-      status: 'Đã giải quyết',
-      user: { name: 'Trần Giáo Viên', role: 'TEACHER' },
-      createdAt: '2 giờ trước'
-    }
-  ];
+  const mockReports: any[] = [];
 
   const getPriorityColor = (priority: string) => {
     switch (priority) {

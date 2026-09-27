@@ -1,18 +1,15 @@
 import { create } from 'zustand';
 import { apiClient } from '../services/api';
 import { User, UserRole } from '../types/user';
-import { MOCK_USERS } from '../mocks/users';
 
 interface AuthState {
   user: User | null;
   token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
-  login: (email: string, role?: UserRole) => Promise<boolean>;
-  logout: () => void;
   setUser: (user: User) => void;
+  logout: () => void;
   setAuthSession: (user: User, token: string) => void;
-  quickLoginAs: (role: UserRole) => void;
   checkAuth: () => Promise<void>;
 }
 
@@ -37,58 +34,12 @@ export const useAuthStore = create<AuthState>((set) => ({
   isAuthenticated: !!savedUser,
   isLoading: false,
 
-  login: async (email: string, preferredRole?: UserRole) => {
-    set({ isLoading: true });
-    // Match existing mock user or build user
-    let user = MOCK_USERS.find((u) => u.email.toLowerCase() === email.toLowerCase());
-    if (!user) {
-      user = {
-        id: `user-${Date.now()}`,
-        name: email.split('@')[0],
-        email,
-        role: preferredRole || (email.includes('teacher') ? 'TEACHER' : 'STUDENT'),
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=256',
-      };
-    }
-    const token = `mock-token-${user.role.toLowerCase()}-${user.id}`;
-    localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
-    localStorage.setItem(STORAGE_TOKEN_KEY, token);
 
-    set({
-      user,
-      token,
-      isAuthenticated: true,
-      isLoading: false,
-    });
-    return true;
-  },
-
-  quickLoginAs: (role: UserRole) => {
-    const user = role === 'TEACHER' ? MOCK_USERS[0] : role === 'ADMIN' ? MOCK_USERS[2] : MOCK_USERS[1];
-    const token = `mock-token-${role.toLowerCase()}-${user.id}`;
-    localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(user));
-    localStorage.setItem(STORAGE_TOKEN_KEY, token);
-    set({
-      user,
-      token,
-      isAuthenticated: true,
-      isLoading: false,
-    });
-  },
 
   checkAuth: async () => {
     const token = localStorage.getItem(STORAGE_TOKEN_KEY);
     if (!token) return;
     
-    // Skip real API call for mock tokens to prevent 401 redirect loops
-    if (token.startsWith('mock-token-')) {
-      const savedUser = localStorage.getItem(STORAGE_USER_KEY);
-      if (savedUser) {
-        set({ user: JSON.parse(savedUser), isAuthenticated: true });
-      }
-      return;
-    }
-
     try {
       const res = await apiClient.get('/users/me');
       const updatedUser = res.data.data;

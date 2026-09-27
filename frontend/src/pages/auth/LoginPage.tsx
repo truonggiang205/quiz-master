@@ -15,7 +15,7 @@ export const LoginPage: React.FC = () => {
   const [otp, setOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
 
-  const { login, quickLoginAs } = useAuthStore();
+
   const { addToast, clearToasts } = useUiStore();
   const navigate = useNavigate();
 
@@ -249,12 +249,7 @@ export const LoginPage: React.FC = () => {
           </div>
         </div>
 
-        {/* Hidden Quick Login for dev */}
-        <div className="absolute -bottom-12 opacity-30 hover:opacity-100 transition-opacity duration-300 flex gap-4">
-           <button onClick={() => quickLoginAs('TEACHER')} className="text-[10px] text-slate-500 hover:text-slate-700 underline font-semibold transition-colors duration-300">Nhanh (Giáo viên)</button>
-           <button onClick={() => quickLoginAs('STUDENT')} className="text-[10px] text-slate-500 hover:text-slate-700 underline font-semibold transition-colors duration-300">Nhanh (Học sinh)</button>
-           <button onClick={() => quickLoginAs('ADMIN')} className="text-[10px] text-slate-500 hover:text-slate-700 underline font-semibold transition-colors duration-300">Nhanh (Admin)</button>
-        </div>
+
       </div>
     </div>
   );

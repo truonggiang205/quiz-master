@@ -2,6 +2,8 @@ import React, { useState } from 'react';
 import { motion } from 'framer-motion';
 import { Bug, MonitorSmartphone, UploadCloud, Tag, MessageSquare, LayoutTemplate, Zap, FileQuestion } from 'lucide-react';
 import { uploadService } from '../services/upload.service';
+import { reportService } from '../services/report.service';
+import { useUiStore } from '../stores/ui.store';
 
 export const ReportBugPage: React.FC = () => {
   const [formData, setFormData] = useState({
@@ -15,6 +17,7 @@ export const ReportBugPage: React.FC = () => {
 
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
+  const { addToast } = useUiStore();
 
   const bugTypes = [
     { id: 'UI', label: 'Giao diện (UI)', icon: LayoutTemplate },
@@ -44,17 +47,20 @@ export const ReportBugPage: React.FC = () => {
     try {
       let uploadedUrl = null;
       if (formData.screenshot) {
-        // Upload ảnh lên Cloudinary với folder là 'quiz-master/bug'
         const res = await uploadService.uploadFile(formData.screenshot, 'quiz-master/bug');
         uploadedUrl = res.url;
       }
 
-      console.log('Dữ liệu Report Bug gửi đi:', {
-        ...formData,
-        screenshotUrl: uploadedUrl
+      await reportService.createReport({
+        title: formData.title,
+        description: formData.description,
+        type: formData.type,
+        priority: formData.priority,
+        browser: formData.browser,
+        screenshotUrl: uploadedUrl,
       });
 
-      alert('Đã gửi báo cáo thành công! Cảm ơn sự đóng góp của bạn.');
+      addToast({ type: 'success', title: 'Đã gửi báo cáo thành công!' });
       setFormData({
         title: '',
         description: '',
@@ -66,7 +72,7 @@ export const ReportBugPage: React.FC = () => {
       setPreviewUrl(null);
     } catch (err) {
       console.error(err);
-      alert('Có lỗi xảy ra khi upload ảnh lên Cloudinary. Vui lòng kiểm tra lại kết nối hoặc key Cloudinary.');
+      addToast({ type: 'error', title: 'Có lỗi xảy ra khi gửi báo cáo' });
     } finally {
       setIsSubmitting(false);
     }

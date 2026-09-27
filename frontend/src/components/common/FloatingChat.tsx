@@ -5,7 +5,6 @@ import { useAuthStore } from '../../stores/auth.store';
 import { useUiStore } from '../../stores/ui.store';
 import { chatService, Conversation, Message, ChatUser } from '../../services/chat.service';
 
-let socket: Socket | null = null;
 
 export const FloatingChat: React.FC = () => {
   const { user } = useAuthStore();
@@ -21,7 +20,8 @@ export const FloatingChat: React.FC = () => {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const typingTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const latestSearchRef = useRef('');
-  
+  const [socket, setSocket] = useState<Socket | null>(null);
+
   const { addToast } = useUiStore();
   const activeConvRef = useRef<Conversation | null>(null);
   const isOpenRef = useRef<boolean>(false);
@@ -32,17 +32,20 @@ export const FloatingChat: React.FC = () => {
   }, [activeConv, isOpen]);
 
   useEffect(() => {
-    if (user && !socket) {
-      // Fix Socket URL by stripping /api from backend URL
-      const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-      const socketUrl = apiUrl.replace(/\/api\/?$/, '');
+    if (!user) return;
+    
+    // Fix Socket URL by stripping /api from backend URL
+    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
+    const socketUrl = apiUrl.replace(/\/api\/?$/, '');
 
-      // Initialize socket
-      socket = io(socketUrl, {
-        query: { userId: user.id },
-      });
+    // Initialize socket
+    const newSocket = io(socketUrl, {
+      query: { userId: user.id },
+    });
 
-      socket.on('newMessage', (msg: Message & { sender?: ChatUser }) => {
+    setSocket(newSocket);
+
+    newSocket.on('newMessage', (msg: Message & { sender?: ChatUser }) => {
         setMessages(prev => {
           // If the message is for the currently open conversation (or from the user we are chatting with), append it
           const isActiveChat = activeConvRef.current && 
@@ -72,28 +75,33 @@ export const FloatingChat: React.FC = () => {
         loadConversations(); // refresh unread count / last message
       });
 
-      socket.on('messageSent', (msg: Message) => {
-        setMessages(prev => [...prev, msg]);
-        loadConversations();
-        
-        // Update temp conversation ID to real ID if this is the first message sent
-        setActiveConv(prev => {
-          if (prev?.id === 'temp') {
-            return { ...prev, id: msg.conversationId };
-          }
-          return prev;
-        });
+    newSocket.on('messageSent', (msg: Message) => {
+      setMessages(prev => [...prev, msg]);
+      loadConversations();
+      
+      // Update temp conversation ID to real ID if this is the first message sent
+      setActiveConv(prev => {
+        if (prev?.id === 'temp') {
+          return { ...prev, id: msg.conversationId };
+        }
+        return prev;
       });
+    });
 
-      socket.on('userTyping', ({ userId, isTyping }: { userId: string, isTyping: boolean }) => {
-        setTypingUsers(prev => ({ ...prev, [userId]: isTyping }));
-      });
+    newSocket.on('userTyping', ({ userId, isTyping }: { userId: string, isTyping: boolean }) => {
+      setTypingUsers(prev => ({ ...prev, [userId]: isTyping }));
+    });
 
-      socket.on('messagesRead', ({ conversationId }: { conversationId: string }) => {
-        setMessages(prev => prev.map(m => (m.conversationId === conversationId ? { ...m, isRead: true } : m)));
-      });
-    }
+    newSocket.on('messagesRead', ({ conversationId }: { conversationId: string }) => {
+      setMessages(prev => prev.map(m => (m.conversationId === conversationId ? { ...m, isRead: true } : m)));
+    });
 
+    return () => {
+      newSocket.disconnect();
+    };
+  }, [user]);
+
+  useEffect(() => {
     // Listen for custom event to open chat from toast click
     const handleOpenChat = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -108,7 +116,7 @@ export const FloatingChat: React.FC = () => {
     return () => {
       window.removeEventListener('openChat', handleOpenChat);
     };
-  }, [user]);
+  }, [conversations]); // Dependency added to ensure we have conversations loaded if possible
 
   useEffect(() => {
     if (isOpen) {

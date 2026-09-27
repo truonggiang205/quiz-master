@@ -102,6 +102,7 @@ export class SubmissionsService {
       const studentAns = (dto.answers || []).find((a) => a.questionId === q.id);
       const selected = studentAns ? studentAns.selectedOptionIds || [] : [];
       let essayImageUrl = studentAns ? studentAns.essayImageUrl : undefined;
+      let essayText = studentAns ? studentAns.essayText : undefined;
 
       if (q.type === 'ESSAY') {
         if (essayImageUrl) {
@@ -126,6 +127,7 @@ export class SubmissionsService {
         answers.push({
           questionId: q.id,
           essayImageUrl,
+          essayText,
           isCorrect: undefined, // Pending manual grading
           scoreAwarded: 0,
         });

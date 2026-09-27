@@ -4,6 +4,7 @@ export interface StudentAnswer {
   questionId: string;
   selectedOptionIds?: string[];
   essayImageUrl?: string;
+  essayText?: string;
   isCorrect?: boolean;
   scoreAwarded: number;
 }

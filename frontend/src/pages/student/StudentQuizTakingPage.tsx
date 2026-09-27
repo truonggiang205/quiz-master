@@ -21,6 +21,7 @@ export const StudentQuizTakingPage: React.FC = () => {
     currentQuestionIndex,
     answers,
     essayAnswers,
+    essayTextAnswers,
     flaggedQuestionIds,
     remainingSeconds,
     initQuizTaking,
@@ -28,6 +29,7 @@ export const StudentQuizTakingPage: React.FC = () => {
     toggleMultipleAnswer,
     addEssayAnswer,
     removeEssayAnswer,
+    setEssayTextAnswer,
     toggleFlagQuestion,
     nextQuestion,
     prevQuestion,
@@ -115,6 +117,7 @@ export const StudentQuizTakingPage: React.FC = () => {
           questionId: q.id,
           selectedOptionIds: answers[q.id] || [],
           essayImageUrl: essayArr.join('|||'),
+          essayText: essayTextAnswers[q.id] || '',
         };
       });
 
@@ -143,7 +146,7 @@ export const StudentQuizTakingPage: React.FC = () => {
       });
       setIsSubmitting(false);
     }
-  }, [id, currentQuiz, isSubmitting, answers, essayAnswers, questions, remainingSeconds, addToast, resetExam, navigate]);
+  }, [id, currentQuiz, isSubmitting, answers, essayAnswers, essayTextAnswers, questions, remainingSeconds, addToast, resetExam, navigate]);
 
   const handleTimeExpired = useCallback(() => {
     addToast({
@@ -170,7 +173,7 @@ export const StudentQuizTakingPage: React.FC = () => {
   const isFlagged = flaggedQuestionIds.includes(currentQ.id);
 
   const answeredCount = questions.filter(
-    (q) => (answers[q.id] && answers[q.id].length > 0) || essayAnswers[q.id],
+    (q) => (answers[q.id] && answers[q.id].length > 0) || essayAnswers[q.id] || essayTextAnswers[q.id],
   ).length;
   const unansweredCount = questions.length - answeredCount;
   const progressPercent = Math.round((answeredCount / questions.length) * 100);
@@ -234,6 +237,8 @@ export const StudentQuizTakingPage: React.FC = () => {
                 ? essayAnswers[currentQ.id] 
                 : (essayAnswers[currentQ.id] ? [essayAnswers[currentQ.id] as unknown as string] : [])
             }
+            essayText={essayTextAnswers[currentQ.id] || ''}
+            onEssayTextChange={(text) => setEssayTextAnswer(currentQ.id, text)}
             onToggleFlag={() => toggleFlagQuestion(currentQ.id)}
           />
 

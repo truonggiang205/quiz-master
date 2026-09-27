@@ -17,6 +17,11 @@ export class SubmittedAnswerDto {
   @IsOptional()
   @IsString()
   essayImageUrl?: string;
+
+  @ApiPropertyOptional({ example: 'Đây là câu trả lời tự luận' })
+  @IsOptional()
+  @IsString()
+  essayText?: string;
 }
 
 export class SubmitQuizDto {

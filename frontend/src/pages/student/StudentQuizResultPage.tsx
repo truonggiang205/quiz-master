@@ -173,18 +173,30 @@ export const StudentQuizResultPage: React.FC = () => {
                     <img src={item.questionImageUrl.startsWith('http') ? item.questionImageUrl : `http://localhost:3000${item.questionImageUrl}`} alt="Đề bài" className="w-full max-h-[800px] rounded-xl object-contain border border-slate-200 dark:border-slate-700" />
                   )}
 
-                  {/* Options with colored feedback or Essay Image */}
+                  {/* Options with colored feedback or Essay Image/Text */}
                   <div className="space-y-2 pt-1">
-                    {item.questionType === 'ESSAY' && item.essayImageUrl ? (
-                      <div className="mt-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col items-center">
-                        <span className="text-xs font-bold text-slate-500 mb-2">Ảnh bài làm của bạn:</span>
-                        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
-                          {item.essayImageUrl.split('|||').map((url, i) => (
-                            <img key={i} src={url.startsWith('http') ? url : `http://localhost:3000${url}`} alt={`Bài làm tự luận ${i+1}`} className="w-full max-h-[800px] rounded-lg object-contain border border-slate-300 dark:border-slate-600" />
-                          ))}
-                        </div>
+                    {item.questionType === 'ESSAY' && (item.essayImageUrl || item.essayText) ? (
+                      <div className="mt-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-4">
+                        {item.essayText && (
+                          <div>
+                            <span className="text-xs font-bold text-slate-500 mb-2 block">Câu trả lời văn bản:</span>
+                            <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">
+                              {item.essayText}
+                            </div>
+                          </div>
+                        )}
+                        {item.essayImageUrl && (
+                          <div>
+                            <span className="text-xs font-bold text-slate-500 mb-2 block">Ảnh bài làm của bạn:</span>
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
+                              {item.essayImageUrl.split('|||').map((url, i) => (
+                                <img key={i} src={url.startsWith('http') ? url : `http://localhost:3000${url}`} alt={`Bài làm tự luận ${i+1}`} className="w-full max-h-[800px] rounded-lg object-contain border border-slate-300 dark:border-slate-600" />
+                              ))}
+                            </div>
+                          </div>
+                        )}
                       </div>
-                    ) : item.options.map((opt, optIdx) => {
+                    ) : item.options?.map((opt, optIdx) => {
                       const isStudentSelected = (item.selectedOptionIds || []).includes(opt.id);
                       const isActuallyCorrect = opt.isCorrect;
 

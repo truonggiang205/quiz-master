@@ -17,8 +17,10 @@ interface QuestionCardProps {
   onSelectOption: (optionId: string) => void;
   onToggleFlag: () => void;
   essayImageUrls?: string[];
+  essayText?: string;
   onUploadEssayImage?: (url: string) => void;
   onRemoveEssayImage?: (index: number) => void;
+  onEssayTextChange?: (text: string) => void;
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -30,8 +32,10 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   onSelectOption,
   onToggleFlag,
   essayImageUrls = [],
+  essayText = '',
   onUploadEssayImage,
   onRemoveEssayImage,
+  onEssayTextChange,
 }) => {
   const [isUploading, setIsUploading] = React.useState(false);
   const isMultiple = question.type === 'MULTIPLE_CHOICE';
@@ -119,7 +123,19 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         {/* Answer Options or Essay Upload */}
         {question.type === 'ESSAY' ? (
           <div className="space-y-4">
-            <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-6 bg-slate-50 dark:bg-slate-900/50">
+            <div className="space-y-2">
+              <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Trả lời bằng văn bản (Tùy chọn):</label>
+              <textarea
+                value={essayText}
+                onChange={(e) => onEssayTextChange?.(e.target.value)}
+                placeholder="Nhập câu trả lời của bạn vào đây..."
+                className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/50 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow resize-y"
+              />
+            </div>
+            <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-6 bg-slate-50 dark:bg-slate-900/50 mt-4">
+              <div className="mb-4">
+                <span className="text-sm font-semibold text-slate-700 dark:text-slate-300">Hoặc tải lên hình ảnh bài làm (Tùy chọn):</span>
+              </div>
               {essayImageUrls.length > 0 ? (
                 <div className="space-y-4">
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -149,7 +165,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 <div className="flex flex-col items-center justify-center py-4">
                   <ImageIcon className="w-10 h-10 text-slate-400 mb-3" />
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-center">
-                    Tải ảnh chụp bài làm tự luận của bạn lên đây (Định dạng: JPG, PNG)
+                    (Định dạng: JPG, PNG)
                   </p>
                   <label className={`cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${isUploading ? 'bg-slate-200 text-slate-500' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
                     <Upload className="w-4 h-4" /> {isUploading ? 'Đang tải...' : 'Chọn ảnh tải lên'}

@@ -1,4 +1,5 @@
 import { create } from 'zustand';
+import { apiClient } from '../services/api';
 import { User, UserRole } from '../types/user';
 import { MOCK_USERS } from '../mocks/users';
 
@@ -12,6 +13,7 @@ interface AuthState {
   setUser: (user: User) => void;
   setAuthSession: (user: User, token: string) => void;
   quickLoginAs: (role: UserRole) => void;
+  checkAuth: () => Promise<void>;
 }
 
 const STORAGE_USER_KEY = 'quizmaster_auth_user';
@@ -72,6 +74,20 @@ export const useAuthStore = create<AuthState>((set) => ({
       isAuthenticated: true,
       isLoading: false,
     });
+  },
+
+  checkAuth: async () => {
+    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+    if (!token) return;
+    try {
+      const res = await apiClient.get('/users/me');
+      const updatedUser = res.data.data;
+      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(updatedUser));
+      set({ user: updatedUser, isAuthenticated: true });
+    } catch (e) {
+      console.error('Failed to check auth', e);
+      // Optional: clear auth state if token is invalid (handled by interceptor)
+    }
   },
 
   logout: () => {

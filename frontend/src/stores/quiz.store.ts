@@ -9,6 +9,7 @@ interface QuizTakingState {
   currentQuestionIndex: number;
   answers: Record<string, string[]>; // questionId -> array of selected optionIds
   essayAnswers: Record<string, string[]>; // questionId -> array of uploaded image urls
+  essayTextAnswers: Record<string, string>; // questionId -> text answer
   flaggedQuestionIds: string[]; // questionIds marked for review
   remainingSeconds: number;
   isTimerRunning: boolean;
@@ -20,6 +21,7 @@ interface QuizTakingState {
   toggleMultipleAnswer: (questionId: string, optionId: string) => void;
   addEssayAnswer: (questionId: string, url: string) => void;
   removeEssayAnswer: (questionId: string, index: number) => void;
+  setEssayTextAnswer: (questionId: string, text: string) => void;
   toggleFlagQuestion: (questionId: string) => void;
   goToQuestion: (index: number) => void;
   nextQuestion: () => void;
@@ -37,6 +39,7 @@ export const useQuizStore = create<QuizTakingState>()(
   currentQuestionIndex: 0,
   answers: {},
   essayAnswers: {},
+  essayTextAnswers: {},
   flaggedQuestionIds: [],
   remainingSeconds: 0,
   isTimerRunning: false,
@@ -58,6 +61,7 @@ export const useQuizStore = create<QuizTakingState>()(
       currentQuestionIndex: 0,
       answers: {},
       essayAnswers: {},
+      essayTextAnswers: {},
       flaggedQuestionIds: [],
       remainingSeconds: totalSeconds,
       isTimerRunning: true,
@@ -117,6 +121,15 @@ export const useQuizStore = create<QuizTakingState>()(
     });
   },
 
+  setEssayTextAnswer: (questionId: string, text: string) => {
+    set((state) => ({
+      essayTextAnswers: {
+        ...state.essayTextAnswers,
+        [questionId]: text,
+      }
+    }));
+  },
+
   toggleFlagQuestion: (questionId: string) => {
     const list = get().flaggedQuestionIds;
     const updated = list.includes(questionId)
@@ -164,6 +177,7 @@ export const useQuizStore = create<QuizTakingState>()(
       currentQuestionIndex: 0,
       answers: {},
       essayAnswers: {},
+      essayTextAnswers: {},
       flaggedQuestionIds: [],
       remainingSeconds: 0,
       isTimerRunning: false,
@@ -180,6 +194,7 @@ export const useQuizStore = create<QuizTakingState>()(
         currentQuestionIndex: state.currentQuestionIndex,
         answers: state.answers,
         essayAnswers: state.essayAnswers,
+        essayTextAnswers: state.essayTextAnswers,
         flaggedQuestionIds: state.flaggedQuestionIds,
         remainingSeconds: state.remainingSeconds,
         isTimerRunning: state.isTimerRunning,

@@ -161,17 +161,30 @@ export const TeacherGradingPage: React.FC = () => {
             </div>
 
             {ans.questionType === 'ESSAY' ? (
-              <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
-                <h4 className="text-xs font-bold text-slate-500 uppercase mb-3">Bài làm của học sinh:</h4>
-                {ans.essayImageUrl ? (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-2">
-                    {ans.essayImageUrl.split('|||').map((url, i) => (
-                      <img key={i} src={url.startsWith('http') ? url : `http://localhost:3000${url}`} alt={`Bài làm tự luận ${i+1}`} className="max-w-full rounded-xl object-contain border border-slate-200" style={{ maxHeight: '400px' }} />
-                    ))}
+              <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col gap-4">
+                <h4 className="text-xs font-bold text-slate-500 uppercase">Bài làm của học sinh:</h4>
+                
+                {ans.essayText && (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500 mb-1 block">Văn bản:</span>
+                    <div className="p-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-sm text-slate-700 dark:text-slate-200 whitespace-pre-wrap">
+                      {ans.essayText}
+                    </div>
                   </div>
-                ) : (
-                  <p className="text-slate-400 italic">Học sinh chưa nộp bài tự luận hoặc chỉ gửi đáp án văn bản (hiện tại hỗ trợ nộp ảnh).</p>
                 )}
+                
+                {ans.essayImageUrl ? (
+                  <div>
+                    <span className="text-xs font-semibold text-slate-500 mb-1 block">Hình ảnh đính kèm:</span>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
+                      {ans.essayImageUrl.split('|||').map((url, i) => (
+                        <img key={i} src={url.startsWith('http') ? url : `http://localhost:3000${url}`} alt={`Bài làm tự luận ${i+1}`} className="max-w-full rounded-xl object-contain border border-slate-200" style={{ maxHeight: '400px' }} />
+                      ))}
+                    </div>
+                  </div>
+                ) : !ans.essayText ? (
+                  <p className="text-slate-400 italic">Học sinh chưa nộp bài tự luận.</p>
+                ) : null}
               </div>
             ) : (
               <div className="space-y-2">

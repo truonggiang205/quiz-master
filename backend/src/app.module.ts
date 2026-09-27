@@ -11,6 +11,7 @@ import {
 import { NotificationEntity } from './entities/notification.entity.js';
 import { AppealEntity } from './entities/appeal.entity.js';
 import { ConversationEntity, MessageEntity } from './entities/chat.entity.js';
+import { BugReportEntity } from './entities/bug-report.entity.js';
 import { AuthModule } from './modules/auth/auth.module.js';
 import { UsersModule } from './modules/users/users.module.js';
 import { QuizzesModule } from './modules/quizzes/quizzes.module.js';
@@ -24,6 +25,7 @@ import { AdminModule } from './modules/admin/admin.module.js';
 import { NotificationsModule } from './modules/notifications/notifications.module.js';
 import { AppealsModule } from './modules/appeals/appeals.module.js';
 import { ChatModule } from './modules/chat/chat.module.js';
+import { BugReportModule } from './modules/bug-report/bug-report.module.js';
 import { LoggerMiddleware } from './common/middleware/logger.middleware.js';
 
 dotenv.config();
@@ -40,7 +42,7 @@ dotenv.config();
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [UserEntity, QuizEntity, QuestionEntity, SubmissionEntity, ClassEntity, NotificationEntity, AppealEntity, ConversationEntity, MessageEntity],
+      entities: [UserEntity, QuizEntity, QuestionEntity, SubmissionEntity, ClassEntity, NotificationEntity, AppealEntity, ConversationEntity, MessageEntity, BugReportEntity],
       synchronize: true, // Auto creates and syncs tables with Aiven MySQL
       logging: false,
     }),
@@ -57,6 +59,7 @@ dotenv.config();
     NotificationsModule,
     AppealsModule,
     ChatModule,
+    BugReportModule,
   ],
 })
 export class AppModule implements NestModule {

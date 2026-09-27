@@ -86,7 +86,7 @@ export class UploadController {
       if (!response.ok) {
         const err = await response.text();
         const errorMessage = err.trim().startsWith('<') 
-          ? 'URL API Parser sai hoặc server trả về trang web thay vì JSON.' 
+          ? `URL API Parser đang gọi là [${pythonUrl}/parse-document] nhưng server lại trả về trang HTML thay vì JSON. Trích xuất: ${err.substring(0, 40)}...` 
           : err;
         throw new BadRequestException('Lỗi từ Python Parser: ' + errorMessage);
       }

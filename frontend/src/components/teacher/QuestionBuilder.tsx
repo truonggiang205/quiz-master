@@ -1,6 +1,6 @@
 import React from 'react';
 import { Question, QuestionType, AnswerOption } from '../../types/question';
-import { Plus, Trash2, Copy, CheckCircle, Circle, Square, CheckSquare, Upload, Image as ImageIcon, X, Save } from 'lucide-react';
+import { Plus, Trash2, Copy, CheckCircle, Circle, Square, CheckSquare, Upload, Image as ImageIcon, X, Save, RefreshCw } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadService } from '../../services/upload.service';
 
@@ -260,6 +260,19 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                       }
                       className="w-16 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700 px-2 py-1 text-center font-bold text-slate-800 dark:text-white"
                     />
+                    {questions.length > 1 && (
+                      <button
+                        type="button"
+                        title={`Đồng bộ tất cả câu hỏi về ${q.score} điểm`}
+                        onClick={() => {
+                          const newScore = q.score;
+                          onChange(questions.map(qq => ({ ...qq, score: newScore })));
+                        }}
+                        className="p-1 rounded-lg text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
+                      >
+                        <RefreshCw className="w-3.5 h-3.5" />
+                      </button>
+                    )}
                   </div>
 
                   <button

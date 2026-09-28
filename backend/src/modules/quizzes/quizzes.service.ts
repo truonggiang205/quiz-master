@@ -5,6 +5,7 @@ import { QuizEntity, QuizStatus, QuestionEntity, SubmissionEntity, ClassEntity, 
 import { CreateQuizDto } from './dto/create-quiz.dto.js';
 import { UpdateQuizDto } from './dto/update-quiz.dto.js';
 import { UploadService } from '../upload/upload.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 @Injectable()
 export class QuizzesService {
@@ -17,7 +18,10 @@ export class QuizzesService {
     private readonly submissionRepo: Repository<SubmissionEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
+    @InjectRepository(ClassEntity)
+    private readonly classRepo: Repository<ClassEntity>,
     private readonly uploadService: UploadService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getAllQuizzes(userRole?: string, userId?: string) {
@@ -39,8 +43,8 @@ export class QuizzesService {
       });
       const classIds = user?.classes?.map(c => c.id) || [];
 
+      // Students only see quizzes assigned to their class or directly to them (NOT "all" mode)
       qb.andWhere(`(
-        (quiz.classId IS NULL AND (quiz.assignedStudentIds IS NULL OR JSON_LENGTH(quiz.assignedStudentIds) = 0)) OR
         (quiz.classId IN (:...classIds)) OR
         (JSON_CONTAINS(quiz.assignedStudentIds, :userIdStr))
       )`, { 
@@ -166,7 +170,36 @@ export class QuizzesService {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
     }
     quiz.status = 'PUBLISHED';
-    return this.quizRepo.save(quiz);
+    await this.quizRepo.save(quiz);
+
+    // Gửi thông báo cho các học sinh liên quan
+    const studentIds: string[] = [];
+
+    if (quiz.classId) {
+      // Giao theo lớp: lấy danh sách học sinh trong lớp
+      const classEntity = await this.classRepo.findOne({
+        where: { id: quiz.classId },
+        relations: { students: true },
+      });
+      if (classEntity?.students) {
+        studentIds.push(...classEntity.students.map(s => s.id));
+      }
+    } else if (quiz.assignedStudentIds && quiz.assignedStudentIds.length > 0) {
+      // Giao theo học sinh 1-1
+      studentIds.push(...quiz.assignedStudentIds);
+    }
+
+    for (const sid of studentIds) {
+      await this.notificationsService.createPersonalNotification(
+        sid,
+        `Bài kiểm tra mới: ${quiz.title}`,
+        `Giáo viên vừa giao bài kiểm tra "${quiz.title}" cho bạn. Hãy vào làm bài nhé!`,
+        `/student/quizzes`,
+        'Xem bài kiểm tra',
+      );
+    }
+
+    return quiz;
   }
 
   async unpublishQuiz(id: string) {

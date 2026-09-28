@@ -76,6 +76,15 @@ export class StudentsService {
     student.teachers.push(teacher);
     await this.userRepo.save(student);
 
+    // Gửi thông báo về cho giáo viên
+    await this.notificationsService.createPersonalNotification(
+      teacher.id,
+      `Học sinh ${student.name} đã chấp nhận lời mời`,
+      `${student.name} (${student.email}) đã chấp nhận lời mời và tham gia vào danh sách học sinh của bạn.`,
+      `/teacher/students`,
+      'Xem danh sách học sinh',
+    );
+
     return { success: true, teacherName: teacher.name };
   }
 

@@ -36,7 +36,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
   const [isLoadingBank, setIsLoadingBank] = useState(false);
 
   // Assignment settings
-  const [assignMode, setAssignMode] = useState<'ALL' | 'CLASS' | 'STUDENTS'>('ALL');
+  const [assignMode, setAssignMode] = useState<'CLASS' | 'STUDENTS'>('CLASS');
   const [classId, setClassId] = useState<string>('');
   const [assignedStudentIds, setAssignedStudentIds] = useState<string[]>([]);
   
@@ -76,6 +76,8 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
           } else if (quiz.assignedStudentIds && quiz.assignedStudentIds.length > 0) {
             setAssignMode('STUDENTS');
             setAssignedStudentIds(quiz.assignedStudentIds);
+          } else {
+            setAssignMode('CLASS'); // default to class if no assignment set
           }
 
           if (quiz.startTime) {
@@ -480,11 +482,6 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             </div>
             
             <div className="flex gap-2 mb-2">
-              <button
-                type="button"
-                onClick={() => setAssignMode('ALL')}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${assignMode === 'ALL' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
-              >Tất cả</button>
               <button
                 type="button"
                 onClick={() => setAssignMode('CLASS')}

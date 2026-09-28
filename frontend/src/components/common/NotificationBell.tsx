@@ -63,7 +63,19 @@ export const NotificationBell: React.FC = () => {
     <div className="relative" ref={dropdownRef}>
       {/* Bell Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={async () => {
+          const willOpen = !isOpen;
+          setIsOpen(willOpen);
+          if (willOpen && unreadCount > 0) {
+            // Auto-mark all as read when opening the dropdown
+            try {
+              await notificationService.markAllAsRead();
+              setNotifications(prev => prev.map(n => ({ ...n, isRead: true })));
+            } catch {
+              // fail silently
+            }
+          }
+        }}
         className="w-[44px] h-[44px] rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all relative group"
       >
         {unreadCount > 0 ? (

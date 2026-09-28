@@ -85,10 +85,11 @@ export class UploadController {
 
       if (!response.ok) {
         const err = await response.text();
-        const errorMessage = err.trim().startsWith('<') 
-          ? `Server Python có thể đang ngủ đông và đang khởi động lại (Render). Vui lòng đợi 30s-1p và thử lại. (HTML trả về)` 
-          : err;
-        throw new BadRequestException('Lỗi từ Python Parser: ' + errorMessage);
+        if (err.trim().startsWith('<')) {
+          console.error('[Python Parser HTML Error]:', err.substring(0, 500));
+          throw new BadRequestException('Lỗi từ Python Parser: Server Python có thể đang ngủ đông và đang khởi động lại (Render). Vui lòng đợi 30s-1p và thử lại. (HTML trả về)');
+        }
+        throw new BadRequestException('Lỗi từ Python Parser: ' + err);
       }
 
       const textData = await response.text();
@@ -97,8 +98,10 @@ export class UploadController {
         data = JSON.parse(textData);
       } catch (e) {
         if (textData.trim().startsWith('<')) {
+          console.error('[Python Parser HTML Response (200 OK)]:', textData.substring(0, 500));
           throw new BadRequestException('Lỗi từ Python Parser: Server Python có thể đang ngủ đông. Vui lòng đợi 30s-1p và thử lại.');
         }
+        console.error('[Python Parser Invalid JSON]:', textData.substring(0, 500));
         throw new BadRequestException('Lỗi từ Python Parser: Phản hồi không phải JSON hợp lệ.');
       }
 

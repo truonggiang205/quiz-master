@@ -40,6 +40,12 @@ export class QuestionEntity {
   @Column({ type: 'double', default: 2.0 })
   score: number;
 
+  @Column({ type: 'int', default: 0 })
+  points: number;
+
+  @Column({ type: 'boolean', default: false })
+  isLocked: boolean;
+
   @Column({ type: 'text', nullable: true })
   explanation: string;
 

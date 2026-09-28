@@ -109,7 +109,7 @@ export const StudentDashboard: React.FC = () => {
         />
         <StatCard
           title="Điểm trung bình"
-          value={`${stats.averageScore}/10`}
+          value={`${(stats.averageScore / 100).toFixed(2)}/10.00`}
           subtitle="Tỷ lệ đạt chuẩn tốt"
           icon={<Award className="w-5 h-5" />}
           variant="peach"
@@ -117,7 +117,7 @@ export const StudentDashboard: React.FC = () => {
         />
         <StatCard
           title="Điểm cao nhất"
-          value={`${stats.highestScore}/10`}
+          value={`${(stats.highestScore / 100).toFixed(2)}/10.00`}
           subtitle="Thành tích kỷ lục"
           icon={<TrendingUp className="w-5 h-5" />}
           variant="sky"
@@ -189,9 +189,9 @@ export const StudentDashboard: React.FC = () => {
               <div className="flex items-center gap-4 self-end sm:self-auto">
                 <div className="text-right">
                   <span className="text-base font-bold text-indigo-600 dark:text-indigo-400">
-                    {sub.score}
+                    {(sub.score / 100).toFixed(2)}
                   </span>
-                  <span className="text-xs text-slate-400 font-normal"> / {sub.maxScore}</span>
+                  <span className="text-xs text-slate-400 font-normal"> / {((sub.maxScore || 1000) / 100).toFixed(2)}</span>
                 </div>
 
                 <Link

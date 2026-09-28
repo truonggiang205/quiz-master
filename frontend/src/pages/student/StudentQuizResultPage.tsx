@@ -154,7 +154,7 @@ export const StudentQuizResultPage: React.FC = () => {
                       {item.isCorrect ? (
                         <Badge variant="mint" size="sm">
                           <CheckCircle2 className="w-3.5 h-3.5" />
-                          Chính xác (+{item.scoreAwarded} điểm)
+                          Chính xác (+{((item.scoreAwarded || 0) / 100).toFixed(2)} điểm)
                         </Badge>
                       ) : (
                         <Badge variant="rose" size="sm">

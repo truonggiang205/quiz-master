@@ -25,7 +25,7 @@ export const TeacherGradingPage: React.FC = () => {
           const initialGrades: { [key: string]: number } = {};
           data.detailedAnswers?.forEach((ans) => {
             if (ans.questionType === 'ESSAY') {
-              initialGrades[ans.questionId] = ans.scoreAwarded || 0;
+              initialGrades[ans.questionId] = (ans.scoreAwarded || 0) / 100;
             }
           });
           setGrades(initialGrades);
@@ -45,8 +45,8 @@ export const TeacherGradingPage: React.FC = () => {
     if (numVal < 0) numVal = 0;
     if (numVal > maxScore) numVal = maxScore;
     
-    // Ensure step of 0.25
-    numVal = Math.round(numVal * 4) / 4;
+    // Ensure step of 0.25 or 0.01 depending on precision
+    numVal = Math.round(numVal * 100) / 100;
     setGrades(prev => ({ ...prev, [questionId]: numVal }));
   };
 
@@ -57,7 +57,7 @@ export const TeacherGradingPage: React.FC = () => {
     try {
       const gradesArray = Object.keys(grades).map(qId => ({
         questionId: qId,
-        scoreAwarded: grades[qId]
+        scoreAwarded: Math.round(grades[qId] * 100)
       }));
       await submissionService.gradeSubmission(submissionId, gradesArray);
       addToast({ type: 'success', title: 'Thành công', message: 'Đã lưu điểm và cập nhật kết quả!' });
@@ -102,7 +102,7 @@ export const TeacherGradingPage: React.FC = () => {
             <div className="text-right">
               <p className="text-xs text-slate-500 font-semibold uppercase">Tổng điểm hiện tại</p>
               <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
-                {submission.score} <span className="text-sm text-slate-400 font-normal">/ 10</span>
+                {(submission.score / 100).toFixed(2)} <span className="text-sm text-slate-400 font-normal">/ {((submission.maxScore || 1000) / 100).toFixed(2)}</span>
               </p>
             </div>
             <button
@@ -126,10 +126,10 @@ export const TeacherGradingPage: React.FC = () => {
                   {idx + 1}
                 </div>
                 {ans.questionType === 'ESSAY' ? (
-                  <Badge variant="sky">Tự luận ({ans.score}đ)</Badge>
+                  <Badge variant="sky">Tự luận ({(ans.score / 100).toFixed(2)}đ)</Badge>
                 ) : (
                   <Badge variant={ans.isCorrect ? 'mint' : 'rose'}>
-                    Trắc nghiệm ({ans.scoreAwarded || 0}/{ans.score}đ)
+                    Trắc nghiệm ({((ans.scoreAwarded || 0) / 100).toFixed(2)}/{(ans.score / 100).toFixed(2)}đ)
                   </Badge>
                 )}
               </div>
@@ -140,13 +140,13 @@ export const TeacherGradingPage: React.FC = () => {
                   <input
                     type="number"
                     min={0}
-                    max={ans.score}
+                    max={ans.score / 100}
                     step={0.25}
                     value={grades[ans.questionId] ?? 0}
-                    onChange={(e) => handleGradeChange(ans.questionId, e.target.value, ans.score)}
+                    onChange={(e) => handleGradeChange(ans.questionId, e.target.value, ans.score / 100)}
                     className="w-20 text-center font-bold px-2 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
                   />
-                  <span className="text-sm font-medium text-slate-500">/ {ans.score}</span>
+                  <span className="text-sm font-medium text-slate-500">/ {(ans.score / 100).toFixed(2)}</span>
                 </div>
               )}
             </div>

@@ -92,7 +92,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
 
           <div className="flex items-center gap-2.5">
             <span className="text-xs font-semibold text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-700/70 px-2.5 py-1 rounded-full">
-              {question.score} điểm
+              {((question.points || 0) / 100).toFixed(2)} điểm
             </span>
             <button
               type="button"

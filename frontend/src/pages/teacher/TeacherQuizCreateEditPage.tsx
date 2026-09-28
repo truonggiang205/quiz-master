@@ -11,6 +11,8 @@ import { useUiStore } from '../../stores/ui.store';
 import { uploadService } from '../../services/upload.service';
 import { ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Shield, Calendar, Users, UserPlus, Database } from 'lucide-react';
 import Latex from 'react-latex-next';
+import { rebalance } from '../../utils/points.util';
+
 export const TeacherQuizCreateEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
@@ -23,6 +25,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
   const [mode, setMode] = useState<'QUIZ' | 'PRACTICE'>('QUIZ');
   const [durationMinutes, setDurationMinutes] = useState(15);
   const [totalAttempts, setTotalAttempts] = useState(1);
+  const [totalPoints, setTotalPoints] = useState(1000); // Feature: 1000 = 10.00
   const [shuffleQuestions, setShuffleQuestions] = useState(true);
   const [shuffleAnswers, setShuffleAnswers] = useState(true);
   const [showScoreImmediately, setShowScoreImmediately] = useState(true);
@@ -64,6 +67,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
           setMode(quiz.mode || 'QUIZ');
           setDurationMinutes(quiz.durationMinutes);
           setTotalAttempts(quiz.totalAttempts);
+          setTotalPoints(quiz.totalPoints || 1000);
           setShuffleQuestions(quiz.shuffleQuestions);
           setShuffleAnswers(quiz.shuffleAnswers);
           setShowScoreImmediately(quiz.showScoreImmediately);
@@ -128,6 +132,8 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
           content: 'Nội dung câu hỏi số 1...',
           type: 'SINGLE_CHOICE',
           score: 2,
+          points: 1000,
+          isLocked: false,
           explanation: 'Lời giải chi tiết câu hỏi...',
           order: 1,
           options: [
@@ -176,6 +182,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         mode,
         durationMinutes: Number(durationMinutes),
         totalAttempts: Number(totalAttempts),
+        totalPoints: Number(totalPoints),
         shuffleQuestions,
         shuffleAnswers,
         showScoreImmediately,
@@ -419,7 +426,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         </div>
 
         {/* Configurations Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 pt-2">
+        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-5 gap-4 pt-2">
           <div>
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               Chế độ
@@ -470,6 +477,33 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               onChange={(e) => setTotalAttempts(Number(e.target.value))}
               className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-900 dark:text-white"
             />
+          </div>
+
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+              Thang điểm
+            </label>
+            <select
+              value={totalPoints}
+              onChange={(e) => {
+                const val = Number(e.target.value);
+                if (window.confirm('Thay đổi thang điểm sẽ chia lại toàn bộ điểm các câu hỏi hiện có. Bạn có chắc chắn?')) {
+                  setTotalPoints(val);
+                  setQuestions(prev => {
+                    try {
+                      return rebalance(prev.map(q => ({ ...q, isLocked: false })), val) as Question[];
+                    } catch {
+                      return prev;
+                    }
+                  });
+                }
+              }}
+              className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-900 dark:text-white focus:outline-none"
+            >
+              <option value={1000}>Thang 10 (10.00)</option>
+              <option value={10000}>Thang 100 (100.0)</option>
+              <option value={400}>Thang 4 (4.00)</option>
+            </select>
           </div>
         </div>
 
@@ -666,6 +700,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
       <QuestionBuilder 
         questions={questions} 
         onChange={setQuestions}
+        totalPoints={totalPoints}
         onImportFromBank={handleOpenBankModal}
         onSaveToBank={handleSaveToBank}
         onImportFromDocx={handleImportDocx}

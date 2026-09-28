@@ -153,7 +153,7 @@ export const TeacherDashboard: React.FC = () => {
         />
         <StatCard
           title="Điểm trung bình"
-          value={`${stats.averageScore}/10`}
+          value={`${(stats.averageScore / 100).toFixed(2)}/10.00`}
           subtitle="Thang điểm chuẩn 10"
           icon={<Award className="w-5 h-5" />}
           variant="peach"

@@ -1,12 +1,15 @@
 import React from 'react';
 import { Question, QuestionType, AnswerOption } from '../../types/question';
-import { Plus, Trash2, Copy, CheckCircle, Circle, Square, CheckSquare, Upload, Image as ImageIcon, X, Save, RefreshCw } from 'lucide-react';
+import { Plus, Trash2, Copy, CheckCircle, Circle, Square, CheckSquare, Upload, Image as ImageIcon, X, Save, RefreshCw, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadService } from '../../services/upload.service';
+import { rebalance } from '../../utils/points.util';
+import { useUiStore } from '../../stores/ui.store';
 
 interface QuestionBuilderProps {
   questions: Question[];
   onChange: (questions: Question[]) => void;
+  totalPoints: number;
   onImportFromBank?: () => void;
   onSaveToBank?: (qIndex: number) => void;
   onImportFromDocx?: (file: File) => void;
@@ -15,11 +18,22 @@ interface QuestionBuilderProps {
 export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
   questions,
   onChange,
+  totalPoints,
   onImportFromBank,
   onSaveToBank,
   onImportFromDocx,
 }) => {
   const [uploadingImageFor, setUploadingImageFor] = React.useState<number | null>(null);
+  const { addToast } = useUiStore();
+
+  const safeRebalance = (qs: Question[]) => {
+    try {
+      return rebalance(qs, totalPoints) as Question[];
+    } catch (e: any) {
+      addToast({ type: 'error', title: 'Lỗi chia điểm', message: e.message });
+      return qs;
+    }
+  };
 
   const handleAddQuestion = () => {
     const newQ: Question = {
@@ -28,6 +42,8 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
       content: '',
       type: 'SINGLE_CHOICE',
       score: 2,
+      points: 0,
+      isLocked: false,
       explanation: '',
       order: questions.length + 1,
       options: [
@@ -37,13 +53,22 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
         { id: `opt-${Date.now()}-4`, text: '', isCorrect: false },
       ],
     };
-    onChange([...questions, newQ]);
+    onChange(safeRebalance([...questions, newQ]));
   };
 
   const handleUpdateQuestion = (index: number, updated: Partial<Question>) => {
     const next = [...questions];
     next[index] = { ...next[index], ...updated };
-    onChange(next);
+    // If points are updated manually, we lock it and rebalance
+    if (updated.points !== undefined) {
+      next[index].isLocked = true;
+      onChange(safeRebalance(next));
+    } else if (updated.isLocked !== undefined) {
+      // Just rebalance if lock status changed
+      onChange(safeRebalance(next));
+    } else {
+      onChange(next);
+    }
   };
 
   const handleUploadQuestionImage = async (index: number, e: React.ChangeEvent<HTMLInputElement>) => {
@@ -65,7 +90,8 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
   };
 
   const handleDeleteQuestion = (index: number) => {
-    onChange(questions.filter((_, i) => i !== index));
+    const next = questions.filter((_, i) => i !== index);
+    onChange(safeRebalance(next));
   };
 
   const handleDuplicateQuestion = (index: number) => {
@@ -79,10 +105,11 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
         id: `opt-${Date.now()}-${i}`,
       })),
       order: questions.length + 1,
+      isLocked: false,
     };
     const next = [...questions];
     next.splice(index + 1, 0, duplicated);
-    onChange(next);
+    onChange(safeRebalance(next));
   };
 
   const handleTypeChange = (index: number, newType: QuestionType) => {
@@ -148,8 +175,49 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
     handleUpdateQuestion(qIndex, { options: newOptions });
   };
 
+  const currentTotalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
+  const isPointsBalanced = currentTotalPoints === totalPoints;
+  const pointDiff = totalPoints - currentTotalPoints;
+
   return (
     <div className="space-y-6">
+      {/* Sticky Points Bar */}
+      <div className={`sticky top-0 z-40 p-4 rounded-b-2xl border-x border-b shadow-sm backdrop-blur-md transition-colors ${isPointsBalanced ? 'bg-emerald-50/90 border-emerald-200 dark:bg-emerald-950/80 dark:border-emerald-800' : 'bg-rose-50/90 border-rose-200 dark:bg-rose-950/80 dark:border-rose-800'}`}>
+        <div className="flex flex-wrap items-center justify-between gap-4 max-w-5xl mx-auto">
+          <div className="flex items-center gap-3">
+            {isPointsBalanced ? (
+              <CheckCircle className="w-6 h-6 text-emerald-600 dark:text-emerald-400" />
+            ) : (
+              <AlertTriangle className="w-6 h-6 text-rose-600 dark:text-rose-400" />
+            )}
+            <div>
+              <h4 className={`text-sm font-bold ${isPointsBalanced ? 'text-emerald-800 dark:text-emerald-300' : 'text-rose-800 dark:text-rose-300'}`}>
+                Tổng điểm: {(currentTotalPoints / 100).toFixed(2)} / {(totalPoints / 100).toFixed(2)}
+              </h4>
+              {!isPointsBalanced && (
+                <p className="text-xs font-medium text-rose-600 dark:text-rose-400 mt-0.5">
+                  {pointDiff > 0 ? `Đang thiếu ${(pointDiff / 100).toFixed(2)}đ` : `Đang vượt ${(-pointDiff / 100).toFixed(2)}đ`}
+                </p>
+              )}
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => {
+              if (questions.some(q => q.isLocked) && !window.confirm('Có câu đang bị khóa. Bạn có chắc muốn mở khóa tất cả và chia đều lại?')) {
+                return;
+              }
+              const unlockedQs = questions.map(q => ({ ...q, isLocked: false }));
+              onChange(safeRebalance(unlockedQs));
+            }}
+            className="flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold bg-white/80 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 hover:bg-white text-slate-700 dark:text-slate-300 shadow-sm"
+          >
+            <RefreshCw className="w-4 h-4" />
+            Chia đều lại
+          </button>
+        </div>
+      </div>
+
       <div className="flex items-center justify-between">
         <div>
           <h3 className="text-base font-bold text-slate-900 dark:text-white">
@@ -246,34 +314,47 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                   </select>
                 </div>
 
-                <div className="flex items-center gap-2">
-                  {/* Score input */}
-                  <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400">
-                    <span>Điểm:</span>
-                    <input
-                      type="number"
-                      step="0.5"
-                      min="0.5"
-                      value={q.score}
-                      onChange={(e) =>
-                        handleUpdateQuestion(qIndex, { score: parseFloat(e.target.value) || 0 })
-                      }
-                      className="w-16 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700 px-2 py-1 text-center font-bold text-slate-800 dark:text-white"
-                    />
-                    {questions.length > 1 && (
-                      <button
-                        type="button"
-                        title={`Đồng bộ tất cả câu hỏi về ${q.score} điểm`}
-                        onClick={() => {
-                          const newScore = q.score;
-                          onChange(questions.map(qq => ({ ...qq, score: newScore })));
+                  <div className="flex items-center gap-2">
+                    <button
+                      type="button"
+                      onClick={() => handleUpdateQuestion(qIndex, { isLocked: !q.isLocked })}
+                      title={q.isLocked ? "Mở khóa điểm" : "Khóa điểm"}
+                      className={`p-1.5 rounded-lg transition-colors ${q.isLocked ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                    >
+                      {q.isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
+                    </button>
+                    {/* Points input */}
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title="Phần dư 0.01đ được cộng vào các câu đầu để tổng điểm khớp 100%">
+                      <span>Điểm:</span>
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={((q.points || 0) / 100).toFixed(2)}
+                        onChange={(e) => {
+                          const val = parseFloat(e.target.value);
+                          if (!isNaN(val)) {
+                            handleUpdateQuestion(qIndex, { points: Math.round(val * 100) });
+                          }
                         }}
-                        className="p-1 rounded-lg text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
-                      >
-                        <RefreshCw className="w-3.5 h-3.5" />
-                      </button>
-                    )}
-                  </div>
+                        className={`w-20 rounded-xl border px-2 py-1 text-center font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 ${q.isLocked ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-700'}`}
+                      />
+                      {questions.length > 1 && (
+                        <button
+                          type="button"
+                          title="Đặt mức điểm này làm mặc định cho tất cả câu"
+                          onClick={() => {
+                            if (window.confirm(`Bạn có muốn đặt điểm ${((q.points || 0) / 100).toFixed(2)} cho tất cả các câu? (Lưu ý: Nếu tổng điểm vượt mức, hệ thống sẽ cảnh báo khi xuất bản)`)) {
+                              const newPoints = q.points || 0;
+                              onChange(questions.map(qq => ({ ...qq, points: newPoints, isLocked: true })));
+                            }
+                          }}
+                          className="p-1 rounded-lg text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
+                        >
+                          <Copy className="w-3.5 h-3.5" />
+                        </button>
+                      )}
+                    </div>
 
                   <button
                     type="button"

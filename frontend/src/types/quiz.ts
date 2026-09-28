@@ -21,6 +21,7 @@ export interface Quiz {
   teacherName: string;
   questionCount: number;
   totalScore: number;
+  totalPoints: number;
   classId?: string | null;
   assignedStudentIds?: string[];
   createdAt: string;
@@ -42,4 +43,5 @@ export interface CreateQuizInput {
   showCorrectAnswers?: boolean;
   showExplanation?: boolean;
   answerReleaseAt?: string;
+  totalPoints?: number;
 }

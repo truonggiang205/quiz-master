@@ -32,9 +32,9 @@ export const ResultOverview: React.FC<ResultOverviewProps> = ({ submission }) =>
             transition={{ duration: 0.5, type: 'spring' }}
           >
             <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-              {submission.score}
+              {(submission.score / 100).toFixed(2)}
             </span>
-            <span className="text-slate-400 text-sm font-semibold"> / {submission.maxScore}</span>
+            <span className="text-slate-400 text-sm font-semibold"> / {(submission.maxScore / 100).toFixed(2)}</span>
           </motion.div>
 
           <div className="mt-2 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-100/70 dark:bg-indigo-950/80 px-3 py-1 rounded-full">

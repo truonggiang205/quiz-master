@@ -62,6 +62,16 @@ export class QuestionsController {
     return createSuccessResponse(updated, 'Cập nhật câu hỏi thành công');
   }
 
+  @Patch('quizzes/:quizId/questions/bulk')
+  @ApiOperation({ summary: 'Cập nhật hàng loạt câu hỏi (ví dụ: điểm số)' })
+  async bulkUpdateQuestions(
+    @Param('quizId') quizId: string,
+    @Body() dto: { questions: { id: string; points?: number; isLocked?: boolean }[] }
+  ) {
+    const updated = await this.questionsService.bulkUpdateQuestions(quizId, dto.questions);
+    return createSuccessResponse(updated, 'Cập nhật hàng loạt thành công');
+  }
+
   @Delete('questions/:id')
   @ApiOperation({ summary: 'Xóa câu hỏi (Teacher)' })
   async deleteQuestion(@Param('id') id: string) {

@@ -57,6 +57,17 @@ export class CreateQuestionDto {
   @Min(0)
   score!: number;
 
+  @ApiPropertyOptional({ example: 200, default: 0 })
+  @IsOptional()
+  @IsNumber()
+  @Min(0)
+  points?: number;
+
+  @ApiPropertyOptional({ example: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  isLocked?: boolean;
+
   @ApiPropertyOptional({ example: 'Giải thích chi tiết cách giải...' })
   @IsOptional()
   @IsString()

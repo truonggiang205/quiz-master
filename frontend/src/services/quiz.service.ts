@@ -62,6 +62,7 @@ export const quizService = {
       teacherName: 'Cô Nguyễn Thu Hà',
       questionCount: 0,
       totalScore: 0,
+      totalPoints: 1000,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString(),
     };

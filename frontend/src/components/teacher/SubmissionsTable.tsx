@@ -88,9 +88,9 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({ submissions 
                 </td>
                 <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
                   <span className="text-base text-indigo-600 dark:text-indigo-400">
-                    {s.score}
+                    {(s.score / 100).toFixed(2)}
                   </span>
-                  <span className="text-xs text-slate-400 font-normal"> / {s.maxScore}</span>
+                  <span className="text-xs text-slate-400 font-normal"> / {(s.maxScore / 100).toFixed(2)}</span>
                 </td>
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-2 text-xs">

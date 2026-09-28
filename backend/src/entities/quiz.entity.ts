@@ -64,6 +64,9 @@ export class QuizEntity {
   @Column({ type: 'double', default: 0 })
   totalScore: number;
 
+  @Column({ type: 'int', default: 1000 })
+  totalPoints: number;
+
   @Column({ type: 'varchar', length: 64, nullable: true })
   classId?: string | null;
 

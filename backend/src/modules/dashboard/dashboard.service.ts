@@ -40,13 +40,13 @@ export class DashboardService {
           )
         : 0;
 
-    // Score distribution for chart based on real submission data
+    // Score distribution for chart based on real submission data (using percentage to be scale-agnostic)
     const scoreDistribution = [
-      { range: '< 5.0', count: submissions.filter((s) => Number(s.score) < 5).length },
-      { range: '5.0 - 6.5', count: submissions.filter((s) => Number(s.score) >= 5 && Number(s.score) < 6.5).length },
-      { range: '6.5 - 8.0', count: submissions.filter((s) => Number(s.score) >= 6.5 && Number(s.score) < 8).length },
-      { range: '8.0 - 9.0', count: submissions.filter((s) => Number(s.score) >= 8 && Number(s.score) < 9).length },
-      { range: '9.0 - 10', count: submissions.filter((s) => Number(s.score) >= 9).length },
+      { range: '< 5.0', count: submissions.filter((s) => Number(s.percentage) < 50).length },
+      { range: '5.0 - 6.5', count: submissions.filter((s) => Number(s.percentage) >= 50 && Number(s.percentage) < 65).length },
+      { range: '6.5 - 8.0', count: submissions.filter((s) => Number(s.percentage) >= 65 && Number(s.percentage) < 80).length },
+      { range: '8.0 - 9.0', count: submissions.filter((s) => Number(s.percentage) >= 80 && Number(s.percentage) < 90).length },
+      { range: '9.0 - 10', count: submissions.filter((s) => Number(s.percentage) >= 90).length },
     ];
 
     // Activity trend

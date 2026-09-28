@@ -15,6 +15,8 @@ export interface Question {
   subject?: string;
   options: AnswerOption[];
   score: number;
+  points: number;
+  isLocked: boolean;
   explanation?: string;
   order: number;
 }

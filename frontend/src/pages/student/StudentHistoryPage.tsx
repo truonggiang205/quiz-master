@@ -151,11 +151,11 @@ export const StudentHistoryPage: React.FC = () => {
                       <div>
                         {isFullyGraded ? (
                           <div className="text-2xl font-black text-slate-800 dark:text-white leading-none">
-                            {sub.score}<span className="text-sm font-semibold text-slate-500 dark:text-slate-400">/{sub.maxScore || 10}</span>
+                            {(sub.score / 100).toFixed(2)}<span className="text-sm font-semibold text-slate-500 dark:text-slate-400">/{((sub.maxScore || 1000) / 100).toFixed(2)}</span>
                           </div>
                         ) : (
                           <div className="text-2xl font-black text-amber-600 dark:text-amber-500 leading-none">
-                            ...<span className="text-sm font-semibold text-slate-500 dark:text-slate-400">/{sub.maxScore || 10}</span>
+                            ...<span className="text-sm font-semibold text-slate-500 dark:text-slate-400">/{((sub.maxScore || 1000) / 100).toFixed(2)}</span>
                           </div>
                         )}
                       </div>

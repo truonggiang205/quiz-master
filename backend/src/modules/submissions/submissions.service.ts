@@ -155,7 +155,7 @@ export class SubmissionsService {
 
       if (isExactMatch) {
         correctCount++;
-        const scoreAwarded = Number(q.score) || 2.0;
+        const scoreAwarded = Number(q.points) || 0;
         totalScore += scoreAwarded;
         answers.push({
           questionId: q.id,
@@ -174,9 +174,9 @@ export class SubmissionsService {
       }
     }
 
-    const maxScore = quizQuestions.reduce((sum, q) => sum + (Number(q.score) || 0), 0) || 10;
+    const maxScore = quiz.totalPoints || quizQuestions.reduce((sum, q) => sum + (Number(q.points) || 0), 0) || 1000;
     const percentage = maxScore > 0 ? Number(((totalScore / maxScore) * 100).toFixed(1)) : 0;
-    const scaledScore = maxScore > 0 ? Number(((totalScore / maxScore) * 10).toFixed(1)) : 0;
+    const scaledScore = totalScore; // store raw points
 
     const submission = this.submissionRepo.create({
       id: `sub-${Date.now()}`,
@@ -187,7 +187,7 @@ export class SubmissionsService {
       studentEmail: student.email,
       studentAvatar: student.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256',
       score: scaledScore,
-      maxScore: 10,
+      maxScore: maxScore,
       percentage,
       correctCount,
       wrongCount,
@@ -231,7 +231,7 @@ export class SubmissionsService {
         questionContent: q.content,
         questionImageUrl: q.imageUrl,
         questionType: q.type,
-        score: Number(q.score) || 2,
+        score: Number(q.points) || 0,
         options: (q.options || []).map((opt) => ({
           id: opt.id,
           text: opt.text,
@@ -379,9 +379,9 @@ export class SubmissionsService {
       return ans;
     });
 
-    const maxScore = quizQuestions.reduce((sum, q) => sum + (Number(q.score) || 0), 0) || 10;
+    const maxScore = quiz.totalPoints || quizQuestions.reduce((sum, q) => sum + (Number(q.points) || 0), 0) || 1000;
     const percentage = maxScore > 0 ? Number(((totalRawScore / maxScore) * 100).toFixed(1)) : 0;
-    const scaledScore = maxScore > 0 ? Number(((totalRawScore / maxScore) * 10).toFixed(1)) : 0;
+    const scaledScore = totalRawScore;
 
     sub.score = scaledScore;
     sub.percentage = percentage;

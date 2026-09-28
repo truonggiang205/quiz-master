@@ -169,6 +169,23 @@ export class QuizzesService {
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
     }
+
+    // BE validate: tổng điểm các câu phải bằng total_points khi xuất bản, điểm mỗi câu >= 0 và là số nguyên.
+    const questions = await this.questionRepo.find({ where: { quizId: id } });
+    let currentTotalPoints = 0;
+    for (const q of questions) {
+      if (q.points < 0 || !Number.isInteger(q.points)) {
+        throw new BadRequestException(`Điểm của câu hỏi (ID: ${q.id}) phải là số nguyên >= 0.`);
+      }
+      currentTotalPoints += q.points;
+    }
+
+    if (currentTotalPoints !== quiz.totalPoints) {
+      const diff = quiz.totalPoints - currentTotalPoints;
+      const textDiff = diff > 0 ? `thiếu ${diff / 100}đ` : `thừa ${-diff / 100}đ`;
+      throw new BadRequestException(`Tổng điểm các câu hỏi (${currentTotalPoints / 100}đ) không khớp với thang điểm của bài thi (${quiz.totalPoints / 100}đ). Bạn đang ${textDiff}.`);
+    }
+
     quiz.status = 'PUBLISHED';
     await this.quizRepo.save(quiz);
 

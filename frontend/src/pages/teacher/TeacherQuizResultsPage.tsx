@@ -69,21 +69,21 @@ export const TeacherQuizResultsPage: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           title="Điểm trung bình"
-          value={`${statistics.averageScore}/10`}
+          value={`${(statistics.averageScore / 100).toFixed(2)}/10.00`}
           subtitle="Toàn bộ học sinh đã nộp"
           icon={<Award className="w-5 h-5" />}
           variant="lavender"
         />
         <StatCard
           title="Điểm cao nhất"
-          value={`${statistics.highestScore}/10`}
+          value={`${(statistics.highestScore / 100).toFixed(2)}/10.00`}
           subtitle="Thành tích cao nhất"
           icon={<TrendingUp className="w-5 h-5" />}
           variant="mint"
         />
         <StatCard
           title="Điểm thấp nhất"
-          value={`${statistics.lowestScore}/10`}
+          value={`${(statistics.lowestScore / 100).toFixed(2)}/10.00`}
           subtitle="Cần hỗ trợ ôn tập"
           icon={<TrendingUp className="w-5 h-5 rotate-180" />}
           variant="peach"

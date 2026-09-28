@@ -70,6 +70,10 @@ export const StudentQuizTakingPage: React.FC = () => {
         }
 
         initQuizTaking(quizData, questionsData);
+      } catch (err: any) {
+        addToast({ type: 'error', title: 'Không tìm thấy bài kiểm tra', message: 'Bài thi này đã bị xóa hoặc không còn khả dụng.' });
+        resetExam();
+        navigate('/student/quizzes');
       } finally {
         setLoading(false);
       }
@@ -79,7 +83,24 @@ export const StudentQuizTakingPage: React.FC = () => {
     return () => {
       // Don't reset exam if navigating to results
     };
-  }, [id, initQuizTaking, navigate, addToast]);
+  }, [id, initQuizTaking, navigate, addToast, resetExam]);
+
+  // Sync timer with wall clock on tab focus (handles cases where user was away)
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') {
+        const state = useQuizStore.getState();
+        if (state.isTimerRunning && state.startedAtMs && state.currentQuiz) {
+          const totalSeconds = state.currentQuiz.durationMinutes * 60;
+          const elapsedSeconds = Math.floor((Date.now() - state.startedAtMs) / 1000);
+          const correctedRemaining = Math.max(0, totalSeconds - elapsedSeconds);
+          useQuizStore.setState({ remainingSeconds: correctedRemaining });
+        }
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, []);
 
   // Prevent accidental refresh or tab close
   useEffect(() => {

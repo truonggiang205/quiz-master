@@ -12,6 +12,7 @@ interface QuizTakingState {
   essayTextAnswers: Record<string, string>; // questionId -> text answer
   flaggedQuestionIds: string[]; // questionIds marked for review
   remainingSeconds: number;
+  startedAtMs: number | null; // Epoch ms when the exam was started (wall clock)
   isTimerRunning: boolean;
   isSubmitModalOpen: boolean;
 
@@ -42,19 +43,25 @@ export const useQuizStore = create<QuizTakingState>()(
   essayTextAnswers: {},
   flaggedQuestionIds: [],
   remainingSeconds: 0,
+  startedAtMs: null,
   isTimerRunning: false,
   isSubmitModalOpen: false,
 
   initQuizTaking: (quiz: Quiz, questions: Question[]) => {
     const current = get();
-    // Resume same quiz
-    if (current.currentQuiz?.id === quiz.id) {
-      set({ currentQuiz: quiz, questions });
+    const nowMs = Date.now();
+    const totalSeconds = quiz.durationMinutes * 60;
+
+    // Resume same quiz in progress
+    if (current.currentQuiz?.id === quiz.id && current.isTimerRunning && current.startedAtMs) {
+      // Recalculate remaining based on wall clock to correct for offline time
+      const elapsedSeconds = Math.floor((nowMs - current.startedAtMs) / 1000);
+      const correctedRemaining = Math.max(0, totalSeconds - elapsedSeconds);
+      set({ currentQuiz: quiz, questions, remainingSeconds: correctedRemaining });
       return;
     }
 
-    // Duration in seconds
-    const totalSeconds = quiz.durationMinutes * 60;
+    // Brand-new attempt
     set({
       currentQuiz: quiz,
       questions,
@@ -64,6 +71,7 @@ export const useQuizStore = create<QuizTakingState>()(
       essayTextAnswers: {},
       flaggedQuestionIds: [],
       remainingSeconds: totalSeconds,
+      startedAtMs: nowMs,
       isTimerRunning: true,
       isSubmitModalOpen: false,
     });
@@ -180,6 +188,7 @@ export const useQuizStore = create<QuizTakingState>()(
       essayTextAnswers: {},
       flaggedQuestionIds: [],
       remainingSeconds: 0,
+      startedAtMs: null,
       isTimerRunning: false,
       isSubmitModalOpen: false,
     });
@@ -197,6 +206,7 @@ export const useQuizStore = create<QuizTakingState>()(
         essayTextAnswers: state.essayTextAnswers,
         flaggedQuestionIds: state.flaggedQuestionIds,
         remainingSeconds: state.remainingSeconds,
+        startedAtMs: state.startedAtMs,
         isTimerRunning: state.isTimerRunning,
       }),
     }

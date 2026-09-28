@@ -1,13 +1,16 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useRef } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useQuizStore } from '../../stores/quiz.store';
 import { Clock, AlertCircle, Play } from 'lucide-react';
+import { quizService } from '../../services/quiz.service';
 
 export const GlobalQuizTimer: React.FC = () => {
-  const { currentQuiz, remainingSeconds, isTimerRunning, decrementTimer } = useQuizStore();
+  const { currentQuiz, remainingSeconds, isTimerRunning, decrementTimer, resetExam, startedAtMs } = useQuizStore();
   const location = useLocation();
   const navigate = useNavigate();
+  const staleCheckDoneRef = useRef(false);
 
+  // Main countdown interval
   useEffect(() => {
     if (!isTimerRunning) return;
     const timer = setInterval(() => {
@@ -15,6 +18,55 @@ export const GlobalQuizTimer: React.FC = () => {
     }, 1000);
     return () => clearInterval(timer);
   }, [isTimerRunning, decrementTimer]);
+
+  // Correct timer drift when user returns to tab after being away
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && isTimerRunning && startedAtMs && currentQuiz) {
+        const totalSeconds = currentQuiz.durationMinutes * 60;
+        const elapsedSeconds = Math.floor((Date.now() - startedAtMs) / 1000);
+        const correctedRemaining = Math.max(0, totalSeconds - elapsedSeconds);
+        // Sync the store's remaining time with wall clock
+        useQuizStore.setState({ remainingSeconds: correctedRemaining });
+      }
+    };
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange);
+  }, [isTimerRunning, startedAtMs, currentQuiz]);
+
+  // Detect stale/orphaned exam state: quiz deleted or time truly elapsed
+  useEffect(() => {
+    if (!isTimerRunning || !currentQuiz || staleCheckDoneRef.current) return;
+    staleCheckDoneRef.current = true;
+
+    const checkStale = async () => {
+      // 1. Wall-clock check: if startedAtMs is set and time already ran out
+      if (startedAtMs) {
+        const totalSeconds = currentQuiz.durationMinutes * 60;
+        const elapsedSeconds = Math.floor((Date.now() - startedAtMs) / 1000);
+        if (elapsedSeconds >= totalSeconds) {
+          // Time truly expired, reset orphan state
+          resetExam();
+          return;
+        }
+      }
+
+      // 2. API check: verify quiz still exists and is still PUBLISHED
+      try {
+        await quizService.getQuizById(currentQuiz.id);
+      } catch {
+        // Quiz was deleted or unpublished — clear stale state
+        resetExam();
+      }
+    };
+
+    checkStale();
+  }, [isTimerRunning, currentQuiz, startedAtMs, resetExam]);
+
+  // Reset staleCheckDoneRef when quiz changes
+  useEffect(() => {
+    staleCheckDoneRef.current = false;
+  }, [currentQuiz?.id]);
 
   if (!isTimerRunning || !currentQuiz) return null;
 

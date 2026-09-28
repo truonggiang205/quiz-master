@@ -4,6 +4,10 @@ import { memoryStorage } from 'multer';
 import { UploadService } from './upload.service.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
+import { parseDocx } from './parsers/docx.parser.js';
+import { parsePdf } from './parsers/pdf.parser.js';
+import { parseQuestions } from './parsers/question.parser.js';
+import path from 'path';
 
 @Controller('upload')
 @UseGuards(JwtAuthGuard)
@@ -72,49 +76,27 @@ export class UploadController {
       throw new BadRequestException('No file uploaded');
     }
 
-    const formData = new FormData();
-    const blob = new Blob([new Uint8Array(file.buffer)], { type: file.mimetype });
-    formData.append('file', blob, file.originalname);
-
     try {
-      const pythonUrl = (process.env.PYTHON_SERVICE_URL || 'http://localhost:8000').replace(/\/+$/, '');
-      const response = await fetch(`${pythonUrl}/parse-document`, {
-        method: 'POST',
-        body: formData,
-      });
+      const ext = path.extname(file.originalname).toLowerCase();
+      let lines: any[];
 
-      if (!response.ok) {
-        const err = await response.text();
-        if (err.trim().startsWith('<')) {
-          console.error('[Python Parser HTML Error]:', err.substring(0, 500));
-          throw new BadRequestException('Lỗi từ Python Parser: Server Python có thể đang ngủ đông và đang khởi động lại (Render). Vui lòng đợi 30s-1p và thử lại. (HTML trả về)');
-        }
-        throw new BadRequestException('Lỗi từ Python Parser: ' + err);
+      if (ext === '.pdf') {
+        lines = await parsePdf(file.buffer);
+      } else if (ext === '.docx') {
+        lines = await parseDocx(file.buffer);
+      } else {
+        throw new BadRequestException('Chỉ hỗ trợ file .docx hoặc .pdf');
       }
 
-      const textData = await response.text();
-      let data: any;
-      try {
-        data = JSON.parse(textData);
-      } catch (e) {
-        if (textData.trim().startsWith('<')) {
-          console.error('[Python Parser HTML Response (200 OK)]:', textData.substring(0, 500));
-          throw new BadRequestException('Lỗi từ Python Parser: Server Python có thể đang ngủ đông. Vui lòng đợi 30s-1p và thử lại.');
-        }
-        console.error('[Python Parser Invalid JSON]:', textData.substring(0, 500));
-        throw new BadRequestException('Lỗi từ Python Parser: Phản hồi không phải JSON hợp lệ.');
-      }
+      const questions = parseQuestions(lines);
+      console.log(`[ParseDocument] Parsed ${questions.length} questions from ${file.originalname}`);
 
-      if (data.status !== 'success') {
-        throw new BadRequestException('Lỗi từ Python Parser: Phản hồi không thành công');
-      }
-      
-      return createSuccessResponse(data.data, 'Parsed successfully');
+      return createSuccessResponse(questions, 'Parsed successfully');
     } catch (error: any) {
-      if (error instanceof BadRequestException) {
-        throw error;
-      }
-      throw new BadRequestException('Không thể kết nối đến Python Parser: ' + error.message);
+      if (error instanceof BadRequestException) throw error;
+      console.error('[ParseDocument] Error:', error);
+      throw new BadRequestException('Lỗi khi phân tích file: ' + error.message);
     }
   }
 }
+

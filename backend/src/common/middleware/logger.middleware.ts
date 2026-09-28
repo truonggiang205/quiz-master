@@ -5,7 +5,7 @@ import { Request, Response, NextFunction } from 'express';
 export class LoggerMiddleware implements NestMiddleware {
   private logger = new Logger('HTTP');
   private static lastPingTime = 0;
-  private static readonly PING_COOLDOWN = 60 * 1000; // 1 minute
+  private static readonly PING_COOLDOWN = 10 * 60 * 1000; // 10 minutes
 
   use(request: Request, response: Response, next: NextFunction): void {
     const { ip, method, originalUrl } = request;

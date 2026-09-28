@@ -34,8 +34,8 @@ export class LoggerMiddleware implements NestMiddleware {
       LoggerMiddleware.lastPingTime = now;
       const pythonUrl = (process.env.PYTHON_SERVICE_URL || 'http://localhost:8000').replace(/\/+$/, '');
       
-      // Fire-and-forget fetch to wake up Python server
-      fetch(`${pythonUrl}/`)
+      // Thêm timestamp để Cloudflare không cache lại request này (nếu bị cache thì request sẽ không tới được server Python để đánh thức)
+      fetch(`${pythonUrl}/?wake=${now}`)
         .then(() => this.logger.debug(`Pinged Python Parser (${pythonUrl}) to keep it awake.`))
         .catch((err) => this.logger.debug(`Ping Python Parser timeout/error, probably waking up... (${err.message})`));
     }

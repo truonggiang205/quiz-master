@@ -13,7 +13,7 @@ export const ContentManagementPage: React.FC = () => {
   const [broadcastMessage, setBroadcastMessage] = useState('');
   const [targetRole, setTargetRole] = useState<'ALL' | 'TEACHER' | 'STUDENT'>('ALL');
   const [sendingBroadcast, setSendingBroadcast] = useState(false);
-  const { addToast } = useUiStore();
+  const { addToast, confirm } = useUiStore();
 
   const loadQuizzes = async () => {
     setLoading(true);
@@ -35,7 +35,13 @@ export const ContentManagementPage: React.FC = () => {
   }, [searchTerm]);
 
   const handleDelete = async (id: string, title: string) => {
-    if (!window.confirm(`Bạn có chắc muốn xóa vĩnh viễn bài thi "${title}" khỏi hệ thống? Thao tác này không thể hoàn tác.`)) {
+    const confirmed = await confirm({
+      title: 'Xóa bài thi',
+      description: `Bạn có chắc muốn xóa vĩnh viễn bài thi "${title}" khỏi hệ thống? Thao tác này không thể hoàn tác.`,
+      variant: 'danger',
+      confirmText: 'Xóa vĩnh viễn'
+    });
+    if (!confirmed) {
       return;
     }
 

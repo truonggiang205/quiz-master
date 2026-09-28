@@ -485,9 +485,14 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             </label>
             <select
               value={totalPoints}
-              onChange={(e) => {
+              onChange={async (e) => {
                 const val = Number(e.target.value);
-                if (window.confirm('Thay đổi thang điểm sẽ chia lại toàn bộ điểm các câu hỏi hiện có. Bạn có chắc chắn?')) {
+                const confirmed = await useUiStore.getState().confirm({
+                  title: 'Xác nhận thay đổi thang điểm',
+                  description: 'Thay đổi thang điểm sẽ chia lại toàn bộ điểm các câu hỏi hiện có. Bạn có chắc chắn?',
+                  variant: 'warning'
+                });
+                if (confirmed) {
                   setTotalPoints(val);
                   setQuestions(prev => {
                     try {

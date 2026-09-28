@@ -11,7 +11,7 @@ export const UserManagementPage: React.FC = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState<string>('');
-  const { addToast } = useUiStore();
+  const { addToast, confirm } = useUiStore();
 
   const loadUsers = async () => {
     setLoading(true);
@@ -39,7 +39,13 @@ export const UserManagementPage: React.FC = () => {
       return;
     }
     const action = currentStatus ? 'Khóa' : 'Mở khóa';
-    if (!window.confirm(`Bạn có chắc muốn ${action} tài khoản này?`)) return;
+    const confirmed = await confirm({
+      title: `${action} tài khoản`,
+      description: `Bạn có chắc muốn ${action} tài khoản này?`,
+      variant: currentStatus ? 'danger' : 'success',
+      confirmText: action
+    });
+    if (!confirmed) return;
 
     try {
       await adminService.toggleUserStatus(id);

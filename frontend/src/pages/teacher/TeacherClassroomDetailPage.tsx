@@ -11,7 +11,7 @@ export const TeacherClassroomDetailPage: React.FC = () => {
   const navigate = useNavigate();
   const [classroom, setClassroom] = useState<Classroom | null>(null);
   const [isLoading, setIsLoading] = useState(true);
-  const { addToast } = useUiStore();
+  const { addToast, confirm } = useUiStore();
 
   useEffect(() => {
     if (id) {
@@ -32,7 +32,14 @@ export const TeacherClassroomDetailPage: React.FC = () => {
   };
 
   const handleRemoveStudent = async (studentId: string, studentName: string) => {
-    if (!id || !window.confirm(`Bạn có chắc chắn muốn xóa học sinh ${studentName} khỏi lớp?`)) return;
+    if (!id) return;
+    const confirmed = await confirm({
+      title: 'Xóa học sinh',
+      description: `Bạn có chắc chắn muốn xóa học sinh ${studentName} khỏi lớp?`,
+      variant: 'danger',
+      confirmText: 'Xóa'
+    });
+    if (!confirmed) return;
     
     try {
       await ClassroomService.removeStudent(id, studentId);

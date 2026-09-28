@@ -10,7 +10,7 @@ export const TeacherStudentsPage: React.FC = () => {
   const [showInviteModal, setShowInviteModal] = useState(false);
   const [inviteEmail, setInviteEmail] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const { addToast } = useUiStore();
+  const { addToast, confirm } = useUiStore();
 
   useEffect(() => {
     fetchStudents();
@@ -45,7 +45,13 @@ export const TeacherStudentsPage: React.FC = () => {
   };
 
   const handleRemoveStudent = async (studentId: string, studentName: string) => {
-    if (!window.confirm(`Bạn có chắc chắn muốn xóa học sinh ${studentName} khỏi danh bạ?`)) return;
+    const confirmed = await confirm({
+      title: 'Xóa học sinh',
+      description: `Bạn có chắc chắn muốn xóa học sinh ${studentName} khỏi danh bạ?`,
+      variant: 'danger',
+      confirmText: 'Xóa'
+    });
+    if (!confirmed) return;
     
     try {
       await StudentService.removeStudent(studentId);

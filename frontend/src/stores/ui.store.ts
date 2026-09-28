@@ -10,6 +10,16 @@ export interface ToastMessage {
   duration?: number;
 }
 
+export interface ConfirmConfig {
+  title: string;
+  description?: string;
+  confirmText?: string;
+  cancelText?: string;
+  variant?: 'danger' | 'warning' | 'primary' | 'success';
+  onConfirm: () => void;
+  onCancel: () => void;
+}
+
 interface UiState {
   theme: 'light' | 'dark';
   isSidebarOpen: boolean;
@@ -21,6 +31,9 @@ interface UiState {
   addToast: (toast: Omit<ToastMessage, 'id'>) => void;
   removeToast: (id: string) => void;
   clearToasts: () => void;
+  confirmConfig: ConfirmConfig | null;
+  confirm: (config: Omit<ConfirmConfig, 'onConfirm' | 'onCancel'>) => Promise<boolean>;
+  hideConfirm: () => void;
 }
 
 const getInitialTheme = (): 'light' | 'dark' => {
@@ -81,4 +94,24 @@ export const useUiStore = create<UiState>((set, get) => ({
   clearToasts: () => {
     set({ toasts: [] });
   },
+
+  confirmConfig: null,
+  confirm: (config) => {
+    return new Promise((resolve) => {
+      set({
+        confirmConfig: {
+          ...config,
+          onConfirm: () => {
+            set({ confirmConfig: null });
+            resolve(true);
+          },
+          onCancel: () => {
+            set({ confirmConfig: null });
+            resolve(false);
+          },
+        },
+      });
+    });
+  },
+  hideConfirm: () => set({ confirmConfig: null }),
 }));

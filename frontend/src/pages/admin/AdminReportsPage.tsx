@@ -7,7 +7,7 @@ import { useUiStore } from '../../stores/ui.store';
 export const AdminReportsPage: React.FC = () => {
   const [reports, setReports] = React.useState<any[]>([]);
   const [loading, setLoading] = React.useState(true);
-  const { addToast } = useUiStore();
+  const { addToast, confirm } = useUiStore();
 
   const loadReports = async () => {
     setLoading(true);
@@ -26,7 +26,13 @@ export const AdminReportsPage: React.FC = () => {
   }, []);
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Bạn có chắc muốn xóa báo cáo này?')) return;
+    const confirmed = await confirm({
+      title: 'Xóa báo cáo',
+      description: 'Bạn có chắc muốn xóa báo cáo này?',
+      variant: 'danger',
+      confirmText: 'Xóa'
+    });
+    if (!confirmed) return;
     try {
       await reportService.deleteReport(id);
       addToast({ type: 'success', title: 'Đã xóa báo cáo' });

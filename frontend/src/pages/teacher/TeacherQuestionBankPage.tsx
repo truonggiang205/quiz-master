@@ -7,7 +7,7 @@ import { Upload, Database, Folder, Trash2, Edit, CheckCircle2, Circle } from 'lu
 import Latex from 'react-latex-next';
 
 export const TeacherQuestionBankPage: React.FC = () => {
-  const { addToast } = useUiStore();
+  const { addToast, confirm } = useUiStore();
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [isUploading, setIsUploading] = useState(false);
@@ -40,7 +40,13 @@ export const TeacherQuestionBankPage: React.FC = () => {
 
   const handleBulkDelete = async () => {
     if (selectedQIds.length === 0) return;
-    if (!window.confirm(`Bạn có chắc chắn muốn xoá ${selectedQIds.length} câu hỏi đã chọn?`)) return;
+    const confirmed = await confirm({
+      title: 'Xoá câu hỏi',
+      description: `Bạn có chắc chắn muốn xoá ${selectedQIds.length} câu hỏi đã chọn?`,
+      variant: 'danger',
+      confirmText: 'Xoá'
+    });
+    if (!confirmed) return;
 
     try {
       setIsLoading(true);
@@ -56,7 +62,13 @@ export const TeacherQuestionBankPage: React.FC = () => {
   };
 
   const handleDelete = async (id: string) => {
-    if (!window.confirm('Bạn có chắc chắn muốn xoá câu hỏi này?')) return;
+    const confirmed = await confirm({
+      title: 'Xoá câu hỏi',
+      description: 'Bạn có chắc chắn muốn xoá câu hỏi này?',
+      variant: 'danger',
+      confirmText: 'Xoá'
+    });
+    if (!confirmed) return;
     try {
       await quizService.deleteQuestion(id);
       setQuestions(questions.filter(q => q.id !== id));

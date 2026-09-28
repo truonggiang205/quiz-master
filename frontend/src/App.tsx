@@ -5,6 +5,7 @@ import { AppRoutes } from './routes/AppRoutes';
 import { useUiStore } from './stores/ui.store';
 import { useAuthStore } from './stores/auth.store';
 import { ToastContainer } from './components/common/ToastContainer';
+import { GlobalConfirmModal } from './components/common/GlobalConfirmModal';
 import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 export const App: React.FC = () => {
@@ -28,6 +29,7 @@ export const App: React.FC = () => {
       <BrowserRouter>
         <AppRoutes />
         <ToastContainer />
+        <GlobalConfirmModal />
         <Analytics />
       </BrowserRouter>
     </ErrorBoundary>

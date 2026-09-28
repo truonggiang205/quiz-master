@@ -84,7 +84,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
       reader.readAsDataURL(file);
     } catch (err) {
       console.error('Failed to read file', err);
-      alert('Tải ảnh thất bại!');
+      addToast({ type: 'error', title: 'Tải ảnh thất bại!' });
       setUploadingImageFor(null);
     }
   };
@@ -203,9 +203,14 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
           </div>
           <button
             type="button"
-            onClick={() => {
-              if (questions.some(q => q.isLocked) && !window.confirm('Có câu đang bị khóa. Bạn có chắc muốn mở khóa tất cả và chia đều lại?')) {
-                return;
+            onClick={async () => {
+              if (questions.some(q => q.isLocked)) {
+                const confirmed = await useUiStore.getState().confirm({
+                  title: 'Mở khóa điểm',
+                  description: 'Có câu đang bị khóa. Bạn có chắc muốn mở khóa tất cả và chia đều lại?',
+                  variant: 'warning'
+                });
+                if (!confirmed) return;
               }
               const unlockedQs = questions.map(q => ({ ...q, isLocked: false }));
               onChange(safeRebalance(unlockedQs));
@@ -231,8 +236,14 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
           {questions.length > 0 && (
             <button
               type="button"
-              onClick={() => {
-                if (window.confirm('Bạn có chắc chắn muốn xoá toàn bộ câu hỏi trong bài thi?')) {
+              onClick={async () => {
+                const confirmed = await useUiStore.getState().confirm({
+                  title: 'Xóa toàn bộ câu hỏi',
+                  description: 'Bạn có chắc chắn muốn xoá toàn bộ câu hỏi trong bài thi?',
+                  variant: 'danger',
+                  confirmText: 'Xóa tất cả'
+                });
+                if (confirmed) {
                   onChange([]);
                 }
               }}
@@ -343,8 +354,13 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                         <button
                           type="button"
                           title="Đặt mức điểm này làm mặc định cho tất cả câu"
-                          onClick={() => {
-                            if (window.confirm(`Bạn có muốn đặt điểm ${((q.points || 0) / 100).toFixed(2)} cho tất cả các câu? (Lưu ý: Nếu tổng điểm vượt mức, hệ thống sẽ cảnh báo khi xuất bản)`)) {
+                          onClick={async () => {
+                            const confirmed = await useUiStore.getState().confirm({
+                              title: 'Cập nhật điểm hàng loạt',
+                              description: `Bạn có muốn đặt điểm ${((q.points || 0) / 100).toFixed(2)} cho tất cả các câu? (Lưu ý: Nếu tổng điểm vượt mức, hệ thống sẽ cảnh báo khi xuất bản)`,
+                              variant: 'warning'
+                            });
+                            if (confirmed) {
                               const newPoints = q.points || 0;
                               onChange(questions.map(qq => ({ ...qq, points: newPoints, isLocked: true })));
                             }

@@ -7,6 +7,7 @@ import { Flag, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { uploadService } from '../../services/upload.service';
 import 'katex/dist/katex.min.css';
 import Latex from 'react-latex-next';
+import { useUiStore } from '../../stores/ui.store';
 
 interface QuestionCardProps {
   question: Question;
@@ -38,6 +39,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   onEssayTextChange,
 }) => {
   const [isUploading, setIsUploading] = React.useState(false);
+  const { addToast } = useUiStore();
   const isMultiple = question.type === 'MULTIPLE_CHOICE';
 
   const typeLabels = {
@@ -61,7 +63,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
       reader.readAsDataURL(file);
     } catch (err) {
       console.error('Failed to read file', err);
-      alert('Tải ảnh thất bại!');
+      addToast({ type: 'error', title: 'Tải ảnh thất bại!' });
       setIsUploading(false);
     }
   };

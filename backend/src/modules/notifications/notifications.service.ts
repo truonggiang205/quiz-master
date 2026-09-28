@@ -110,7 +110,7 @@ export class NotificationsService {
     return await this.notificationRepo.save(notif);
   }
 
-  async createPersonalNotification(recipientId: string, title: string, message: string) {
+  async createPersonalNotification(recipientId: string, title: string, message: string, actionUrl?: string, actionText?: string) {
     const notif = this.notificationRepo.create({
       title,
       message,
@@ -118,6 +118,8 @@ export class NotificationsService {
       targetRole: NotificationTargetRole.NONE,
       recipientId,
       readBy: [],
+      actionUrl,
+      actionText
     });
     return await this.notificationRepo.save(notif);
   }

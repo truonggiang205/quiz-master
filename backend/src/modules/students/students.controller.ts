@@ -30,14 +30,12 @@ export class StudentsController {
   }
 
   @Post('invite')
-  @ApiOperation({ summary: 'Giáo viên mời học sinh qua email' })
+  @ApiOperation({ summary: 'Giáo viên mời học sinh qua thông báo hệ thống' })
   async inviteStudent(
     @CurrentUser() user: any,
     @Body() dto: InviteDto,
   ) {
-    // Should get from config, hardcoding for simplicity
-    const frontendUrl = process.env.FRONTEND_URL || 'http://localhost:5173';
-    const result = await this.studentsService.inviteStudentByEmail(user.id, dto.email, frontendUrl);
+    const result = await this.studentsService.inviteStudentByEmail(user.id, dto.email);
     return createSuccessResponse(result);
   }
 

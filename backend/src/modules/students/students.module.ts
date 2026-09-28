@@ -2,6 +2,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UserEntity } from '../../entities/user.entity.js';
 import { MailerModule } from '../mailer/mailer.module.js';
+import { NotificationsModule } from '../notifications/notifications.module.js';
 import { StudentsController } from './students.controller.js';
 import { StudentsService } from './students.service.js';
 
@@ -9,6 +10,7 @@ import { StudentsService } from './students.service.js';
   imports: [
     TypeOrmModule.forFeature([UserEntity]),
     MailerModule,
+    NotificationsModule,
   ],
   controllers: [StudentsController],
   providers: [StudentsService],

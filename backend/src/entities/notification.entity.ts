@@ -41,6 +41,12 @@ export class NotificationEntity {
   @Column({ type: 'simple-json', nullable: true })
   readBy: string[]; // Array of user IDs who have read this notification
 
+  @Column({ nullable: true })
+  actionUrl: string;
+
+  @Column({ nullable: true })
+  actionText: string;
+
   @CreateDateColumn()
   createdAt: Date;
 }

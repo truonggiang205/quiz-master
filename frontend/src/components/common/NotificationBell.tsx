@@ -2,8 +2,10 @@ import React, { useState, useEffect, useRef } from 'react';
 import { Bell, Check, Info, BellRing } from 'lucide-react';
 import { notificationService, Notification } from '../../services/notification.service';
 import { useUiStore } from '../../stores/ui.store';
+import { useNavigate } from 'react-router-dom';
 
 export const NotificationBell: React.FC = () => {
+  const navigate = useNavigate();
   const [isOpen, setIsOpen] = useState(false);
   const [tab, setTab] = useState<'GENERAL' | 'PERSONAL'>('PERSONAL');
   const [notifications, setNotifications] = useState<Notification[]>([]);
@@ -139,6 +141,18 @@ export const NotificationBell: React.FC = () => {
                     <span className="text-[10px] text-slate-400 font-medium mt-1.5 block">
                       {new Date(n.createdAt).toLocaleString('vi-VN')}
                     </span>
+                    {n.actionUrl && (
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setIsOpen(false);
+                          if (n.actionUrl) navigate(n.actionUrl);
+                        }}
+                        className="mt-2 text-xs font-semibold bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors"
+                      >
+                        {n.actionText || 'Xem chi tiết'}
+                      </button>
+                    )}
                   </div>
                   {!n.isRead && (
                     <button 

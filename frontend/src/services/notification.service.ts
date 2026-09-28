@@ -8,6 +8,8 @@ export interface Notification {
   targetRole: 'ALL' | 'TEACHER' | 'STUDENT' | 'NONE';
   recipientId: string | null;
   isRead: boolean;
+  actionUrl?: string;
+  actionText?: string;
   createdAt: string;
 }
 

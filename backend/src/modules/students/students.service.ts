@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../../entities/user.entity.js';
 import { MailerService } from '../mailer/mailer.service.js';
+import { NotificationsService } from '../notifications/notifications.service.js';
 
 @Injectable()
 export class StudentsService {
@@ -12,6 +13,7 @@ export class StudentsService {
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
     private readonly mailerService: MailerService,
+    private readonly notificationsService: NotificationsService,
   ) {}
 
   async getMyStudents(teacherId: string) {
@@ -23,28 +25,34 @@ export class StudentsService {
     return teacher.students;
   }
 
-  async inviteStudentByEmail(teacherId: string, email: string, frontendUrl: string) {
+  async inviteStudentByEmail(teacherId: string, email: string) {
     const teacher = await this.userRepo.findOneBy({ id: teacherId });
     if (!teacher || teacher.role !== 'TEACHER') {
       throw new UnauthorizedException('Chỉ giáo viên mới được mời học sinh');
     }
 
-    const inviteLink = `${frontendUrl}/student/accept-invite?t=${teacher.id}`;
-    
-    // Gửi email
-    try {
-      await this.mailerService.sendMail(
-        email,
-        `Lời mời học từ giáo viên ${teacher.name}`,
-        `<p>Xin chào,</p><p>Giáo viên <strong>${teacher.name}</strong> vừa mời bạn tham gia học. Bấm vào link dưới đây để chấp nhận:</p><p><a href="${inviteLink}">${inviteLink}</a></p>`,
-      );
-      this.logger.log(`Invite email sent to ${email} with teacherId ${teacher.id}`);
-    } catch (e) {
-      this.logger.error('Cannot send invite email', e);
-      throw new BadRequestException('Lỗi gửi email mời học sinh. Tuy nhiên bạn có thể đưa link trực tiếp cho học sinh: ' + inviteLink);
+    const student = await this.userRepo.findOneBy({ email });
+    if (!student) {
+      throw new BadRequestException('Không tìm thấy học sinh với email này trong hệ thống. Học sinh cần đăng ký tài khoản trước.');
     }
+
+    if (student.role !== 'STUDENT') {
+      throw new BadRequestException('Tài khoản này không phải là tài khoản học sinh.');
+    }
+
+    const actionUrl = `/student/accept-invite?t=${teacher.id}`;
     
-    return { success: true, message: 'Đã gửi lời mời qua email' };
+    // Gửi thông báo
+    await this.notificationsService.createPersonalNotification(
+      student.id,
+      `Lời mời học từ giáo viên ${teacher.name}`,
+      `Giáo viên ${teacher.name} vừa mời bạn tham gia học. Bấm vào nút bên dưới để chấp nhận.`,
+      actionUrl,
+      'Chấp nhận lời mời'
+    );
+    this.logger.log(`Invite notification sent to ${email} (student ID: ${student.id}) with teacherId ${teacher.id}`);
+    
+    return { success: true, message: 'Đã gửi lời mời qua thông báo cá nhân' };
   }
 
   async acceptInvite(studentId: string, teacherId: string) {

@@ -86,12 +86,22 @@ export class UploadController {
       if (!response.ok) {
         const err = await response.text();
         const errorMessage = err.trim().startsWith('<') 
-          ? `URL API Parser đang gọi là [${pythonUrl}/parse-document] nhưng server lại trả về trang HTML thay vì JSON. Trích xuất: ${err.substring(0, 40)}...` 
+          ? `Server Python có thể đang ngủ đông và đang khởi động lại (Render). Vui lòng đợi 30s-1p và thử lại. (HTML trả về)` 
           : err;
         throw new BadRequestException('Lỗi từ Python Parser: ' + errorMessage);
       }
 
-      const data = await response.json() as any;
+      const textData = await response.text();
+      let data: any;
+      try {
+        data = JSON.parse(textData);
+      } catch (e) {
+        if (textData.trim().startsWith('<')) {
+          throw new BadRequestException('Lỗi từ Python Parser: Server Python có thể đang ngủ đông. Vui lòng đợi 30s-1p và thử lại.');
+        }
+        throw new BadRequestException('Lỗi từ Python Parser: Phản hồi không phải JSON hợp lệ.');
+      }
+
       if (data.status !== 'success') {
         throw new BadRequestException('Lỗi từ Python Parser: Phản hồi không thành công');
       }

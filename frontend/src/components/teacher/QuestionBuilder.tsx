@@ -1,5 +1,5 @@
 import React from 'react';
-import { Question, QuestionType, AnswerOption } from '../../types/question';
+import { Question, QuestionType, AnswerOption, EssayRubric, EssayCriterion } from '../../types/question';
 import { Plus, Trash2, Copy, CheckCircle, Circle, Square, CheckSquare, Upload, Image as ImageIcon, X, Save, RefreshCw, Lock, Unlock, AlertTriangle } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadService } from '../../services/upload.service';
@@ -123,6 +123,9 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
       ];
     } else if (newType === 'ESSAY') {
       newOptions = [];
+      const currentRubric = q.essayRubric || { acceptedAnswers: [], criteria: [] };
+      handleUpdateQuestion(index, { type: newType, options: newOptions, essayRubric: currentRubric });
+      return;
     } else if (q.type === 'TRUE_FALSE' || q.type === 'ESSAY') {
       newOptions = [
         { id: `opt-${Date.now()}-1`, text: 'Đáp án A', isCorrect: true },
@@ -526,6 +529,148 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                   </button>
                 )}
               </div>
+              )}
+
+              {/* Essay Rubric */}
+              {q.type === 'ESSAY' && (
+                <div className="space-y-4 border-t border-slate-100 dark:border-slate-700/60 pt-4 mt-2">
+                  <div>
+                    <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-2">Cấu hình chấm tự luận tự động</h4>
+                    
+                    <div className="space-y-3">
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                          Đáp án đúng tuyệt đối (mỗi đáp án 1 dòng)
+                        </label>
+                        <textarea
+                          rows={3}
+                          placeholder="Nhập các câu trả lời hoàn hảo. Khớp chính xác hoặc gần đúng sẽ đạt điểm tối đa..."
+                          value={q.essayRubric?.acceptedAnswers?.join('\n') || ''}
+                          onChange={(e) => {
+                            const answers = e.target.value.split('\n');
+                            const currentRubric = q.essayRubric || { acceptedAnswers: [], criteria: [] };
+                            handleUpdateQuestion(qIndex, { 
+                              essayRubric: { ...currentRubric, acceptedAnswers: answers }
+                            });
+                          }}
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-2">
+                          Tiêu chí chấm điểm (chấm theo từ khóa)
+                        </label>
+                        
+                        <div className="space-y-3">
+                          {(q.essayRubric?.criteria || []).map((criterion, cIndex) => (
+                            <div key={criterion.id || cIndex} className="p-3 bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 rounded-xl relative">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  const newCriteria = [...(q.essayRubric?.criteria || [])];
+                                  newCriteria.splice(cIndex, 1);
+                                  handleUpdateQuestion(qIndex, {
+                                    essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
+                                  });
+                                }}
+                                className="absolute top-2 right-2 text-slate-400 hover:text-rose-500"
+                              >
+                                <Trash2 className="w-4 h-4" />
+                              </button>
+                              
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-6">
+                                <div>
+                                  <input
+                                    type="text"
+                                    placeholder="Mô tả tiêu chí (VD: Nêu được quá trình quang hợp)"
+                                    value={criterion.description}
+                                    onChange={(e) => {
+                                      const newCriteria = [...(q.essayRubric?.criteria || [])];
+                                      newCriteria[cIndex] = { ...criterion, description: e.target.value };
+                                      handleUpdateQuestion(qIndex, {
+                                        essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
+                                      });
+                                    }}
+                                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                  />
+                                </div>
+                                <div className="flex gap-2">
+                                  <input
+                                    type="text"
+                                    placeholder="Từ khóa (cách nhau bởi dấu phẩy)"
+                                    value={criterion.keywords.join(', ')}
+                                    onChange={(e) => {
+                                      const kws = e.target.value.split(',').map(k => k.trim()).filter(k => k !== '');
+                                      const newCriteria = [...(q.essayRubric?.criteria || [])];
+                                      newCriteria[cIndex] = { ...criterion, keywords: kws };
+                                      handleUpdateQuestion(qIndex, {
+                                        essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
+                                      });
+                                    }}
+                                    className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                  />
+                                  <input
+                                    type="number"
+                                    placeholder="Điểm"
+                                    min="0"
+                                    step="0.1"
+                                    title="Điểm tối đa cho tiêu chí này"
+                                    value={criterion.maxPoints || 0}
+                                    onChange={(e) => {
+                                      const pts = parseFloat(e.target.value) || 0;
+                                      const newCriteria = [...(q.essayRubric?.criteria || [])];
+                                      newCriteria[cIndex] = { ...criterion, maxPoints: pts };
+                                      handleUpdateQuestion(qIndex, {
+                                        essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
+                                      });
+                                    }}
+                                    className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-center text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                  />
+                                </div>
+                                <div className="col-span-full">
+                                  <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer w-fit">
+                                    <input
+                                      type="checkbox"
+                                      checked={!!criterion.requireAll}
+                                      onChange={(e) => {
+                                        const newCriteria = [...(q.essayRubric?.criteria || [])];
+                                        newCriteria[cIndex] = { ...criterion, requireAll: e.target.checked };
+                                        handleUpdateQuestion(qIndex, {
+                                          essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
+                                        });
+                                      }}
+                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                    />
+                                    Bắt buộc có tất cả từ khóa mới đạt điểm
+                                  </label>
+                                </div>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const currentRubric = q.essayRubric || { acceptedAnswers: [], criteria: [] };
+                            const newCriteria = [
+                              ...currentRubric.criteria,
+                              { id: `crit-${Date.now()}`, description: '', keywords: [], maxPoints: q.points || 1 }
+                            ];
+                            handleUpdateQuestion(qIndex, {
+                              essayRubric: { ...currentRubric, criteria: newCriteria }
+                            });
+                          }}
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline mt-2"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                          Thêm tiêu chí
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </div>
               )}
 
               {/* Explanation Field */}

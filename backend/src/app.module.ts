@@ -26,6 +26,9 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
 import { AppealsModule } from './modules/appeals/appeals.module.js';
 import { ChatModule } from './modules/chat/chat.module.js';
 import { BugReportModule } from './modules/bug-report/bug-report.module.js';
+import { GradingModule } from './modules/grading/grading.module.js';
+import { EssayRubricEntity } from './modules/grading/entities/essay-rubric.entity.js';
+import { GradingResultEntity } from './modules/grading/entities/grading-result.entity.js';
 import { LoggerMiddleware } from './common/middleware/logger.middleware.js';
 
 dotenv.config();
@@ -42,7 +45,7 @@ dotenv.config();
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [UserEntity, QuizEntity, QuestionEntity, SubmissionEntity, ClassEntity, NotificationEntity, AppealEntity, ConversationEntity, MessageEntity, BugReportEntity],
+      entities: [UserEntity, QuizEntity, QuestionEntity, SubmissionEntity, ClassEntity, NotificationEntity, AppealEntity, ConversationEntity, MessageEntity, BugReportEntity, EssayRubricEntity, GradingResultEntity],
       synchronize: true, // Auto creates and syncs tables with Aiven MySQL
       logging: false,
     }),
@@ -60,6 +63,7 @@ dotenv.config();
     AppealsModule,
     ChatModule,
     BugReportModule,
+    GradingModule,
   ],
 })
 export class AppModule implements NestModule {

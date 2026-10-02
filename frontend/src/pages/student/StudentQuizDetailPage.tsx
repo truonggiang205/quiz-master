@@ -45,7 +45,7 @@ export const StudentQuizDetailPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
           <span className="text-xs text-slate-400">Đang tải thông tin bài thi...</span>
         </div>
       </div>
@@ -92,7 +92,7 @@ export const StudentQuizDetailPage: React.FC = () => {
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5 py-4 border-y border-slate-100 dark:border-slate-700/60 text-xs">
           <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-700/40">
             <span className="flex items-center gap-1.5 text-slate-400 font-semibold mb-1">
-              <Clock className="w-3.5 h-3.5 text-indigo-500" /> Thời gian
+              <Clock className="w-3.5 h-3.5 text-sky-500" /> Thời gian
             </span>
             <span className="font-bold text-slate-800 dark:text-white text-sm">
               {quiz.durationMinutes} phút
@@ -101,7 +101,7 @@ export const StudentQuizDetailPage: React.FC = () => {
 
           <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-700/40">
             <span className="flex items-center gap-1.5 text-slate-400 font-semibold mb-1">
-              <FileQuestion className="w-3.5 h-3.5 text-indigo-500" /> Số câu hỏi
+              <FileQuestion className="w-3.5 h-3.5 text-sky-500" /> Số câu hỏi
             </span>
             <span className="font-bold text-slate-800 dark:text-white text-sm">
               {quiz.questionCount} câu
@@ -110,7 +110,7 @@ export const StudentQuizDetailPage: React.FC = () => {
 
           <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-700/40">
             <span className="flex items-center gap-1.5 text-slate-400 font-semibold mb-1">
-              <RotateCcw className="w-3.5 h-3.5 text-indigo-500" /> Lượt làm
+              <RotateCcw className="w-3.5 h-3.5 text-sky-500" /> Lượt làm
             </span>
             <span className="font-bold text-slate-800 dark:text-white text-sm">
               Tối đa {quiz.totalAttempts} lần
@@ -119,7 +119,7 @@ export const StudentQuizDetailPage: React.FC = () => {
 
           <div className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-700/40">
             <span className="flex items-center gap-1.5 text-slate-400 font-semibold mb-1">
-              <User className="w-3.5 h-3.5 text-indigo-500" /> Giáo viên
+              <User className="w-3.5 h-3.5 text-sky-500" /> Giáo viên
             </span>
             <span className="font-bold text-slate-800 dark:text-white text-sm truncate block">
               {quiz.teacherName}
@@ -128,12 +128,12 @@ export const StudentQuizDetailPage: React.FC = () => {
         </div>
 
         {/* Rules Box */}
-        <div className="p-5 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/50 space-y-2.5">
-          <h3 className="text-xs sm:text-sm font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-2">
-            <AlertCircle className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+        <div className="p-5 rounded-2xl bg-sky-50/70 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/50 space-y-2.5">
+          <h3 className="text-xs sm:text-sm font-bold text-sky-950 dark:text-sky-200 flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 text-sky-600 dark:text-sky-400" />
             Quy định phòng thi trực tuyến
           </h3>
-          <ul className="text-xs text-indigo-900 dark:text-indigo-300 space-y-1.5 list-disc list-inside leading-relaxed">
+          <ul className="text-xs text-sky-900 dark:text-sky-300 space-y-1.5 list-disc list-inside leading-relaxed">
             <li>Đồng hồ đếm ngược sẽ bắt đầu chạy ngay khi bạn nhấn "Bắt đầu".</li>
             <li>Khi hết thời gian làm bài, hệ thống sẽ tự động nộp toàn bộ câu hỏi đã chọn.</li>
             <li>Bạn có thể đánh dấu các câu hỏi chưa chắc chắn để xem lại trước khi nộp.</li>
@@ -147,7 +147,7 @@ export const StudentQuizDetailPage: React.FC = () => {
             type="button"
             onClick={onButtonClick}
             id="start-exam-confirm-trigger"
-            className="w-full flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-2xl font-bold text-sm bg-indigo-600 hover:bg-indigo-700 text-white shadow-lg shadow-indigo-200 dark:shadow-none transition-transform hover:scale-[1.01]"
+            className="w-full flex items-center justify-center gap-2.5 py-3.5 px-6 rounded-2xl font-bold text-sm bg-sky-600 hover:bg-sky-700 text-white shadow-lg shadow-sky-200 dark:shadow-none transition-transform hover:scale-[1.01]"
           >
             <Play className="w-4 h-4 fill-white" />
             <span>{isResuming ? 'Tiếp tục làm bài thi' : 'Bắt đầu làm bài thi'}</span>

@@ -54,8 +54,8 @@ export const SystemSettingsPage: React.FC = () => {
         {/* Toggle Allow Registration */}
         <div className="flex items-start justify-between gap-4">
           <div className="flex items-start gap-4">
-            <div className="w-10 h-10 rounded-xl bg-indigo-50 flex items-center justify-center shrink-0">
-              <UserPlus className="w-5 h-5 text-indigo-600" />
+            <div className="w-10 h-10 rounded-xl bg-sky-50 flex items-center justify-center shrink-0">
+              <UserPlus className="w-5 h-5 text-sky-600" />
             </div>
             <div>
               <h3 className="text-base font-bold text-slate-900">Cho phép đăng ký mới</h3>
@@ -71,7 +71,7 @@ export const SystemSettingsPage: React.FC = () => {
               checked={settings.allowRegistration}
               onChange={(e) => setSettings({ ...settings, allowRegistration: e.target.checked })}
             />
-            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+            <div className="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-sky-600"></div>
           </label>
         </div>
 
@@ -106,7 +106,7 @@ export const SystemSettingsPage: React.FC = () => {
         <button
           onClick={handleSave}
           disabled={saving}
-          className="px-6 py-2.5 bg-indigo-600 text-white rounded-xl text-sm font-bold shadow-md shadow-indigo-200 hover:bg-indigo-700 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center gap-2"
+          className="px-6 py-2.5 bg-sky-600 text-white rounded-xl text-sm font-bold shadow-md shadow-sky-200 hover:bg-sky-700 hover:shadow-lg hover:-translate-y-0.5 transition-all disabled:opacity-50 flex items-center gap-2"
         >
           {saving ? 'Đang lưu...' : <><Save className="w-4 h-4" /> Lưu cấu hình</>}
         </button>

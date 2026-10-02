@@ -32,12 +32,12 @@ export const AdminLayout: React.FC = () => {
   ];
 
   return (
-    <div className="min-h-[100dvh] bg-slate-50 flex font-sans text-slate-900 selection:bg-indigo-500 selection:text-white overflow-x-hidden w-full relative">
+    <div className="min-h-[100dvh] bg-slate-50 flex font-sans text-sky-950 selection:bg-sky-500 selection:text-white overflow-x-hidden w-full relative">
       {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col fixed inset-y-0 left-0 z-50">
         <div className="h-16 flex items-center px-6 border-b border-slate-800">
           <Link to="/admin/dashboard" className="flex items-center gap-2 text-white font-bold text-lg tracking-tight">
-            <Shield className="w-6 h-6 text-indigo-500" />
+            <Shield className="w-6 h-6 text-sky-500" />
             <span>Admin Panel</span>
           </Link>
         </div>
@@ -59,7 +59,7 @@ export const AdminLayout: React.FC = () => {
                 {isActive && (
                   <motion.span
                     layoutId="admin-active-nav"
-                    className="absolute inset-0 rounded-xl bg-indigo-600 shadow-md shadow-indigo-900/50 -z-10"
+                    className="absolute inset-0 rounded-xl bg-sky-600 shadow-md shadow-sky-900/50 -z-10"
                     transition={{ type: 'spring', stiffness: 350, damping: 35 }}
                   />
                 )}

@@ -91,7 +91,7 @@ export const TeacherQuizListPage: React.FC = () => {
         <Link
           to="/teacher/quizzes/create"
           id="create-new-quiz-btn"
-          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-md shadow-indigo-200 dark:shadow-none transition-all duration-200 w-fit"
+          className="flex items-center gap-2 px-5 py-2.5 rounded-2xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-md shadow-sky-200 dark:shadow-none transition-all duration-200 w-fit"
         >
           <Plus className="w-4 h-4" />
           <span>Tạo bài thi mới</span>
@@ -107,7 +107,7 @@ export const TeacherQuizListPage: React.FC = () => {
             placeholder="Tìm kiếm bài thi hoặc môn học..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs md:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full pl-9 pr-4 py-2 text-xs md:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
           />
         </div>
 
@@ -116,7 +116,7 @@ export const TeacherQuizListPage: React.FC = () => {
             onClick={() => setStatusFilter('ALL')}
             className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
               statusFilter === 'ALL'
-                ? 'bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 shadow-xs'
+                ? 'bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 shadow-xs'
                 : 'text-slate-600 dark:text-slate-400'
             }`}
           >
@@ -198,7 +198,7 @@ export const TeacherQuizListPage: React.FC = () => {
                 to={`/teacher/quizzes/${quiz.id}/results`}
                 className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-200 bg-slate-100 dark:bg-slate-700/60 hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               >
-                <BarChart2 className="w-3.5 h-3.5 text-indigo-500" />
+                <BarChart2 className="w-3.5 h-3.5 text-sky-500" />
                 <span>Kết quả</span>
               </Link>
 
@@ -212,7 +212,7 @@ export const TeacherQuizListPage: React.FC = () => {
 
               <Link
                 to={`/teacher/quizzes/${quiz.id}/edit`}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 transition-colors"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 transition-colors"
               >
                 <Edit className="w-3.5 h-3.5" />
                 <span>Sửa</span>
@@ -220,7 +220,7 @@ export const TeacherQuizListPage: React.FC = () => {
 
               <button
                 onClick={() => setDeleteQuizId(quiz.id)}
-                className="p-2 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                className="p-2 rounded-xl text-rose-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                 title="Xóa bài thi"
               >
                 <Trash2 className="w-4 h-4" />

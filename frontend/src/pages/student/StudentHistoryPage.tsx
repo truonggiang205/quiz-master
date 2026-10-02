@@ -42,7 +42,7 @@ export const StudentHistoryPage: React.FC = () => {
   return (
     <div className="space-y-6">
       <div className="flex items-center gap-4">
-        <div className="p-3 bg-indigo-100 dark:bg-indigo-900/50 rounded-2xl text-indigo-600 dark:text-indigo-400">
+        <div className="p-3 bg-sky-100 dark:bg-sky-900/50 rounded-2xl text-sky-600 dark:text-sky-400">
           <FileText className="w-8 h-8" />
         </div>
         <div>
@@ -57,7 +57,7 @@ export const StudentHistoryPage: React.FC = () => {
           onClick={() => setActiveTab('QUIZ')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-lg transition-all ${
             activeTab === 'QUIZ'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
@@ -68,7 +68,7 @@ export const StudentHistoryPage: React.FC = () => {
           onClick={() => setActiveTab('PRACTICE')}
           className={`flex-1 flex items-center justify-center gap-2 py-2.5 text-sm font-semibold rounded-lg transition-all ${
             activeTab === 'PRACTICE'
-              ? 'bg-white dark:bg-slate-900 text-indigo-600 dark:text-indigo-400 shadow-sm'
+              ? 'bg-white dark:bg-slate-900 text-sky-600 dark:text-sky-400 shadow-sm'
               : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-200'
           }`}
         >
@@ -79,7 +79,7 @@ export const StudentHistoryPage: React.FC = () => {
 
       {isLoading ? (
         <div className="flex justify-center py-12">
-          <div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+          <div className="w-8 h-8 border-4 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
         </div>
       ) : filteredSubmissions.length === 0 ? (
         <div className="text-center py-16 bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800">
@@ -144,9 +144,9 @@ export const StudentHistoryPage: React.FC = () => {
 
                   <div className="flex items-center justify-between mt-auto pt-4 border-t border-slate-100 dark:border-slate-800">
                     <div className="flex items-center gap-3">
-                      <div className="w-12 h-12 rounded-xl bg-indigo-50 dark:bg-indigo-900/50 flex flex-col items-center justify-center">
-                        <Award className="w-5 h-5 text-indigo-600 dark:text-indigo-400 mb-0.5" />
-                        <span className="text-[10px] font-bold text-indigo-600 dark:text-indigo-400 uppercase leading-none">Điểm</span>
+                      <div className="w-12 h-12 rounded-xl bg-sky-50 dark:bg-sky-900/50 flex flex-col items-center justify-center">
+                        <Award className="w-5 h-5 text-sky-600 dark:text-sky-400 mb-0.5" />
+                        <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase leading-none">Điểm</span>
                       </div>
                       <div>
                         {isFullyGraded ? (

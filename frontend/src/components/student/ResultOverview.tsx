@@ -21,9 +21,9 @@ export const ResultOverview: React.FC<ResultOverviewProps> = ({ submission }) =>
     <div className="bg-white/90 dark:bg-slate-800/90 rounded-3xl p-6 md:p-8 border border-slate-200/80 dark:border-slate-700/80 shadow-sm backdrop-blur-sm">
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
         {/* Left: Score Badge Gauge */}
-        <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-indigo-50/70 to-sky-50/70 dark:from-slate-900/60 dark:to-indigo-950/30 border border-indigo-100/60 dark:border-indigo-900/40 text-center">
+        <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-gradient-to-br from-sky-50/70 to-sky-50/70 dark:from-slate-900/60 dark:to-sky-950/30 border border-sky-100/60 dark:border-sky-900/40 text-center">
           <div className="p-3 rounded-2xl bg-white dark:bg-slate-800 shadow-sm mb-3">
-            <Trophy className={`w-8 h-8 ${isHigh ? 'text-amber-500' : isPass ? 'text-indigo-500' : 'text-slate-400'}`} />
+            <Trophy className={`w-8 h-8 ${isHigh ? 'text-amber-500' : isPass ? 'text-sky-500' : 'text-slate-400'}`} />
           </div>
 
           <motion.div
@@ -37,7 +37,7 @@ export const ResultOverview: React.FC<ResultOverviewProps> = ({ submission }) =>
             <span className="text-slate-400 text-sm font-semibold"> / {(submission.maxScore / 100).toFixed(2)}</span>
           </motion.div>
 
-          <div className="mt-2 text-xs font-bold uppercase tracking-wider text-indigo-600 dark:text-indigo-400 bg-indigo-100/70 dark:bg-indigo-950/80 px-3 py-1 rounded-full">
+          <div className="mt-2 text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/80 px-3 py-1 rounded-full">
             Đạt {submission.percentage}%
           </div>
         </div>

@@ -81,7 +81,7 @@ export const TeacherProfilePage: React.FC = () => {
             <img
               src={avatar || user?.avatar}
               alt={user?.name}
-              className={`w-20 h-20 rounded-2xl object-cover ring-4 ring-indigo-100 dark:ring-indigo-900 transition-opacity ${isUploading ? 'opacity-50' : ''}`}
+              className={`w-20 h-20 rounded-2xl object-cover ring-4 ring-sky-100 dark:ring-sky-900 transition-opacity ${isUploading ? 'opacity-50' : ''}`}
             />
             <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
               {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}
@@ -92,7 +92,7 @@ export const TeacherProfilePage: React.FC = () => {
             <h3 className="text-base font-bold text-slate-900 dark:text-white">
               {formatUserName(user)}
             </h3>
-            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800 mt-1">
+            <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-semibold bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300 border border-sky-200 dark:border-sky-800 mt-1">
               <Shield className="w-3 h-3" />
               Tài khoản Giáo viên
             </span>
@@ -111,7 +111,7 @@ export const TeacherProfilePage: React.FC = () => {
                 value={name}
                 onChange={(e) => setName(e.target.value)}
                 required
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-base md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-base md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
               />
             </div>
           </div>
@@ -141,7 +141,7 @@ export const TeacherProfilePage: React.FC = () => {
                 type="text"
                 value={phone}
                 onChange={(e) => setPhone(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-base md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-base md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
               />
             </div>
           </div>
@@ -156,7 +156,7 @@ export const TeacherProfilePage: React.FC = () => {
                 type="text"
                 value={school}
                 onChange={(e) => setSchool(e.target.value)}
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-base md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-base md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
               />
             </div>
           </div>
@@ -165,7 +165,7 @@ export const TeacherProfilePage: React.FC = () => {
             <button
               type="submit"
               disabled={isSaving}
-              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm transition-all"
+              className="flex items-center justify-center gap-2 px-6 py-2.5 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-sm transition-all"
             >
               <Save className="w-4 h-4" />
               <span>{isSaving ? 'Đang lưu...' : 'Lưu thay đổi'}</span>

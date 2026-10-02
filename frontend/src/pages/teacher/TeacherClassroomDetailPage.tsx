@@ -55,7 +55,7 @@ export const TeacherClassroomDetailPage: React.FC = () => {
   };
 
   if (isLoading) {
-    return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div></div>;
+    return <div className="flex justify-center items-center h-64"><div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div></div>;
   }
 
   if (!classroom) return null;
@@ -69,7 +69,7 @@ export const TeacherClassroomDetailPage: React.FC = () => {
         <div>
           <h1 className="text-2xl font-bold text-slate-800 dark:text-white flex items-center gap-3">
             {classroom.name}
-            <span className="text-xs font-bold px-2 py-1 bg-indigo-100 text-indigo-700 dark:bg-indigo-900/50 dark:text-indigo-300 rounded-md uppercase tracking-wider">
+            <span className="text-xs font-bold px-2 py-1 bg-sky-100 text-sky-700 dark:bg-sky-900/50 dark:text-sky-300 rounded-md uppercase tracking-wider">
               {classroom.inviteCode}
             </span>
           </h1>
@@ -83,7 +83,7 @@ export const TeacherClassroomDetailPage: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-100 dark:border-slate-800 overflow-hidden">
             <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
               <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <Users className="w-5 h-5 text-indigo-500" /> Danh sách Học sinh
+                <Users className="w-5 h-5 text-sky-500" /> Danh sách Học sinh
               </h3>
             </div>
             
@@ -100,7 +100,7 @@ export const TeacherClassroomDetailPage: React.FC = () => {
                     </div>
                     <button 
                       onClick={() => handleRemoveStudent(student.id, student.name)}
-                      className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                      className="p-2 text-red-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                       title="Xóa khỏi lớp"
                     >
                       <UserMinus className="w-5 h-5" />
@@ -112,7 +112,7 @@ export const TeacherClassroomDetailPage: React.FC = () => {
               <div className="p-12 text-center">
                 <GraduationCap className="w-12 h-12 text-slate-300 dark:text-slate-600 mx-auto mb-3" />
                 <p className="text-slate-500 dark:text-slate-400">Chưa có học sinh nào tham gia lớp này.</p>
-                <p className="text-sm text-slate-400 mt-1">Hãy gửi mã <strong className="text-indigo-500">{classroom.inviteCode}</strong> cho học sinh.</p>
+                <p className="text-sm text-slate-400 mt-1">Hãy gửi mã <strong className="text-sky-500">{classroom.inviteCode}</strong> cho học sinh.</p>
               </div>
             )}
           </div>
@@ -130,7 +130,7 @@ export const TeacherClassroomDetailPage: React.FC = () => {
                 </p>
               </div>
               <div className="pt-4 border-t border-slate-100 dark:border-slate-800">
-                <Link to="/teacher/quizzes/create" className="w-full flex justify-center items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 py-3 rounded-xl font-semibold transition-colors">
+                <Link to="/teacher/quizzes/create" className="w-full flex justify-center items-center gap-2 bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 py-3 rounded-xl font-semibold transition-colors">
                   <FileQuestion className="w-5 h-5" /> Giao bài kiểm tra mới
                 </Link>
                 <p className="text-xs text-center text-slate-500 mt-3 italic">* Tính năng giao bài cho riêng lớp học đang phát triển ở Giai đoạn 2</p>

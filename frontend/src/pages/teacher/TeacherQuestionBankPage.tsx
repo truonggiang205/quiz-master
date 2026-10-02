@@ -203,7 +203,7 @@ export const TeacherQuestionBankPage: React.FC = () => {
           <button
             onClick={() => fileInputRef.current?.click()}
             disabled={isUploading}
-            className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white text-sm font-bold rounded-xl shadow-md shadow-indigo-200 dark:shadow-none transition-all disabled:opacity-50"
+            className="flex items-center gap-2 px-5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white text-sm font-bold rounded-xl shadow-md shadow-sky-200 dark:shadow-none transition-all disabled:opacity-50"
           >
             <Upload className="w-4 h-4" />
             {isUploading ? 'Đang tải...' : 'Nhập từ thiết bị'}
@@ -220,7 +220,7 @@ export const TeacherQuestionBankPage: React.FC = () => {
                 onClick={() => { setSelectedSubject('Tất cả'); setSelectedQIds([]); }}
                 className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                   selectedSubject === 'Tất cả' 
-                  ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' 
+                  ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300' 
                   : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                 }`}
               >
@@ -237,7 +237,7 @@ export const TeacherQuestionBankPage: React.FC = () => {
                   onClick={() => { setSelectedSubject(subject); setSelectedQIds([]); }}
                   className={`w-full flex items-center justify-between px-3 py-2 rounded-xl text-sm font-medium transition-colors ${
                     selectedSubject === subject 
-                    ? 'bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300' 
+                    ? 'bg-sky-50 dark:bg-sky-900/30 text-sky-700 dark:text-sky-300' 
                     : 'text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-700/50'
                   }`}
                 >
@@ -257,7 +257,7 @@ export const TeacherQuestionBankPage: React.FC = () => {
         <div className="flex-1 space-y-4">
           {isLoading ? (
             <div className="flex flex-col items-center justify-center py-20 bg-white dark:bg-slate-800 rounded-3xl border border-slate-200 dark:border-slate-700">
-              <div className="w-10 h-10 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div>
+              <div className="w-10 h-10 border-4 border-sky-600 border-t-transparent rounded-full animate-spin"></div>
               <p className="mt-4 text-slate-500 font-medium">Đang tải ngân hàng đề...</p>
             </div>
           ) : filteredQuestions.length === 0 ? (
@@ -277,7 +277,7 @@ export const TeacherQuestionBankPage: React.FC = () => {
                   type="checkbox"
                   checked={selectedQIds.length === filteredQuestions.length && filteredQuestions.length > 0}
                   onChange={handleSelectAll}
-                  className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 cursor-pointer"
+                  className="w-5 h-5 rounded border-slate-300 text-sky-600 focus:ring-sky-600 cursor-pointer"
                   title="Chọn tất cả"
                 />
                 <span className="text-sm font-medium text-slate-600 dark:text-slate-400">Chọn tất cả ({filteredQuestions.length} câu)</span>
@@ -300,9 +300,9 @@ export const TeacherQuestionBankPage: React.FC = () => {
                         type="checkbox"
                         checked={selectedQIds.includes(q.id)}
                         onChange={(e) => handleSelectQuestion(q.id, e.target.checked)}
-                        className="w-5 h-5 rounded border-slate-300 text-indigo-600 focus:ring-indigo-600 mt-1 cursor-pointer"
+                        className="w-5 h-5 rounded border-slate-300 text-sky-600 focus:ring-sky-600 mt-1 cursor-pointer"
                       />
-                      <div className="w-8 h-8 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 rounded-lg flex items-center justify-center font-bold text-sm">
+                      <div className="w-8 h-8 bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 rounded-lg flex items-center justify-center font-bold text-sm">
                         {idx + 1}
                       </div>
                     </div>

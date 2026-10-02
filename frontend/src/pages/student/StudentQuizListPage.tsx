@@ -53,7 +53,7 @@ export const StudentQuizListPage: React.FC = () => {
             placeholder="Tìm kiếm bài thi..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 text-xs md:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full pl-9 pr-4 py-2 text-xs md:text-sm rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
           />
         </div>
 
@@ -65,7 +65,7 @@ export const StudentQuizListPage: React.FC = () => {
               onClick={() => setSelectedSubject(subj)}
               className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-colors ${
                 selectedSubject === subj
-                  ? 'bg-indigo-600 text-white shadow-xs'
+                  ? 'bg-sky-600 text-white shadow-xs'
                   : 'bg-slate-100 dark:bg-slate-700/60 text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-700'
               }`}
             >

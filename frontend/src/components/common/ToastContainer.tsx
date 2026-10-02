@@ -19,7 +19,7 @@ export const ToastContainer: React.FC = () => {
     error: 'border-rose-200 dark:border-rose-800/60 bg-rose-50/95 dark:bg-slate-900/95',
     warning: 'border-amber-200 dark:border-amber-800/60 bg-amber-50/95 dark:bg-slate-900/95',
     info: 'border-sky-200 dark:border-sky-800/60 bg-sky-50/95 dark:bg-slate-900/95',
-    message: 'border-indigo-200/50 bg-white/95 dark:bg-slate-900/95 shadow-indigo-100/50',
+    message: 'border-sky-200/50 bg-white/95 dark:bg-slate-900/95 shadow-sky-100/50',
   };
 
   if (!toasts || toasts.length === 0) return null;
@@ -44,12 +44,12 @@ export const ToastContainer: React.FC = () => {
         >
           {/* Animated glow effect for message toast */}
           {toast.type === 'message' && (
-            <div className="absolute inset-0 bg-gradient-to-r from-indigo-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
+            <div className="absolute inset-0 bg-gradient-to-r from-sky-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
           )}
 
           {toast.type === 'message' && toast.avatar ? (
             <div className="relative shrink-0">
-              <img src={toast.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover ring-2 ring-indigo-100 shadow-sm" />
+              <img src={toast.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover ring-2 ring-sky-100 shadow-sm" />
               <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
             </div>
           ) : (

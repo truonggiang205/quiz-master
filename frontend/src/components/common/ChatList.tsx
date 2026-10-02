@@ -27,13 +27,13 @@ export const ChatList: React.FC<ChatListProps> = ({ items, onChatClick }) => {
         <PremiumListItem
           key={chat.id}
           onClick={() => onChatClick?.(chat)}
-          hoverColorClass="bg-indigo-600"
+          hoverColorClass="bg-sky-600"
           avatar={
             <>
               <img
                 src={chat.avatar}
                 alt={chat.name}
-                className="w-14 h-14 rounded-full object-cover shadow-sm p-0.5 border-2 border-slate-100 group-hover:border-indigo-200 transition-colors duration-300"
+                className="w-14 h-14 rounded-full object-cover shadow-sm p-0.5 border-2 border-slate-100 group-hover:border-sky-200 transition-colors duration-300"
               />
               {chat.isOnline && (
                 <div className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />
@@ -42,7 +42,7 @@ export const ChatList: React.FC<ChatListProps> = ({ items, onChatClick }) => {
           }
           rightAction={
             chat.unreadCount ? (
-              <div className="bg-indigo-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-md shadow-indigo-500/30">
+              <div className="bg-sky-500 text-white text-xs font-bold w-6 h-6 rounded-full flex items-center justify-center shadow-md shadow-sky-500/30">
                 {chat.unreadCount > 99 ? '99+' : chat.unreadCount}
               </div>
             ) : null
@@ -51,7 +51,7 @@ export const ChatList: React.FC<ChatListProps> = ({ items, onChatClick }) => {
           {/* Chat Info (Middle Section) */}
           <div className="flex items-center justify-between mb-1">
             <h3
-              className={`text-base truncate group-hover:text-indigo-900 transition-colors ${
+              className={`text-base truncate group-hover:text-sky-900 transition-colors ${
                 chat.unreadCount ? 'font-bold text-slate-900' : 'font-semibold text-slate-800'
               }`}
             >
@@ -59,7 +59,7 @@ export const ChatList: React.FC<ChatListProps> = ({ items, onChatClick }) => {
             </h3>
             <span
               className={`text-xs whitespace-nowrap ml-2 ${
-                chat.unreadCount ? 'text-indigo-600 font-semibold' : 'text-slate-400'
+                chat.unreadCount ? 'text-sky-600 font-semibold' : 'text-slate-400'
               }`}
             >
               {chat.timestamp}
@@ -78,7 +78,7 @@ export const ChatList: React.FC<ChatListProps> = ({ items, onChatClick }) => {
             )}
 
             {chat.isTyping ? (
-              <span className="text-indigo-500 font-medium italic truncate flex items-center">
+              <span className="text-sky-500 font-medium italic truncate flex items-center">
                 đang soạn tin...
               </span>
             ) : (

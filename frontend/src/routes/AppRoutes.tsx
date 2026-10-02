@@ -55,7 +55,7 @@ export const AppRoutes: React.FC = () => {
   const location = useLocation();
   return (
     <AnimatePresence mode="wait" initial={false}>
-      <React.Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-indigo-600 border-t-transparent rounded-full animate-spin"></div></div>}>
+      <React.Suspense fallback={<div className="flex h-screen items-center justify-center bg-gray-50"><div className="w-8 h-8 border-4 border-sky-600 border-t-transparent rounded-full animate-spin"></div></div>}>
         <Routes location={location} key={location.pathname}>
           {/* Public Landing Page */}
           <Route path="/" element={<LandingPage />} />

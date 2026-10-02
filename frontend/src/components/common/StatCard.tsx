@@ -13,9 +13,9 @@ interface StatCardProps {
 
 const variantStyles = {
   lavender: {
-    iconBg: 'bg-indigo-50 text-indigo-600 dark:bg-indigo-950/60 dark:text-indigo-400',
-    border: 'border-indigo-100/80 dark:border-indigo-900/40',
-    glow: 'group-hover:border-indigo-300 dark:group-hover:border-indigo-700',
+    iconBg: 'bg-sky-50 text-sky-600 dark:bg-sky-950/60 dark:text-sky-400',
+    border: 'border-sky-100/80 dark:border-sky-900/40',
+    glow: 'group-hover:border-sky-300 dark:group-hover:border-sky-700',
   },
   mint: {
     iconBg: 'bg-emerald-50 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400',

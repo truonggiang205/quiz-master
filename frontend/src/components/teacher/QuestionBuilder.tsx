@@ -260,14 +260,14 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
             <button
               type="button"
               onClick={onImportFromBank}
-              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/60 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 shadow-sm transition-all"
+              className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-900/60 hover:bg-sky-50 dark:hover:bg-sky-900/40 shadow-sm transition-all"
             >
               <Upload className="w-4 h-4" />
               Nhập từ Ngân hàng
             </button>
           )}
           {onImportFromDocx && (
-            <label className="cursor-pointer flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-slate-800 text-indigo-600 dark:text-indigo-400 border border-indigo-200 dark:border-indigo-900/60 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 shadow-sm transition-all">
+            <label className="cursor-pointer flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold bg-white dark:bg-slate-800 text-sky-600 dark:text-sky-400 border border-sky-200 dark:border-sky-900/60 hover:bg-sky-50 dark:hover:bg-sky-900/40 shadow-sm transition-all">
               <Upload className="w-4 h-4" />
               Nhập từ thiết bị
               <input 
@@ -288,7 +288,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
             type="button"
             onClick={handleAddQuestion}
             id="add-question-btn"
-            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200 dark:shadow-none transition-all"
+            className="flex items-center gap-2 px-4 py-2.5 rounded-2xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-200 dark:shadow-none transition-all"
           >
             <Plus className="w-4 h-4" />
             Thêm câu hỏi
@@ -311,7 +311,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
               {/* Question Header Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-700/60">
                 <div className="flex items-center gap-3">
-                  <span className="w-7 h-7 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold text-xs flex items-center justify-center">
+                  <span className="w-7 h-7 rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 font-bold text-xs flex items-center justify-center">
                     {qIndex + 1}
                   </span>
 
@@ -319,7 +319,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                   <select
                     value={q.type}
                     onChange={(e) => handleTypeChange(qIndex, e.target.value as QuestionType)}
-                    className="text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700 px-3 py-1.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                    className="text-xs font-semibold rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700 px-3 py-1.5 text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-300"
                   >
                     <option value="SINGLE_CHOICE">Một đáp án đúng</option>
                     <option value="MULTIPLE_CHOICE">Nhiều đáp án đúng</option>
@@ -351,7 +351,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                             handleUpdateQuestion(qIndex, { points: Math.round(val * 100) });
                           }
                         }}
-                        className={`w-20 rounded-xl border px-2 py-1 text-center font-bold text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 ${q.isLocked ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-700'}`}
+                        className={`w-20 rounded-xl border px-2 py-1 text-center font-bold text-amber-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 ${q.isLocked ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-700'}`}
                       />
                       {questions.length > 1 && (
                         <button
@@ -368,7 +368,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                               onChange(questions.map(qq => ({ ...qq, points: newPoints, isLocked: true })));
                             }
                           }}
-                          className="p-1 rounded-lg text-indigo-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 transition-colors"
+                          className="p-1 rounded-lg text-sky-400 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/40 transition-colors"
                         >
                           <Copy className="w-3.5 h-3.5" />
                         </button>
@@ -387,7 +387,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                     type="button"
                     onClick={() => handleDeleteQuestion(qIndex)}
                     title="Xóa câu hỏi"
-                    className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                    className="p-1.5 rounded-xl text-rose-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -396,7 +396,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                       type="button"
                       onClick={() => onSaveToBank(qIndex)}
                       title="Lưu vào ngân hàng câu hỏi"
-                      className="p-1.5 rounded-xl text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-900/40 ml-2 border-l border-slate-200 dark:border-slate-700 pl-3"
+                      className="p-1.5 rounded-xl text-sky-600 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/40 ml-2 border-l border-slate-200 dark:border-slate-700 pl-3"
                     >
                       <Save className="w-4 h-4" />
                     </button>
@@ -425,7 +425,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                       el.style.height = `${el.scrollHeight}px`;
                     }
                   }}
-                  className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 p-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 resize-none overflow-hidden"
+                  className="w-full rounded-2xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 p-3 text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 resize-none overflow-hidden"
                 />
 
                 {/* Question Image Attachment */}
@@ -498,7 +498,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                         onChange={(e) =>
                           handleOptionTextChange(qIndex, optIndex, e.target.value)
                         }
-                        className={`flex-1 rounded-xl border p-2.5 text-xs md:text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300 ${
+                        className={`flex-1 rounded-xl border p-2.5 text-xs md:text-sm text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 ${
                           opt.isCorrect
                             ? 'border-emerald-300 dark:border-emerald-700 bg-emerald-50/40 dark:bg-emerald-950/20'
                             : 'border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800'
@@ -522,7 +522,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                   <button
                     type="button"
                     onClick={() => handleAddOption(qIndex)}
-                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline mt-1"
+                    className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline mt-1"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     Thêm lựa chọn
@@ -553,7 +553,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                               essayRubric: { ...currentRubric, acceptedAnswers: answers }
                             });
                           }}
-                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                          className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
                         />
                       </div>
 
@@ -592,7 +592,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                                         essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
                                       });
                                     }}
-                                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                    className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
                                   />
                                 </div>
                                 <div className="flex gap-2">
@@ -608,7 +608,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                                         essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
                                       });
                                     }}
-                                    className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                    className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
                                   />
                                   <input
                                     type="number"
@@ -625,7 +625,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                                         essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
                                       });
                                     }}
-                                    className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-center text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                                    className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-center text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
                                   />
                                 </div>
                                 <div className="col-span-full">
@@ -640,7 +640,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                                           essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
                                         });
                                       }}
-                                      className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                                      className="rounded border-slate-300 text-sky-600 focus:ring-sky-500"
                                     />
                                     Bắt buộc có tất cả từ khóa mới đạt điểm
                                   </label>
@@ -662,7 +662,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                               essayRubric: { ...currentRubric, criteria: newCriteria }
                             });
                           }}
-                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 hover:underline mt-2"
+                          className="inline-flex items-center gap-1.5 text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline mt-2"
                         >
                           <Plus className="w-3.5 h-3.5" />
                           Thêm tiêu chí
@@ -683,7 +683,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                   placeholder="Giải thích vì sao đáp án này đúng..."
                   value={q.explanation || ''}
                   onChange={(e) => handleUpdateQuestion(qIndex, { explanation: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
                 />
               </div>
             </motion.div>

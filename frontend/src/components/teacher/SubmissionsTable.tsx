@@ -38,7 +38,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({ submissions 
             placeholder="Tìm kiếm theo tên hoặc email học sinh..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl text-xs md:text-sm border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full pl-9 pr-4 py-2 rounded-xl text-xs md:text-sm border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
           />
         </div>
 
@@ -87,7 +87,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({ submissions 
                   {new Date(s.submittedAt).toLocaleString('vi-VN')}
                 </td>
                 <td className="px-6 py-4 font-bold text-slate-900 dark:text-white">
-                  <span className="text-base text-indigo-600 dark:text-indigo-400">
+                  <span className="text-base text-sky-600 dark:text-sky-400">
                     {(s.score / 100).toFixed(2)}
                   </span>
                   <span className="text-xs text-slate-400 font-normal"> / {(s.maxScore / 100).toFixed(2)}</span>
@@ -113,7 +113,7 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({ submissions 
                 <td className="px-6 py-4 text-right">
                   <button
                     onClick={() => window.location.href = `/teacher/quizzes/${s.quizId}/grade/${s.id}`}
-                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition-colors"
+                    className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-semibold text-sky-600 bg-sky-50 hover:bg-sky-100 transition-colors"
                   >
                     Chấm bài
                   </button>

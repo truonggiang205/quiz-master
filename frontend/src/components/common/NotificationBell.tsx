@@ -76,7 +76,7 @@ export const NotificationBell: React.FC = () => {
             }
           }
         }}
-        className="w-[44px] h-[44px] rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-indigo-600 hover:border-indigo-200 transition-all relative group"
+        className="w-[44px] h-[44px] rounded-xl bg-white border border-slate-200 shadow-sm flex items-center justify-center text-slate-500 hover:text-sky-600 hover:border-sky-200 transition-all relative group"
       >
         {unreadCount > 0 ? (
           <BellRing className="w-5 h-5 animate-wiggle" />
@@ -102,7 +102,7 @@ export const NotificationBell: React.FC = () => {
             {unreadCount > 0 && (
               <button 
                 onClick={handleMarkAllAsRead}
-                className="text-xs font-semibold text-indigo-600 hover:text-indigo-700 hover:underline"
+                className="text-xs font-semibold text-sky-600 hover:text-sky-700 hover:underline"
               >
                 Đánh dấu tất cả đã đọc
               </button>
@@ -113,7 +113,7 @@ export const NotificationBell: React.FC = () => {
             <button
               onClick={() => setTab('PERSONAL')}
               className={`pb-3 text-sm font-bold border-b-2 transition-colors ${
-                tab === 'PERSONAL' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                tab === 'PERSONAL' ? 'border-sky-600 text-sky-600' : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
               Cá nhân
@@ -121,7 +121,7 @@ export const NotificationBell: React.FC = () => {
             <button
               onClick={() => setTab('GENERAL')}
               className={`pb-3 text-sm font-bold border-b-2 transition-colors ${
-                tab === 'GENERAL' ? 'border-indigo-600 text-indigo-600' : 'border-transparent text-slate-500 hover:text-slate-700'
+                tab === 'GENERAL' ? 'border-sky-600 text-sky-600' : 'border-transparent text-slate-500 hover:text-slate-700'
               }`}
             >
               Hệ thống
@@ -140,9 +140,9 @@ export const NotificationBell: React.FC = () => {
               filtered.map((n) => (
                 <div 
                   key={n.id} 
-                  className={`p-3 rounded-2xl transition-all flex gap-3 mb-1 group ${n.isRead ? 'opacity-70 hover:bg-slate-50' : 'bg-indigo-50/50 hover:bg-indigo-50'}`}
+                  className={`p-3 rounded-2xl transition-all flex gap-3 mb-1 group ${n.isRead ? 'opacity-70 hover:bg-slate-50' : 'bg-sky-50/50 hover:bg-sky-50'}`}
                 >
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${n.isRead ? 'bg-slate-100 text-slate-400' : 'bg-indigo-100 text-indigo-600'}`}>
+                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${n.isRead ? 'bg-slate-100 text-slate-400' : 'bg-sky-100 text-sky-600'}`}>
                     <Info className="w-5 h-5" />
                   </div>
                   <div className="flex-1 min-w-0">
@@ -160,7 +160,7 @@ export const NotificationBell: React.FC = () => {
                           setIsOpen(false);
                           if (n.actionUrl) navigate(n.actionUrl);
                         }}
-                        className="mt-2 text-xs font-semibold bg-indigo-600 text-white px-3 py-1.5 rounded-lg hover:bg-indigo-700 transition-colors"
+                        className="mt-2 text-xs font-semibold bg-sky-600 text-white px-3 py-1.5 rounded-lg hover:bg-sky-700 transition-colors"
                       >
                         {n.actionText || 'Xem chi tiết'}
                       </button>
@@ -169,7 +169,7 @@ export const NotificationBell: React.FC = () => {
                   {!n.isRead && (
                     <button 
                       onClick={(e) => handleMarkAsRead(n.id, e)}
-                      className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-slate-300 hover:bg-indigo-200 hover:text-indigo-700 transition-colors opacity-0 group-hover:opacity-100"
+                      className="w-6 h-6 rounded-full flex items-center justify-center shrink-0 text-sky-800 hover:bg-sky-200 hover:text-sky-700 transition-colors opacity-0 group-hover:opacity-100"
                       title="Đánh dấu đã đọc"
                     >
                       <Check className="w-3 h-3" />

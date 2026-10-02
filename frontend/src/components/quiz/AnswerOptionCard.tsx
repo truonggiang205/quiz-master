@@ -33,15 +33,17 @@ export const AnswerOptionCard: React.FC<AnswerOptionCardProps> = ({
       onClick={onSelect}
       className={`w-full text-left p-4 rounded-2xl border flex items-start gap-3.5 ${
         isSelected
-          ? 'bg-indigo-50/90 dark:bg-indigo-950/60 border-indigo-400 dark:border-indigo-600 shadow-sm shadow-indigo-100 dark:shadow-none'
-          : 'bg-white/80 dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/50 border-slate-200/80 dark:border-slate-700/80 hover:border-indigo-200 dark:hover:border-indigo-800'
+          ? 'bg-sky-50/90 dark:bg-sky-950/60 border-sky-400 dark:border-sky-600 shadow-sm shadow-sky-100 dark:shadow-none'
+          : 'bg-white/80 dark:bg-slate-800/80 hover:bg-slate-50 dark:hover:bg-slate-700/50 border-slate-200/80 dark:border-slate-700/80 hover:border-sky-200 dark:hover:border-sky-800'
       }`}
     >
       {/* Option Letter / Check indicator */}
-      <div
+      <motion.div
+        animate={{ scale: isSelected ? [1, 1.2, 1] : 1 }}
+        transition={{ duration: 0.2 }}
         className={`w-7 h-7 rounded-xl flex items-center justify-center text-xs font-bold transition-colors flex-shrink-0 mt-0.5 ${
           isSelected
-            ? 'bg-indigo-600 text-white shadow-xs'
+            ? 'bg-sky-600 text-white shadow-xs'
             : 'bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
         }`}
       >
@@ -50,14 +52,14 @@ export const AnswerOptionCard: React.FC<AnswerOptionCardProps> = ({
         ) : (
           <span>{letter}</span>
         )}
-      </div>
+      </motion.div>
 
       {/* Option Text */}
       <div className="flex-1 min-w-0">
         <p
           className={`text-sm md:text-base leading-relaxed ${
             isSelected
-              ? 'font-semibold text-indigo-950 dark:text-indigo-100'
+              ? 'font-semibold text-sky-950 dark:text-sky-100'
               : 'text-slate-700 dark:text-slate-200'
           }`}
         >

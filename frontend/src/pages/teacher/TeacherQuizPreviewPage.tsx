@@ -36,7 +36,7 @@ export const TeacherQuizPreviewPage: React.FC = () => {
   if (loading || !quiz) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
-        <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -47,7 +47,7 @@ export const TeacherQuizPreviewPage: React.FC = () => {
         <p className="text-sm text-slate-500">Bài thi này chưa có câu hỏi nào để xem trước.</p>
         <Link
           to={`/teacher/quizzes/${id}/edit`}
-          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600"
+          className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-sky-600"
         >
           Thêm câu hỏi ngay
         </Link>

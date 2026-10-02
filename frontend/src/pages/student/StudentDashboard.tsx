@@ -41,7 +41,7 @@ export const StudentDashboard: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
           <span className="text-xs text-slate-400">Đang tải góc học tập của bạn...</span>
         </div>
       </div>
@@ -61,7 +61,7 @@ export const StudentDashboard: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Student Welcome Hero Banner */}
-      <div className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-indigo-500 via-purple-500 to-sky-400 text-white shadow-lg shadow-indigo-200/50 dark:shadow-none overflow-hidden">
+      <div className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-sky-500 via-purple-500 to-sky-400 text-white shadow-lg shadow-sky-200/50 dark:shadow-none overflow-hidden">
         <div className="relative z-10 max-w-xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider mb-3 backdrop-blur-xs">
             <Sparkles className="w-3.5 h-3.5" />
@@ -70,7 +70,7 @@ export const StudentDashboard: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
             Chào mừng, {user?.name || 'Học Sinh'}! 🎓
           </h1>
-          <p className="text-indigo-100 text-xs sm:text-sm mt-1.5 leading-relaxed">
+          <p className="text-sky-100 text-xs sm:text-sm mt-1.5 leading-relaxed">
             Bạn có <span className="font-bold underline">{stats.availableCount} bài kiểm tra</span> đang sẵn sàng để thử sức. Hãy chuẩn bị tinh thần và bắt đầu ngay!
           </p>
 
@@ -78,7 +78,7 @@ export const StudentDashboard: React.FC = () => {
             <Link
               to="/student/quizzes"
               id="student-dashboard-quizzes-btn"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-xs shadow-sm transition-transform hover:scale-105"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-sky-700 hover:bg-sky-50 font-bold text-xs shadow-sm transition-transform hover:scale-105"
             >
               <span>Xem tất cả bài thi</span>
               <ArrowRight className="w-4 h-4" />
@@ -138,7 +138,7 @@ export const StudentDashboard: React.FC = () => {
           </div>
           <Link
             to="/student/quizzes"
-            className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+            className="flex items-center gap-1 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline"
           >
             <span>Xem tất cả</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -188,7 +188,7 @@ export const StudentDashboard: React.FC = () => {
 
               <div className="flex items-center gap-4 self-end sm:self-auto">
                 <div className="text-right">
-                  <span className="text-base font-bold text-indigo-600 dark:text-indigo-400">
+                  <span className="text-base font-bold text-sky-600 dark:text-sky-400">
                     {(sub.score / 100).toFixed(2)}
                   </span>
                   <span className="text-xs text-slate-400 font-normal"> / {((sub.maxScore || 1000) / 100).toFixed(2)}</span>
@@ -196,7 +196,7 @@ export const StudentDashboard: React.FC = () => {
 
                 <Link
                   to={`/student/quizzes/${sub.quizId}/result?submissionId=${sub.id}`}
-                  className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-indigo-700 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 transition-colors"
+                  className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 transition-colors"
                 >
                   Xem đáp án
                 </Link>

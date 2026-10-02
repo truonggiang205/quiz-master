@@ -37,7 +37,7 @@ export const TeacherQuizResultsPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
           <span className="text-xs text-slate-400">Đang tải kết quả bài kiểm tra...</span>
         </div>
       </div>
@@ -102,7 +102,7 @@ export const TeacherQuizResultsPage: React.FC = () => {
           onClick={() => setActiveTab('submitted')}
           className={`px-4 py-2 text-sm font-medium border-b-2 transition-colors ${
             activeTab === 'submitted'
-              ? 'border-indigo-500 text-indigo-600 dark:text-indigo-400'
+              ? 'border-sky-500 text-sky-600 dark:text-sky-400'
               : 'border-transparent text-slate-500 hover:text-slate-700 dark:hover:text-slate-300'
           }`}
         >

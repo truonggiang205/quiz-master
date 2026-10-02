@@ -86,7 +86,7 @@ export const ReportBugPage: React.FC = () => {
         className="bg-white rounded-3xl p-6 sm:p-10 shadow-[0_12px_35px_rgba(15,23,42,0.08),0_3px_8px_rgba(15,23,42,0.04)] border border-slate-100"
       >
         <div className="flex items-center gap-4 mb-8">
-          <div className="w-12 h-12 bg-indigo-100 rounded-2xl flex items-center justify-center text-indigo-600 shadow-inner">
+          <div className="w-12 h-12 bg-sky-100 rounded-2xl flex items-center justify-center text-sky-600 shadow-inner">
             <Bug className="w-6 h-6" />
           </div>
           <div>
@@ -106,7 +106,7 @@ export const ReportBugPage: React.FC = () => {
                 placeholder="VD: Không thể nộp bài khi hết giờ"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none transition-all"
                 required
               />
             </div>
@@ -122,7 +122,7 @@ export const ReportBugPage: React.FC = () => {
                 placeholder="Hãy mô tả thao tác bạn đã làm và lỗi gì đã xảy ra..."
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
-                className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all resize-none"
+                className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none transition-all resize-none"
                 required
               />
               <div className="absolute right-3 bottom-3 text-xs text-slate-400">
@@ -143,8 +143,8 @@ export const ReportBugPage: React.FC = () => {
                     onClick={() => setFormData({ ...formData, type: type.id })}
                     className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-sm font-medium transition-all ${
                       formData.type === type.id
-                        ? 'bg-indigo-600 text-white shadow-md shadow-indigo-600/30'
-                        : 'bg-white text-slate-600 border border-slate-200 hover:border-indigo-300 hover:bg-indigo-50'
+                        ? 'bg-sky-600 text-white shadow-md shadow-sky-600/30'
+                        : 'bg-white text-sky-800 border border-slate-200 hover:border-sky-300 hover:bg-sky-50'
                     }`}
                   >
                     <type.icon className="w-3.5 h-3.5" />
@@ -198,14 +198,14 @@ export const ReportBugPage: React.FC = () => {
                 placeholder="VD: Chrome, Windows 11 hoặc Safari, iPhone 14"
                 value={formData.browser}
                 onChange={(e) => setFormData({ ...formData, browser: e.target.value })}
-                className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
+                className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none transition-all"
               />
             </div>
           </div>
 
           {/* Attach Screenshot */}
           <div>
-            <div className="relative border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 hover:bg-slate-50 hover:border-indigo-300 transition-colors cursor-pointer group overflow-hidden">
+            <div className="relative border-2 border-dashed border-slate-200 rounded-xl bg-slate-50/50 hover:bg-slate-50 hover:border-sky-300 transition-colors cursor-pointer group overflow-hidden">
               <input
                 type="file"
                 accept="image/*"
@@ -217,7 +217,7 @@ export const ReportBugPage: React.FC = () => {
                   <img src={previewUrl} alt="Preview" className="h-32 object-contain rounded-lg shadow-sm" />
                 ) : (
                   <>
-                    <UploadCloud className="w-6 h-6 text-slate-400 group-hover:text-indigo-500 transition-colors mb-2" />
+                    <UploadCloud className="w-6 h-6 text-slate-400 group-hover:text-sky-500 transition-colors mb-2" />
                     <p className="text-sm font-medium text-slate-700">Đính kèm ảnh minh họa</p>
                     <p className="text-xs text-slate-500">Nhấn hoặc kéo thả ảnh vào đây</p>
                   </>
@@ -230,7 +230,7 @@ export const ReportBugPage: React.FC = () => {
           <button
             type="submit"
             disabled={isSubmitting}
-            className="w-full py-3.5 rounded-xl text-white font-semibold flex items-center justify-center gap-2 bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 shadow-lg shadow-indigo-500/30 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
+            className="w-full py-3.5 rounded-xl text-white font-semibold flex items-center justify-center gap-2 bg-gradient-to-r from-sky-500 to-purple-600 hover:from-sky-600 hover:to-purple-700 shadow-lg shadow-sky-500/30 transition-all active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed"
           >
             {isSubmitting ? (
               <div className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />

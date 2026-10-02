@@ -31,7 +31,7 @@ export const UnsubmittedTable: React.FC<UnsubmittedTableProps> = ({ students }) 
             placeholder="Tìm kiếm theo tên hoặc email học sinh..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 rounded-xl text-xs md:text-sm border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+            className="w-full pl-9 pr-4 py-2 rounded-xl text-xs md:text-sm border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-700/60 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
           />
         </div>
       </div>

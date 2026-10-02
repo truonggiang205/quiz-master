@@ -259,7 +259,7 @@ export const FloatingChat: React.FC = () => {
         <div className="w-[350px] max-w-[calc(100vw-3rem)] h-[calc(100vh-120px)] max-h-[550px] bg-white rounded-3xl shadow-[0_20px_40px_-15px_rgba(0,0,0,0.15)] border border-slate-100 flex flex-col mb-4 overflow-hidden animate-in slide-in-from-bottom-8 duration-300">
           
           {/* Header */}
-          <div className="h-16 bg-gradient-to-r from-indigo-500 to-indigo-600 px-4 flex items-center justify-between text-white shadow-md z-10 shrink-0">
+          <div className="h-16 bg-gradient-to-r from-sky-500 to-sky-600 px-4 flex items-center justify-between text-white shadow-md z-10 shrink-0">
             <div className="flex items-center gap-2">
               {activeTab === 'CHAT' && (
                 <button 
@@ -280,7 +280,7 @@ export const FloatingChat: React.FC = () => {
                 )}
                 <div className="flex-1 min-w-0">
                   <h3 className="font-bold text-base truncate">{activeTab === 'CHAT' ? activeConv?.otherUser?.name : 'Tin nhắn'}</h3>
-                  {activeTab === 'CHAT' && <p className="text-xs text-indigo-100 uppercase truncate">{activeConv?.otherUser?.role === 'TEACHER' ? 'Giáo viên' : 'Học sinh'}</p>}
+                  {activeTab === 'CHAT' && <p className="text-xs text-sky-100 uppercase truncate">{activeConv?.otherUser?.role === 'TEACHER' ? 'Giáo viên' : 'Học sinh'}</p>}
                 </div>
               </div>
             </div>
@@ -300,7 +300,7 @@ export const FloatingChat: React.FC = () => {
                     placeholder="Tìm theo tên hoặc email..."
                     value={searchQuery}
                     onChange={handleSearch}
-                    className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all shadow-sm"
+                    className="w-full pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-xl text-sm focus:outline-none focus:border-sky-500 focus:ring-2 focus:ring-sky-100 transition-all shadow-sm"
                   />
                 </div>
               </div>
@@ -310,15 +310,15 @@ export const FloatingChat: React.FC = () => {
                   <div className="animate-in fade-in slide-in-from-top-2 duration-300">
                     {searchResults.length > 0 ? (
                       searchResults.map(u => (
-                        <button key={u.id} onClick={() => startChatWith(u)} className="w-full flex items-center gap-3 p-3 mb-1 rounded-2xl hover:bg-indigo-50 border border-transparent hover:border-indigo-100 transition-all text-left group shadow-sm bg-white">
-                          <img src={u.avatar} alt={u.name} className="w-11 h-11 rounded-full object-cover ring-2 ring-slate-100 group-hover:ring-indigo-300 transition-all" />
+                        <button key={u.id} onClick={() => startChatWith(u)} className="w-full flex items-center gap-3 p-3 mb-1 rounded-2xl hover:bg-sky-50 border border-transparent hover:border-sky-100 transition-all text-left group shadow-sm bg-white">
+                          <img src={u.avatar} alt={u.name} className="w-11 h-11 rounded-full object-cover ring-2 ring-slate-100 group-hover:ring-sky-300 transition-all" />
                           <div className="flex-1 overflow-hidden">
-                            <p className="font-bold text-sm text-slate-800 truncate group-hover:text-indigo-700 transition-colors">{u.name}</p>
+                            <p className="font-bold text-sm text-slate-800 truncate group-hover:text-sky-700 transition-colors">{u.name}</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
-                              <Mail className="w-3 h-3 text-slate-400 group-hover:text-indigo-400 transition-colors" />
+                              <Mail className="w-3 h-3 text-slate-400 group-hover:text-sky-400 transition-colors" />
                               <p className="text-[11px] text-slate-500 truncate">{u.email}</p>
                             </div>
-                            <p className="text-[10px] uppercase font-bold text-indigo-500/70 mt-0.5">{u.role === 'TEACHER' ? 'Giáo viên' : 'Học sinh'}</p>
+                            <p className="text-[10px] uppercase font-bold text-sky-500/70 mt-0.5">{u.role === 'TEACHER' ? 'Giáo viên' : 'Học sinh'}</p>
                           </div>
                         </button>
                       ))
@@ -384,7 +384,7 @@ export const FloatingChat: React.FC = () => {
                         )}
                         <div className={`rounded-2xl px-4 py-2.5 text-[13px] md:text-sm shadow-sm ${
                           isMe 
-                            ? 'bg-indigo-600 text-white rounded-br-sm' 
+                            ? 'bg-sky-600 text-white rounded-br-sm' 
                             : 'bg-white text-slate-800 border border-slate-100 rounded-bl-sm'
                         }`}>
                           {m.content}
@@ -411,9 +411,9 @@ export const FloatingChat: React.FC = () => {
                       className="w-7 h-7 rounded-full object-cover shrink-0 mb-0.5 shadow-sm"
                     />
                     <div className="bg-white border border-slate-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm flex items-center gap-1.5 h-10">
-                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full animate-bounce"></div>
+                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full  [animation-delay:-0.3s]"></div>
+                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full  [animation-delay:-0.15s]"></div>
+                      <div className="w-1.5 h-1.5 bg-slate-400 rounded-full "></div>
                     </div>
                   </div>
                 )}
@@ -432,13 +432,13 @@ export const FloatingChat: React.FC = () => {
                       }
                     }}
                     placeholder="Nhắn tin..."
-                    className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:border-indigo-500 focus:bg-white transition-colors resize-none max-h-24 custom-scrollbar"
+                    className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:border-sky-500 focus:bg-white transition-colors resize-none max-h-24 custom-scrollbar"
                     rows={1}
                   />
                   <button 
                     onClick={handleSend}
                     disabled={!newMessage.trim()}
-                    className="w-10 h-10 rounded-full bg-indigo-600 text-white flex items-center justify-center shrink-0 hover:bg-indigo-700 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all shadow-md shadow-indigo-200"
+                    className="w-10 h-10 rounded-full bg-sky-600 text-white flex items-center justify-center shrink-0 hover:bg-sky-700 hover:scale-105 disabled:opacity-50 disabled:hover:scale-100 transition-all shadow-md shadow-sky-200"
                   >
                     <Send className="w-4 h-4 ml-0.5" />
                   </button>
@@ -452,11 +452,11 @@ export const FloatingChat: React.FC = () => {
       {/* Bubble Button */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="w-14 h-14 bg-indigo-600 hover:bg-indigo-700 hover:scale-110 active:scale-95 text-white rounded-full flex items-center justify-center shadow-[0_10px_20px_-5px_rgba(79,70,229,0.5)] transition-all relative group"
+        className="w-14 h-14 bg-sky-600 hover:bg-sky-700 hover:scale-110 active:scale-95 text-white rounded-full flex items-center justify-center shadow-[0_10px_20px_-5px_rgba(79,70,229,0.5)] transition-all relative group"
       >
         <MessageCircle className="w-6 h-6" />
         {!isOpen && unreadTotal > 0 && (
-          <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-rose-500 rounded-full border-2 border-white text-[10px] font-bold text-white flex items-center justify-center animate-bounce">
+          <span className="absolute -top-1 -right-1 min-w-5 h-5 px-1 bg-rose-500 rounded-full border-2 border-white text-[10px] font-bold text-white flex items-center justify-center ">
             {unreadTotal > 99 ? '99+' : unreadTotal}
           </span>
         )}

@@ -70,7 +70,7 @@ export const StudentQuizResultPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[500px]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
           <span className="text-xs text-slate-400">Đang tải kết quả thi của bạn...</span>
         </div>
       </div>
@@ -129,7 +129,7 @@ export const StudentQuizResultPage: React.FC = () => {
         <div className="space-y-6 pt-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
             <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <BookOpen className="w-5 h-5 text-indigo-500" />
+              <BookOpen className="w-5 h-5 text-sky-500" />
               Chi tiết câu hỏi & Lời giải
             </h3>
             <span className="text-xs text-slate-400">
@@ -148,7 +148,7 @@ export const StudentQuizResultPage: React.FC = () => {
                 >
                   <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-700/60">
                     <div className="flex items-center gap-2.5">
-                      <span className="text-sm font-black text-indigo-600 dark:text-indigo-400">
+                      <span className="text-sm font-black text-sky-600 dark:text-sky-400">
                         Câu {idx + 1}
                       </span>
                       {item.isCorrect ? (
@@ -221,7 +221,7 @@ export const StudentQuizResultPage: React.FC = () => {
 
                           <div className="flex items-center gap-2">
                             {isStudentSelected && (
-                              <span className="text-[11px] font-bold text-indigo-600 dark:text-indigo-400 bg-indigo-50 dark:bg-indigo-950 px-2 py-0.5 rounded-md">
+                              <span className="text-[11px] font-bold text-sky-600 dark:text-sky-400 bg-sky-50 dark:bg-sky-950 px-2 py-0.5 rounded-md">
                                 Bạn đã chọn
                               </span>
                             )}
@@ -239,12 +239,12 @@ export const StudentQuizResultPage: React.FC = () => {
 
                   {/* Explanation Note */}
                   {item.explanation && (
-                    <div className="p-4 rounded-2xl bg-indigo-50/70 dark:bg-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 text-xs">
-                      <span className="font-bold text-indigo-950 dark:text-indigo-200 flex items-center gap-1.5 mb-1">
-                        <Sparkles className="w-3.5 h-3.5 text-indigo-500" />
+                    <div className="p-4 rounded-2xl bg-sky-50/70 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/60 text-xs">
+                      <span className="font-bold text-sky-950 dark:text-sky-200 flex items-center gap-1.5 mb-1">
+                        <Sparkles className="w-3.5 h-3.5 text-sky-500" />
                         Lời giải thích chi tiết:
                       </span>
-                      <p className="text-indigo-900 dark:text-indigo-300 leading-relaxed">
+                      <p className="text-sky-900 dark:text-sky-300 leading-relaxed">
                         <Latex>{item.explanation}</Latex>
                       </p>
                     </div>
@@ -280,7 +280,7 @@ export const StudentQuizResultPage: React.FC = () => {
                 value={appealReason}
                 onChange={(e) => setAppealReason(e.target.value)}
                 placeholder="VD: Câu 3 em chọn đáp án đúng nhưng hệ thống ghi nhận sai..."
-                className="w-full h-32 px-4 py-3 text-sm rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-indigo-500 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors resize-none"
+                className="w-full h-32 px-4 py-3 text-sm rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-sky-500 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors resize-none"
               />
               <button
                 onClick={handleAppealSubmit}

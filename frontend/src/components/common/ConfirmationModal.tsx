@@ -28,14 +28,14 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   isLoading = false,
 }) => {
   const variantIcons = {
-    primary: <AlertCircle className="w-6 h-6 text-indigo-500" />,
+    primary: <AlertCircle className="w-6 h-6 text-sky-500" />,
     warning: <AlertTriangle className="w-6 h-6 text-amber-500" />,
     danger: <AlertCircle className="w-6 h-6 text-rose-500" />,
     success: <CheckCircle2 className="w-6 h-6 text-emerald-500" />,
   };
 
   const confirmBtnStyles = {
-    primary: 'bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200 dark:shadow-none',
+    primary: 'bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-200 dark:shadow-none',
     warning: 'bg-amber-500 hover:bg-amber-600 text-white shadow-sm shadow-amber-200 dark:shadow-none',
     danger: 'bg-rose-500 hover:bg-rose-600 text-white shadow-sm shadow-rose-200 dark:shadow-none',
     success: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-200 dark:shadow-none',

@@ -90,7 +90,7 @@ export const TeacherAppealsPage: React.FC = () => {
                   {a.status === 'PENDING' ? (
                     <>
                       <textarea
-                        className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-indigo-500 bg-white shadow-sm resize-none"
+                        className="w-full px-3 py-2 text-sm rounded-xl border border-slate-200 focus:outline-none focus:border-sky-500 bg-white shadow-sm resize-none"
                         rows={2}
                         placeholder="Nhập lời nhắn phản hồi..."
                         value={replyText[a.id] || ''}

@@ -1,4 +1,4 @@
-@import url('https://fonts.googleapis.com/css2?family=Instrument+Serif:ital@0;1&family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Lora:ital@0;1&family=Outfit:wght@300;400;500;600;700;800&display=swap');
 
 @tailwind base;
 @tailwind components;
@@ -18,12 +18,14 @@
   }
 
   body {
-    @apply font-sans bg-slate-50 text-slate-800 antialiased selection:bg-indigo-100 selection:text-indigo-700;
+    @apply font-sans bg-slate-50 text-sky-950 antialiased;
+    @apply selection:bg-sky-200 selection:text-sky-900;
     font-feature-settings: "cv02", "cv03", "cv04", "cv11";
   }
 
   .dark body {
-    @apply bg-slate-900 text-slate-100 selection:bg-indigo-900 selection:text-indigo-200;
+    @apply bg-slate-900 text-sky-100;
+    @apply selection:bg-sky-800 selection:text-sky-100;
   }
 
   /* Prevent Safari auto-zoom on mobile */
@@ -62,9 +64,9 @@
 .dark .bg-pastel-mesh {
   background-color: #0b1120;
   background-image: 
-    radial-gradient(at 0% 0%, rgba(99, 102, 241, 0.15) 0px, transparent 50%),
+    radial-gradient(at 0% 0%, rgba(56, 189, 248, 0.15) 0px, transparent 50%),
     radial-gradient(at 100% 0%, rgba(56, 189, 248, 0.12) 0px, transparent 50%),
-    radial-gradient(at 50% 50%, rgba(168, 85, 247, 0.1) 0px, transparent 50%);
+    radial-gradient(at 50% 50%, rgba(56, 189, 248, 0.1) 0px, transparent 50%);
 }
 
 /* Smooth custom scrollbars */

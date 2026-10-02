@@ -81,7 +81,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         {/* Top bar */}
         <div className="flex flex-wrap items-center justify-between gap-3 mb-5 pb-4 border-b border-slate-100 dark:border-slate-700/60">
           <div className="flex items-center gap-2">
-            <span className="text-base md:text-lg font-black text-indigo-600 dark:text-indigo-400">
+            <span className="text-base md:text-lg font-black text-sky-600 dark:text-sky-400">
               Câu {questionNumber}
             </span>
             <span className="text-xs text-slate-400 font-medium">
@@ -131,7 +131,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                 value={essayText}
                 onChange={(e) => onEssayTextChange?.(e.target.value)}
                 placeholder="Nhập câu trả lời của bạn vào đây..."
-                className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/50 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-shadow resize-y"
+                className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/50 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-shadow resize-y"
               />
             </div>
             <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-2xl p-6 bg-slate-50 dark:bg-slate-900/50 mt-4">
@@ -157,7 +157,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   </div>
                   
                   <div className="flex justify-center mt-4">
-                    <label className={`cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${isUploading ? 'bg-slate-200 text-slate-500' : 'bg-slate-100 hover:bg-slate-200 text-indigo-600 border border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-indigo-400 dark:hover:bg-slate-700'}`}>
+                    <label className={`cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${isUploading ? 'bg-slate-200 text-slate-500' : 'bg-slate-100 hover:bg-slate-200 text-sky-600 border border-slate-300 dark:bg-slate-800 dark:border-slate-700 dark:text-sky-400 dark:hover:bg-slate-700'}`}>
                       <Upload className="w-4 h-4" /> {isUploading ? 'Đang tải...' : 'Thêm ảnh khác'}
                       <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
                     </label>
@@ -169,7 +169,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   <p className="text-sm text-slate-500 dark:text-slate-400 mb-4 text-center">
                     (Định dạng: JPG, PNG)
                   </p>
-                  <label className={`cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${isUploading ? 'bg-slate-200 text-slate-500' : 'bg-indigo-600 hover:bg-indigo-700 text-white'}`}>
+                  <label className={`cursor-pointer inline-flex items-center gap-2 px-5 py-2.5 rounded-xl text-sm font-bold transition-colors ${isUploading ? 'bg-slate-200 text-slate-500' : 'bg-sky-600 hover:bg-sky-700 text-white'}`}>
                     <Upload className="w-4 h-4" /> {isUploading ? 'Đang tải...' : 'Chọn ảnh tải lên'}
                     <input type="file" accept="image/*" className="hidden" onChange={handleFileChange} disabled={isUploading} />
                   </label>

@@ -9,6 +9,7 @@ import { QuestionPalette } from '../../components/quiz/QuestionPalette';
 import { QuizTimer } from '../../components/quiz/QuizTimer';
 import { ConfirmationModal } from '../../components/common/ConfirmationModal';
 import { ArrowLeft, ArrowRight, Send, Flag } from 'lucide-react';
+import { motion } from 'framer-motion';
 
 export const StudentQuizTakingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -182,7 +183,7 @@ export const StudentQuizTakingPage: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[500px]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
           <span className="text-xs text-slate-400">Đang chuẩn bị phòng thi của bạn...</span>
         </div>
       </div>
@@ -204,7 +205,7 @@ export const StudentQuizTakingPage: React.FC = () => {
       {/* Top Bar: Title, Progress & Timer */}
       <div className="bg-white/95 dark:bg-slate-800/95 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-xs backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
         <div>
-          <span className="text-[10px] uppercase font-bold text-indigo-500 tracking-wider">
+          <span className="text-[10px] uppercase font-bold text-sky-500 tracking-wider">
             {currentQuiz.subject}
           </span>
           <h1 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight line-clamp-1">
@@ -219,7 +220,7 @@ export const StudentQuizTakingPage: React.FC = () => {
             type="button"
             onClick={() => setIsSubmitModalOpen(true)}
             id="finish-exam-top-btn"
-            className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-sm transition-all"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-2xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 shadow-sm transition-all"
           >
             <Send className="w-3.5 h-3.5" />
             <span>Nộp bài</span>
@@ -228,10 +229,16 @@ export const StudentQuizTakingPage: React.FC = () => {
       </div>
 
       {/* Thin Progress bar */}
-      <div className="w-full bg-slate-200/80 dark:bg-slate-700/60 h-1.5 rounded-full overflow-hidden">
+      <div 
+        className="w-full bg-slate-200/80 dark:bg-slate-700/60 h-1.5 rounded-full overflow-hidden"
+        role="progressbar"
+        aria-valuenow={progressPercent}
+        aria-valuemin={0}
+        aria-valuemax={100}
+      >
         <div
-          className="bg-indigo-600 h-full rounded-full transition-all duration-300"
-          style={{ width: `${progressPercent}%` }}
+          className="bg-sky-600 h-full rounded-full transition-transform duration-300 origin-left"
+          style={{ transform: `scaleX(${progressPercent / 100})` }}
         />
       </div>
 
@@ -283,6 +290,7 @@ export const StudentQuizTakingPage: React.FC = () => {
             <button
               type="button"
               onClick={() => toggleFlagQuestion(currentQ.id)}
+              aria-label={isFlagged ? "Bỏ cắm cờ câu hỏi" : "Cắm cờ câu hỏi"}
               className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-semibold sm:hidden border ${
                 isFlagged
                   ? 'bg-amber-100 text-amber-800 border-amber-300'
@@ -297,7 +305,7 @@ export const StudentQuizTakingPage: React.FC = () => {
                 type="button"
                 onClick={nextQuestion}
                 id="next-question-btn"
-                className="flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-700 transition-colors shadow-xs"
+                className="flex items-center gap-1.5 px-5 py-2.5 rounded-2xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 dark:bg-sky-600 dark:hover:bg-sky-700 transition-colors shadow-xs"
               >
                 <span>Câu tiếp theo</span>
                 <ArrowRight className="w-4 h-4" />
@@ -331,18 +339,28 @@ export const StudentQuizTakingPage: React.FC = () => {
       >
         <div className="grid grid-cols-2 gap-3 py-2">
           <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200 dark:border-emerald-800 text-center">
-            <span className="block text-2xl font-black text-emerald-700 dark:text-emerald-300 font-mono">
+            <motion.span 
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.1, type: "spring", stiffness: 300, damping: 20 }}
+              className="block text-2xl font-black text-emerald-700 dark:text-emerald-300 font-mono"
+            >
               {answeredCount}
-            </span>
+            </motion.span>
             <span className="text-[11px] font-bold text-emerald-600 uppercase">
               Đã trả lời
             </span>
           </div>
 
           <div className="p-3.5 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 text-center">
-            <span className="block text-2xl font-black text-amber-700 dark:text-amber-300 font-mono">
+            <motion.span 
+              initial={{ scale: 0.5, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              transition={{ delay: 0.2, type: "spring", stiffness: 300, damping: 20 }}
+              className="block text-2xl font-black text-amber-700 dark:text-amber-300 font-mono"
+            >
               {unansweredCount}
-            </span>
+            </motion.span>
             <span className="text-[11px] font-bold text-amber-600 uppercase">
               Chưa trả lời
             </span>

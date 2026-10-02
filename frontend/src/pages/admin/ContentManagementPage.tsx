@@ -84,14 +84,14 @@ export const ContentManagementPage: React.FC = () => {
       </div>
 
       {/* Broadcast Section */}
-      <div className="bg-gradient-to-br from-indigo-500 to-indigo-600 rounded-3xl p-6 shadow-lg shadow-indigo-200 text-white">
+      <div className="bg-gradient-to-br from-sky-500 to-sky-600 rounded-3xl p-6 shadow-lg shadow-sky-200 text-white">
         <div className="flex items-center gap-3 mb-4">
           <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
             <Megaphone className="w-5 h-5 text-white" />
           </div>
           <div>
             <h2 className="text-lg font-bold">Phát Thông Báo Chung</h2>
-            <p className="text-indigo-100 text-xs">Gửi thông báo đến chuông của người dùng (Tab Hệ thống)</p>
+            <p className="text-sky-100 text-xs">Gửi thông báo đến chuông của người dùng (Tab Hệ thống)</p>
           </div>
         </div>
         
@@ -102,7 +102,7 @@ export const ContentManagementPage: React.FC = () => {
               placeholder="Tiêu đề thông báo..."
               value={broadcastTitle}
               onChange={(e) => setBroadcastTitle(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-indigo-200 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm"
+              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-sky-200 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm"
             />
             <select
               value={targetRole}
@@ -120,12 +120,12 @@ export const ContentManagementPage: React.FC = () => {
               value={broadcastMessage}
               onChange={(e) => setBroadcastMessage(e.target.value)}
               rows={2}
-              className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-indigo-200 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm resize-none"
+              className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-sky-200 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm resize-none"
             />
             <button
               onClick={handleSendBroadcast}
               disabled={sendingBroadcast}
-              className="px-6 py-3 bg-white text-indigo-600 font-bold rounded-xl shadow-md hover:bg-indigo-50 hover:scale-105 transition-all disabled:opacity-70 flex items-center gap-2"
+              className="px-6 py-3 bg-white text-sky-600 font-bold rounded-xl shadow-md hover:bg-sky-50 hover:scale-105 transition-all disabled:opacity-70 flex items-center gap-2"
             >
               {sendingBroadcast ? 'Đang gửi...' : <><Send className="w-4 h-4" /> Gửi</>}
             </button>
@@ -141,7 +141,7 @@ export const ContentManagementPage: React.FC = () => {
             placeholder="Tìm kiếm bài thi..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
-            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
+            className="w-full pl-9 pr-4 py-2 bg-slate-50 border border-slate-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-sky-500"
           />
         </div>
       </div>

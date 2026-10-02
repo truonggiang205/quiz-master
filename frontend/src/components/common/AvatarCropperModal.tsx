@@ -79,7 +79,7 @@ export const AvatarCropperModal: React.FC<AvatarCropperModalProps> = ({
               step={0.1}
               aria-labelledby="Zoom"
               onChange={(e) => setZoom(Number(e.target.value))}
-              className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-indigo-600"
+              className="flex-1 h-1.5 bg-slate-200 rounded-lg appearance-none cursor-pointer accent-sky-600"
             />
           </div>
           
@@ -94,7 +94,7 @@ export const AvatarCropperModal: React.FC<AvatarCropperModalProps> = ({
             <button
               onClick={handleConfirm}
               disabled={isProcessing}
-              className="px-5 py-2.5 rounded-xl font-bold text-white bg-indigo-600 hover:bg-indigo-700 active:scale-95 transition-all shadow-md shadow-indigo-200 disabled:opacity-70 flex items-center gap-2"
+              className="px-5 py-2.5 rounded-xl font-bold text-white bg-sky-600 hover:bg-sky-700 active:scale-95 transition-all shadow-md shadow-sky-200 disabled:opacity-70 flex items-center gap-2"
             >
               {isProcessing ? (
                 <>Đang lưu...</>

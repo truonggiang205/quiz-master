@@ -57,7 +57,7 @@ export const StudentClassroomsPage: React.FC = () => {
         </div>
         <button
           onClick={() => setShowJoinModal(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-colors font-medium shadow-sm shadow-indigo-200 dark:shadow-none"
+          className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl transition-colors font-medium shadow-sm shadow-sky-200 dark:shadow-none"
         >
           <PlusCircle className="w-5 h-5" />
           Tham gia lớp
@@ -66,12 +66,12 @@ export const StudentClassroomsPage: React.FC = () => {
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
         </div>
       ) : classrooms.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center shadow-xs border border-slate-100 dark:border-slate-800">
-          <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <GraduationCap className="w-10 h-10 text-indigo-500 dark:text-indigo-400" />
+          <div className="w-20 h-20 bg-sky-50 dark:bg-sky-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <GraduationCap className="w-10 h-10 text-sky-500 dark:text-sky-400" />
           </div>
           <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Bạn chưa tham gia lớp nào</h3>
           <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
@@ -79,7 +79,7 @@ export const StudentClassroomsPage: React.FC = () => {
           </p>
           <button
             onClick={() => setShowJoinModal(true)}
-            className="inline-flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 px-6 py-3 rounded-xl transition-colors font-semibold"
+            className="inline-flex items-center gap-2 bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 px-6 py-3 rounded-xl transition-colors font-semibold"
           >
             <PlusCircle className="w-5 h-5" />
             Nhập mã lớp học
@@ -116,7 +116,7 @@ export const StudentClassroomsPage: React.FC = () => {
                 {!cls.isPrivate ? (
                   <Link
                     to={`/student/classrooms/${cls.id}`}
-                    className="block w-full py-2.5 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-teal-500 hover:text-teal-600 dark:hover:border-teal-400 dark:hover:text-teal-400 text-slate-700 dark:text-slate-200 text-center rounded-xl font-medium transition-all group-hover:bg-teal-50 dark:group-hover:bg-teal-900/20"
+                    className="block w-full py-2.5 px-4 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-teal-500 hover:text-teal-600 dark:hover:border-teal-400 dark:hover:text-teal-400 text-teal-700 dark:text-teal-800 text-center rounded-xl font-medium transition-all group-hover:bg-teal-50 dark:group-hover:bg-teal-900/20"
                   >
                     Vào lớp
                   </Link>
@@ -154,7 +154,7 @@ export const StudentClassroomsPage: React.FC = () => {
                   value={inviteCode}
                   onChange={e => setInviteCode(e.target.value.toUpperCase())}
                   placeholder="VD: MATH-A8F2"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all uppercase tracking-wider font-mono text-center text-lg"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all uppercase tracking-wider font-mono text-center text-lg"
                 />
                 <p className="text-xs text-slate-500 mt-2 text-center">Xin giáo viên của bạn mã gồm 9 ký tự (có dấu gạch ngang)</p>
               </div>
@@ -170,7 +170,7 @@ export const StudentClassroomsPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting || !inviteCode}
-                  className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                  className="flex-1 py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
                 >
                   {isSubmitting ? 'Đang xác thực...' : 'Tham gia ngay'}
                 </button>

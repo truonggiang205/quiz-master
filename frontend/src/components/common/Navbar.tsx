@@ -68,13 +68,13 @@ export const Navbar: React.FC<NavbarProps> = ({ showSidebarToggle = false }) => 
                 <img
                   src={user.avatar}
                   alt={user.name}
-                  className="w-8 h-8 rounded-xl object-cover ring-2 ring-indigo-200 dark:ring-indigo-900"
+                  className="w-8 h-8 rounded-xl object-cover ring-2 ring-sky-200 dark:ring-sky-900"
                 />
                 <div className="hidden sm:flex flex-col text-left">
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">
                     {formatUserName(user)}
                   </span>
-                  <span className="text-[10px] font-semibold text-indigo-500 dark:text-indigo-400 uppercase">
+                  <span className="text-[10px] font-semibold text-sky-500 dark:text-sky-400 uppercase">
                     {user.role === 'TEACHER' ? 'Giáo Viên' : 'Học Sinh'}
                   </span>
                 </div>
@@ -120,7 +120,7 @@ export const Navbar: React.FC<NavbarProps> = ({ showSidebarToggle = false }) => 
               </Link>
               <Link
                 to="/register"
-                className="px-4 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm shadow-indigo-200 dark:shadow-none transition-all"
+                className="px-4 py-2 rounded-xl text-xs font-semibold bg-sky-600 hover:bg-sky-700 text-white shadow-sm shadow-sky-200 dark:shadow-none transition-all"
               >
                 Đăng ký
               </Link>

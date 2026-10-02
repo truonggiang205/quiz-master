@@ -24,7 +24,7 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({ onTimeExpired }) => {
   const isDanger = remainingSeconds <= 300; // <= 5 minutes
   const isWarning = !isDanger && remainingSeconds <= 600; // <= 10 minutes
 
-  let badgeStyle = 'bg-indigo-50 text-indigo-700 border-indigo-200 dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800';
+  let badgeStyle = 'bg-sky-50 text-sky-700 border-sky-200 dark:bg-sky-950/60 dark:text-sky-300 dark:border-sky-800';
   if (isDanger) {
     badgeStyle = 'bg-rose-50 text-rose-700 border-rose-300 dark:bg-rose-950/70 dark:text-rose-300 dark:border-rose-800 animate-pulse-glow';
   } else if (isWarning) {
@@ -37,9 +37,9 @@ export const QuizTimer: React.FC<QuizTimerProps> = ({ onTimeExpired }) => {
       title={isDanger ? 'Cảnh báo: Còn dưới 5 phút!' : isWarning ? 'Lưu ý: Còn dưới 10 phút' : 'Thời gian làm bài còn lại'}
     >
       {isDanger ? (
-        <AlertTriangle className="w-4 h-4 text-rose-500 animate-bounce" />
+        <AlertTriangle className="w-4 h-4 text-rose-500 " />
       ) : (
-        <Clock className={`w-4 h-4 ${isWarning ? 'text-amber-500' : 'text-indigo-500'}`} />
+        <Clock className={`w-4 h-4 ${isWarning ? 'text-amber-500' : 'text-sky-500'}`} />
       )}
       <span className="text-base tracking-wider">{formattedTime}</span>
     </div>

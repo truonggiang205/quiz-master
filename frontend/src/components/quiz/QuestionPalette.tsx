@@ -44,7 +44,7 @@ export const QuestionPalette: React.FC = () => {
           }
 
           const ringStyle = isCurrent
-            ? 'ring-2 ring-indigo-500 ring-offset-2 dark:ring-offset-slate-800 font-extrabold shadow-sm'
+            ? 'ring-2 ring-sky-500 ring-offset-2 dark:ring-offset-slate-800 font-extrabold shadow-sm'
             : '';
 
           return (
@@ -87,7 +87,7 @@ export const QuestionPalette: React.FC = () => {
           <span>Chưa làm</span>
         </div>
         <div className="flex items-center gap-2">
-          <span className="w-3.5 h-3.5 rounded-md ring-2 ring-indigo-500 bg-white dark:bg-slate-800" />
+          <span className="w-3.5 h-3.5 rounded-md ring-2 ring-sky-500 bg-white dark:bg-slate-800" />
           <span>Đang chọn</span>
         </div>
       </div>

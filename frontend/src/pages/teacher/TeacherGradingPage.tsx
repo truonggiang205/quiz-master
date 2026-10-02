@@ -72,7 +72,7 @@ export const TeacherGradingPage: React.FC = () => {
   if (loading || !submission) {
     return (
       <div className="flex justify-center py-12">
-        <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+        <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
       </div>
     );
   }
@@ -101,7 +101,7 @@ export const TeacherGradingPage: React.FC = () => {
           <div className="flex items-center gap-4 bg-white dark:bg-slate-800 p-3 rounded-2xl border border-slate-200 dark:border-slate-700 shadow-sm">
             <div className="text-right">
               <p className="text-xs text-slate-500 font-semibold uppercase">Tổng điểm hiện tại</p>
-              <p className="text-2xl font-black text-indigo-600 dark:text-indigo-400">
+              <p className="text-2xl font-black text-sky-600 dark:text-sky-400">
                 {(submission.score / 100).toFixed(2)} <span className="text-sm text-slate-400 font-normal">/ {((submission.maxScore || 1000) / 100).toFixed(2)}</span>
               </p>
             </div>
@@ -135,8 +135,8 @@ export const TeacherGradingPage: React.FC = () => {
               </div>
               
               {ans.questionType === 'ESSAY' && (
-                <div className="flex items-center gap-3 bg-indigo-50 dark:bg-indigo-900/30 px-4 py-2 rounded-xl">
-                  <span className="text-sm font-bold text-indigo-700 dark:text-indigo-300">Chấm điểm:</span>
+                <div className="flex items-center gap-3 bg-sky-50 dark:bg-sky-900/30 px-4 py-2 rounded-xl">
+                  <span className="text-sm font-bold text-sky-700 dark:text-sky-300">Chấm điểm:</span>
                   <input
                     type="number"
                     min={0}
@@ -144,7 +144,7 @@ export const TeacherGradingPage: React.FC = () => {
                     step={0.25}
                     value={grades[ans.questionId] ?? 0}
                     onChange={(e) => handleGradeChange(ans.questionId, e.target.value, ans.score / 100)}
-                    className="w-20 text-center font-bold px-2 py-1.5 rounded-lg border border-indigo-200 dark:border-indigo-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                    className="w-20 text-center font-bold px-2 py-1.5 rounded-lg border border-sky-200 dark:border-sky-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
                   />
                   <span className="text-sm font-medium text-slate-500">/ {(ans.score / 100).toFixed(2)}</span>
                 </div>

@@ -21,7 +21,7 @@ export interface PremiumListItemProps {
   rightAction?: ReactNode;
   children: ReactNode;
   className?: string;
-  hoverColorClass?: string; // ví dụ: 'bg-indigo-600', 'bg-emerald-500'
+  hoverColorClass?: string; // ví dụ: 'bg-sky-600', 'bg-emerald-500'
 }
 
 export const PremiumListItem: React.FC<PremiumListItemProps> = ({
@@ -30,7 +30,7 @@ export const PremiumListItem: React.FC<PremiumListItemProps> = ({
   rightAction,
   children,
   className = '',
-  hoverColorClass = 'bg-indigo-600',
+  hoverColorClass = 'bg-sky-600',
 }) => {
   return (
     <div

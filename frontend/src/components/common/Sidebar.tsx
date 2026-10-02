@@ -111,7 +111,7 @@ export const Sidebar: React.FC = () => {
                   }}
                   className={`relative flex items-center gap-3 px-3.5 py-3 rounded-2xl text-sm font-semibold group ${
                     isActive
-                      ? 'text-indigo-600 dark:text-indigo-300'
+                      ? 'text-sky-600 dark:text-sky-300'
                       : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100'
                   }`}
                 >
@@ -119,7 +119,7 @@ export const Sidebar: React.FC = () => {
                   {isActive && (
                     <motion.span
                       layoutId={layoutId}
-                      className="absolute inset-0 rounded-2xl bg-indigo-50 dark:bg-indigo-950/70 shadow-xs"
+                      className="absolute inset-0 rounded-2xl bg-sky-50 dark:bg-sky-950/70 shadow-xs"
                       transition={{ type: 'spring', stiffness: 380, damping: 38 }}
                     />
                   )}
@@ -135,7 +135,7 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Bottom card preview */}
-        <div className="p-3.5 rounded-2xl bg-gradient-to-br from-indigo-50/80 to-sky-50/80 dark:from-slate-800/80 dark:to-indigo-950/30 border border-indigo-100/60 dark:border-indigo-900/40 md:hidden lg:block">
+        <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50/80 to-sky-50/80 dark:from-slate-800/80 dark:to-sky-950/30 border border-sky-100/60 dark:border-sky-900/40 md:hidden lg:block">
           <div className="flex items-center gap-2 mb-1">
             <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
             <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">

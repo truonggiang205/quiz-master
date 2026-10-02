@@ -90,12 +90,12 @@ export const GlobalQuizTimer: React.FC = () => {
       }`}>
         <div className="flex items-center gap-3">
           <div className={`p-2 rounded-xl ${
-            isLowTime ? 'bg-rose-100 dark:bg-rose-900/50' : 'bg-indigo-50 dark:bg-indigo-900/50'
+            isLowTime ? 'bg-rose-100 dark:bg-rose-900/50' : 'bg-sky-50 dark:bg-sky-900/50'
           }`}>
             {isLowTime ? (
-              <AlertCircle className={`w-5 h-5 ${isLowTime ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400'} animate-pulse`} />
+              <AlertCircle className={`w-5 h-5 ${isLowTime ? 'text-rose-600 dark:text-rose-400' : 'text-sky-600 dark:text-sky-400'} animate-pulse`} />
             ) : (
-              <Clock className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+              <Clock className="w-5 h-5 text-sky-600 dark:text-sky-400" />
             )}
           </div>
           <div>
@@ -111,7 +111,7 @@ export const GlobalQuizTimer: React.FC = () => {
         <div className="flex items-center justify-between gap-4 mt-1">
           <div className="flex items-center gap-1.5">
             <span className={`text-xl font-black font-mono tracking-tight ${
-              isLowTime ? 'text-rose-600 dark:text-rose-400' : 'text-indigo-600 dark:text-indigo-400'
+              isLowTime ? 'text-rose-600 dark:text-rose-400' : 'text-sky-600 dark:text-sky-400'
             }`}>
               {timeString}
             </span>
@@ -120,7 +120,7 @@ export const GlobalQuizTimer: React.FC = () => {
           <button
             onClick={() => navigate(takeQuizPath)}
             className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs font-bold text-white shadow-sm transition-transform hover:scale-105 active:scale-95 ${
-              isLowTime ? 'bg-rose-600 hover:bg-rose-700' : 'bg-indigo-600 hover:bg-indigo-700'
+              isLowTime ? 'bg-rose-600 hover:bg-rose-700' : 'bg-sky-600 hover:bg-sky-700'
             }`}
           >
             <Play className="w-3.5 h-3.5 fill-white" />

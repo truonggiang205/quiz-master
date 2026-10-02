@@ -50,7 +50,7 @@ export const StudentAcceptInvitePage: React.FC = () => {
       <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 max-w-md w-full shadow-xl border border-slate-100 dark:border-slate-800 text-center">
         {status === 'loading' && (
           <>
-            <Loader2 className="w-16 h-16 text-indigo-500 animate-spin mx-auto mb-4" />
+            <Loader2 className="w-16 h-16 text-sky-500 animate-spin mx-auto mb-4" />
             <h2 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Đang xác thực...</h2>
             <p className="text-slate-500">Vui lòng đợi trong giây lát</p>
           </>
@@ -66,7 +66,7 @@ export const StudentAcceptInvitePage: React.FC = () => {
             <p className="text-sm text-slate-400">Đang tự động chuyển về bàn học tập...</p>
             <button
               onClick={() => navigate('/student/dashboard')}
-              className="mt-6 bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2.5 rounded-xl transition-colors font-medium w-full"
+              className="mt-6 bg-sky-600 hover:bg-sky-700 text-white px-6 py-2.5 rounded-xl transition-colors font-medium w-full"
             >
               Về Bàn học tập ngay
             </button>

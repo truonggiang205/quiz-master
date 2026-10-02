@@ -63,7 +63,7 @@ export const TeacherDashboard: React.FC = () => {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
         <div className="flex flex-col items-center gap-3">
-          <div className="w-8 h-8 rounded-full border-2 border-indigo-500 border-t-transparent animate-spin" />
+          <div className="w-8 h-8 rounded-full border-2 border-sky-500 border-t-transparent animate-spin" />
           <span className="text-xs text-slate-400">Đang tải số liệu bảng điều khiển...</span>
         </div>
       </div>
@@ -88,7 +88,7 @@ export const TeacherDashboard: React.FC = () => {
   return (
     <div className="space-y-8">
       {/* Welcome Banner */}
-      <div className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-indigo-500 via-indigo-600 to-sky-500 text-white shadow-lg shadow-indigo-200/50 dark:shadow-none overflow-hidden">
+      <div className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-sky-400 via-sky-500 to-sky-600 text-white shadow-lg shadow-sky-200/50 dark:shadow-none overflow-hidden">
         <div className="relative z-10 max-w-xl">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider mb-3 backdrop-blur-xs">
             <Sparkles className="w-3.5 h-3.5" />
@@ -97,7 +97,7 @@ export const TeacherDashboard: React.FC = () => {
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
             Xin chào, {user?.name || 'Giáo Viên'}! 👋
           </h1>
-          <p className="text-indigo-100 text-xs sm:text-sm mt-1.5 leading-relaxed">
+          <p className="text-sky-100 text-xs sm:text-sm mt-1.5 leading-relaxed">
             {stats.totalQuizzes > 0
               ? `Hệ thống hiện có ${stats.totalQuizzes} bài kiểm tra và ${stats.totalSubmissions} lượt nộp bài thi.`
               : 'Hệ thống hiện chưa có đề thi nào. Hãy bắt đầu bằng cách tạo bài kiểm tra đầu tiên!'}
@@ -107,14 +107,14 @@ export const TeacherDashboard: React.FC = () => {
             <Link
               to="/teacher/quizzes/create"
               id="dashboard-create-quiz-btn"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-indigo-700 hover:bg-indigo-50 font-bold text-xs shadow-sm transition-transform hover:scale-105"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-sky-700 hover:bg-sky-50 font-bold text-xs shadow-sm transition-transform hover:scale-105"
             >
               <Plus className="w-4 h-4" />
               Tạo bài thi mới
             </Link>
             <Link
               to="/teacher/quizzes"
-              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-indigo-700/60 hover:bg-indigo-700 text-white font-bold text-xs border border-white/20 transition-colors"
+              className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-700/60 hover:bg-sky-700 text-white font-bold text-xs border border-white/20 transition-colors"
             >
               Quản lý đề thi
             </Link>
@@ -180,7 +180,7 @@ export const TeacherDashboard: React.FC = () => {
           </div>
           <Link
             to="/teacher/quizzes"
-            className="flex items-center gap-1 text-xs font-bold text-indigo-600 dark:text-indigo-400 hover:underline"
+            className="flex items-center gap-1 text-xs font-bold text-sky-600 dark:text-sky-400 hover:underline"
           >
             <span>Xem tất cả</span>
             <ArrowRight className="w-3.5 h-3.5" />
@@ -189,7 +189,7 @@ export const TeacherDashboard: React.FC = () => {
 
         {recentQuizzes.length === 0 ? (
           <div className="py-12 text-center text-xs text-slate-400">
-            Chưa có bài thi nào trong hệ thống. Nhấn <Link to="/teacher/quizzes/create" className="font-bold text-indigo-600 dark:text-indigo-400 hover:underline">"Tạo bài thi mới"</Link> để bắt đầu soạn đề.
+            Chưa có bài thi nào trong hệ thống. Nhấn <Link to="/teacher/quizzes/create" className="font-bold text-sky-600 dark:text-sky-400 hover:underline">"Tạo bài thi mới"</Link> để bắt đầu soạn đề.
           </div>
         ) : (
           <div className="divide-y divide-slate-100 dark:divide-slate-700/60">
@@ -226,13 +226,13 @@ export const TeacherDashboard: React.FC = () => {
                   </Link>
                   <Link
                     to={`/teacher/quizzes/${quiz.id}/edit`}
-                    className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-indigo-600 dark:text-indigo-300 bg-indigo-50 dark:bg-indigo-950/60 hover:bg-indigo-100 transition-colors"
+                    className="px-3.5 py-1.5 rounded-xl text-xs font-semibold text-sky-600 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/60 hover:bg-sky-100 transition-colors"
                   >
                     Chỉnh sửa
                   </Link>
                   <button
                     onClick={() => setDeleteQuizId(quiz.id)}
-                    className="p-1.5 rounded-xl text-slate-400 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
+                    className="p-1.5 rounded-xl text-rose-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40 transition-colors"
                     title="Xóa bài thi"
                   >
                     <Trash2 className="w-4 h-4" />

@@ -376,7 +376,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             onClick={() => handleSave(true)}
             id="publish-quiz-btn"
             disabled={isSaving}
-            className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold text-white bg-indigo-600 hover:bg-indigo-700 shadow-md shadow-indigo-200 dark:shadow-none transition-all"
+            className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 shadow-md shadow-sky-200 dark:shadow-none transition-all"
           >
             <CheckCircle2 className="w-4 h-4" />
             Xuất bản ngay
@@ -407,7 +407,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
             />
           </div>
 
@@ -420,7 +420,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               placeholder="Nhập ghi chú hoặc yêu cầu đối với học sinh..."
               value={description}
               onChange={(e) => setDescription(e.target.value)}
-              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-xs md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-indigo-300"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-xs md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
             />
           </div>
         </div>
@@ -516,7 +516,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 pt-4 border-t border-slate-100 dark:border-slate-800">
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <Users className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <Users className="w-4 h-4 text-sky-600 dark:text-sky-400" />
               <h3 className="text-sm font-bold text-slate-800 dark:text-white">Đối tượng tham gia</h3>
             </div>
             
@@ -524,12 +524,12 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setAssignMode('CLASS')}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${assignMode === 'CLASS' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
+                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${assignMode === 'CLASS' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
               >Theo Lớp</button>
               <button
                 type="button"
                 onClick={() => setAssignMode('STUDENTS')}
-                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${assignMode === 'STUDENTS' ? 'bg-indigo-600 text-white border-indigo-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
+                className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${assignMode === 'STUDENTS' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
               >Học sinh 1-1</button>
             </div>
 
@@ -560,7 +560,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                           if (e.target.checked) setAssignedStudentIds([...assignedStudentIds, student.id]);
                           else setAssignedStudentIds(assignedStudentIds.filter(id => id !== student.id));
                         }}
-                        className="rounded text-indigo-600 focus:ring-indigo-400"
+                        className="rounded text-sky-600 focus:ring-sky-400"
                       />
                       <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{student.name} ({student.email})</span>
                     </label>
@@ -572,7 +572,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
 
           <div className="space-y-4">
             <div className="flex items-center gap-2">
-              <Calendar className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
+              <Calendar className="w-4 h-4 text-sky-600 dark:text-sky-400" />
               <h3 className="text-sm font-bold text-slate-800 dark:text-white">Thời gian</h3>
             </div>
             
@@ -599,10 +599,10 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         </div>
 
         {/* Answer Release Settings */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-indigo-50/70 to-sky-50/70 dark:from-slate-900/60 dark:to-indigo-950/40 border border-indigo-100 dark:border-indigo-900/60 space-y-3">
+        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-sky-50/70 to-sky-50/70 dark:from-slate-900/60 dark:to-sky-950/40 border border-sky-100 dark:border-sky-900/60 space-y-3">
           <div className="flex items-center gap-2">
-            <Clock className="w-4 h-4 text-indigo-600 dark:text-indigo-400" />
-            <h3 className="text-xs sm:text-sm font-bold text-indigo-950 dark:text-indigo-200">
+            <Clock className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+            <h3 className="text-xs sm:text-sm font-bold text-sky-950 dark:text-sky-200">
               Thiết lập thời gian công bố đáp án & lời giải
             </h3>
           </div>
@@ -613,7 +613,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               onClick={() => setReleaseMode('IMMEDIATE')}
               className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${
                 releaseMode === 'IMMEDIATE'
-                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  ? 'bg-sky-600 text-white border-sky-600'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -624,7 +624,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               onClick={() => setReleaseMode('AFTER_30M')}
               className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${
                 releaseMode === 'AFTER_30M'
-                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  ? 'bg-sky-600 text-white border-sky-600'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -635,7 +635,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               onClick={() => setReleaseMode('AFTER_1D')}
               className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${
                 releaseMode === 'AFTER_1D'
-                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  ? 'bg-sky-600 text-white border-sky-600'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -646,7 +646,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               onClick={() => setReleaseMode('CUSTOM')}
               className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${
                 releaseMode === 'CUSTOM'
-                  ? 'bg-indigo-600 text-white border-indigo-600'
+                  ? 'bg-sky-600 text-white border-sky-600'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
             >
@@ -663,7 +663,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                 type="datetime-local"
                 value={customReleaseDate}
                 onChange={(e) => setCustomReleaseDate(e.target.value)}
-                className="px-3 py-1.5 rounded-xl text-xs border border-indigo-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
+                className="px-3 py-1.5 rounded-xl text-xs border border-sky-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
               />
             </div>
           )}
@@ -676,7 +676,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               type="checkbox"
               checked={shuffleQuestions}
               onChange={(e) => setShuffleQuestions(e.target.checked)}
-              className="rounded-md text-indigo-600 focus:ring-indigo-400"
+              className="rounded-md text-sky-600 focus:ring-sky-400"
             />
             <span>Đảo thứ tự câu hỏi</span>
           </label>
@@ -685,7 +685,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               type="checkbox"
               checked={shuffleAnswers}
               onChange={(e) => setShuffleAnswers(e.target.checked)}
-              className="rounded-md text-indigo-600 focus:ring-indigo-400"
+              className="rounded-md text-sky-600 focus:ring-sky-400"
             />
             <span>Đảo thứ tự các đáp án</span>
           </label>
@@ -694,7 +694,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               type="checkbox"
               checked={showScoreImmediately}
               onChange={(e) => setShowScoreImmediately(e.target.checked)}
-              className="rounded-md text-indigo-600 focus:ring-indigo-400"
+              className="rounded-md text-sky-600 focus:ring-sky-400"
             />
             <span>Hiển thị điểm ngay sau nộp</span>
           </label>
@@ -717,7 +717,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]">
             <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
               <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <Database className="w-5 h-5 text-indigo-500" /> Ngân hàng câu hỏi của tôi
+                <Database className="w-5 h-5 text-sky-500" /> Ngân hàng câu hỏi của tôi
               </h3>
               <button onClick={() => setShowBankModal(false)} className="text-slate-400 hover:text-slate-600">
                 &times;
@@ -727,7 +727,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             <div className="p-6 overflow-y-auto flex-1">
               {isLoadingBank ? (
                 <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
                 </div>
               ) : bankQuestions.length === 0 ? (
                 <div className="text-center py-8">
@@ -737,7 +737,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               ) : (
                 <div className="space-y-3">
                   {bankQuestions.map((q, idx) => (
-                    <label key={q.id} className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-colors ${selectedBankQIds.includes(q.id) ? 'bg-indigo-50/50 border-indigo-200 dark:bg-indigo-900/20 dark:border-indigo-800' : 'bg-slate-50 border-slate-200 hover:bg-white dark:bg-slate-800 dark:border-slate-700'}`}>
+                    <label key={q.id} className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-colors ${selectedBankQIds.includes(q.id) ? 'bg-sky-50/50 border-sky-200 dark:bg-sky-900/20 dark:border-sky-800' : 'bg-slate-50 border-slate-200 hover:bg-white dark:bg-slate-800 dark:border-slate-700'}`}>
                       <input 
                         type="checkbox"
                         checked={selectedBankQIds.includes(q.id)}
@@ -745,7 +745,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                           if (e.target.checked) setSelectedBankQIds([...selectedBankQIds, q.id]);
                           else setSelectedBankQIds(selectedBankQIds.filter(id => id !== q.id));
                         }}
-                        className="mt-1 rounded text-indigo-600 focus:ring-indigo-400"
+                        className="mt-1 rounded text-sky-600 focus:ring-sky-400"
                       />
                       <div>
                         <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Câu {idx + 1}: <Latex>{q.content}</Latex></p>
@@ -769,7 +769,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                 type="button"
                 disabled={selectedBankQIds.length === 0}
                 onClick={handleImportBankQuestions}
-                className="py-2.5 px-5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 text-sm shadow-sm"
+                className="py-2.5 px-5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 text-sm shadow-sm"
               >
                 Nhập {selectedBankQIds.length > 0 ? `(${selectedBankQIds.length})` : ''} câu hỏi
               </button>

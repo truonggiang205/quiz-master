@@ -71,7 +71,7 @@ export const TeacherStudentsPage: React.FC = () => {
         </div>
         <button
           onClick={() => setShowInviteModal(true)}
-          className="flex items-center gap-2 bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl transition-colors font-medium shadow-sm shadow-indigo-200 dark:shadow-none"
+          className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2 rounded-xl transition-colors font-medium shadow-sm shadow-sky-200 dark:shadow-none"
         >
           <Mail className="w-5 h-5" />
           Mời qua Email
@@ -80,12 +80,12 @@ export const TeacherStudentsPage: React.FC = () => {
 
       {isLoading ? (
         <div className="flex justify-center items-center h-64">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-indigo-600"></div>
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
         </div>
       ) : students.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center shadow-xs border border-slate-100 dark:border-slate-800">
-          <div className="w-20 h-20 bg-indigo-50 dark:bg-indigo-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
-            <UserPlus className="w-10 h-10 text-indigo-500 dark:text-indigo-400" />
+          <div className="w-20 h-20 bg-sky-50 dark:bg-sky-900/30 rounded-full flex items-center justify-center mx-auto mb-4">
+            <UserPlus className="w-10 h-10 text-sky-500 dark:text-sky-400" />
           </div>
           <h3 className="text-xl font-bold text-slate-800 dark:text-white mb-2">Chưa có học sinh nào</h3>
           <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto">
@@ -93,7 +93,7 @@ export const TeacherStudentsPage: React.FC = () => {
           </p>
           <button
             onClick={() => setShowInviteModal(true)}
-            className="inline-flex items-center gap-2 bg-indigo-50 dark:bg-indigo-900/30 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/50 px-6 py-3 rounded-xl transition-colors font-semibold"
+            className="inline-flex items-center gap-2 bg-sky-50 dark:bg-sky-900/30 text-sky-600 dark:text-sky-400 hover:bg-sky-100 dark:hover:bg-sky-900/50 px-6 py-3 rounded-xl transition-colors font-semibold"
           >
             <Mail className="w-5 h-5" />
             Mời học sinh ngay
@@ -103,7 +103,7 @@ export const TeacherStudentsPage: React.FC = () => {
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-100 dark:border-slate-800 overflow-hidden">
           <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center bg-slate-50/50 dark:bg-slate-800/20">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <GraduationCap className="w-5 h-5 text-indigo-500" /> Tất cả học sinh ({students.length})
+              <GraduationCap className="w-5 h-5 text-sky-500" /> Tất cả học sinh ({students.length})
             </h3>
           </div>
           <ul className="divide-y divide-slate-100 dark:divide-slate-800">
@@ -118,7 +118,7 @@ export const TeacherStudentsPage: React.FC = () => {
                 </div>
                 <button 
                   onClick={() => handleRemoveStudent(student.id, student.name)}
-                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
+                  className="p-2 text-red-600 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-lg transition-colors"
                   title="Xóa khỏi danh bạ"
                 >
                   <UserMinus className="w-5 h-5" />
@@ -149,7 +149,7 @@ export const TeacherStudentsPage: React.FC = () => {
                   value={inviteEmail}
                   onChange={e => setInviteEmail(e.target.value)}
                   placeholder="hocsinh@example.com"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-indigo-500 outline-none transition-all"
+                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all"
                 />
                 <p className="text-xs text-slate-500 mt-2">Hệ thống sẽ gửi một link mời đặc biệt tới địa chỉ email này.</p>
               </div>
@@ -165,7 +165,7 @@ export const TeacherStudentsPage: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isSubmitting || !inviteEmail}
-                  className="flex-1 py-3 px-4 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
+                  className="flex-1 py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
                 >
                   {isSubmitting ? 'Đang gửi...' : 'Gửi lời mời'}
                 </button>

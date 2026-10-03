@@ -167,52 +167,178 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
       return;
     }
 
+    if (!questions || questions.length === 0) {
+      addToast({
+        type: 'error',
+        title: 'Chưa có câu hỏi',
+        message: 'Vui lòng thêm ít nhất 1 câu hỏi cho bài kiểm tra.',
+      });
+      return;
+    }
+
+    // Validate questions and options
+    for (let i = 0; i < questions.length; i++) {
+      const q = questions[i];
+      if (!q.content || !q.content.trim()) {
+        addToast({
+          type: 'error',
+          title: 'Nội dung câu hỏi trống',
+          message: `Câu hỏi số ${i + 1} chưa có nội dung. Vui lòng kiểm tra lại.`,
+        });
+        return;
+      }
+
+      if (q.type !== 'ESSAY') {
+        const validOpts = (q.options || []).filter(o => o.text && o.text.trim());
+        if (validOpts.length < 2) {
+          addToast({
+            type: 'error',
+            title: 'Thiếu đáp án',
+            message: `Câu hỏi số ${i + 1} phải có ít nhất 2 lựa chọn có nội dung.`,
+          });
+          return;
+        }
+
+        const hasCorrect = (q.options || []).some(o => o.isCorrect);
+        if (!hasCorrect) {
+          addToast({
+            type: 'error',
+            title: 'Chưa chọn đáp án đúng',
+            message: `Câu hỏi số ${i + 1} chưa được chọn đáp án đúng.`,
+          });
+          return;
+        }
+      }
+    }
+
+    // Validate times
+    let parsedStartTime: string | undefined;
+    if (startTime) {
+      const d = new Date(startTime);
+      if (isNaN(d.getTime())) {
+        addToast({ type: 'error', title: 'Thời gian bắt đầu không hợp lệ' });
+        return;
+      }
+      parsedStartTime = d.toISOString();
+    }
+
+    let parsedEndTime: string | undefined;
+    if (endTime) {
+      const d = new Date(endTime);
+      if (isNaN(d.getTime())) {
+        addToast({ type: 'error', title: 'Thời gian kết thúc không hợp lệ' });
+        return;
+      }
+      parsedEndTime = d.toISOString();
+    }
+
+    if (parsedStartTime && parsedEndTime && new Date(parsedStartTime) >= new Date(parsedEndTime)) {
+      addToast({
+        type: 'error',
+        title: 'Thời gian không hợp lệ',
+        message: 'Thời gian kết thúc phải diễn ra sau thời gian bắt đầu.',
+      });
+      return;
+    }
+
     setIsSaving(true);
     addToast({
       type: 'info',
       title: 'Đang lưu bài kiểm tra...',
       message: 'Hệ thống đang xử lý, vui lòng chờ trong giây lát',
     });
+
     try {
       const releaseTime = computeReleaseDate();
+      const cleanClassId = assignMode === 'CLASS' && classId?.trim() ? classId.trim() : undefined;
+      const cleanAssignedStudentIds = assignMode === 'STUDENTS' && assignedStudentIds?.length ? assignedStudentIds : undefined;
+
       const quizInput = {
-        title,
-        description,
-        subject,
+        title: title.trim(),
+        description: description?.trim() || '',
+        subject: subject?.trim() || 'Tổng hợp',
         mode,
-        durationMinutes: Number(durationMinutes),
-        totalAttempts: Number(totalAttempts),
-        totalPoints: Number(totalPoints),
+        durationMinutes: Number(durationMinutes) || 45,
+        totalAttempts: Number(totalAttempts) || 1,
+        totalPoints: Number(totalPoints) || 1000,
         shuffleQuestions,
         shuffleAnswers,
         showScoreImmediately,
         showCorrectAnswers,
         showExplanation,
         answerReleaseAt: releaseTime,
-        startTime: startTime ? new Date(startTime).toISOString() : undefined,
-        endTime: endTime ? new Date(endTime).toISOString() : undefined,
-        classId: assignMode === 'CLASS' ? classId : undefined,
-        assignedStudentIds: assignMode === 'STUDENTS' ? assignedStudentIds : undefined,
+        startTime: parsedStartTime,
+        endTime: parsedEndTime,
+        classId: cleanClassId,
+        assignedStudentIds: cleanAssignedStudentIds,
       };
 
-      let currentQuizId = id;
+      // Clean options and rebalance points
+      let processedQuestions = questions.map((q, idx) => ({
+        ...q,
+        order: idx + 1,
+        content: q.content.trim(),
+        options: q.type === 'ESSAY'
+          ? []
+          : (q.options || []).filter(o => o.text && o.text.trim()).map(o => ({
+              ...o,
+              text: o.text.trim(),
+            })),
+      }));
+
+      try {
+        processedQuestions = rebalance(processedQuestions, Number(totalPoints)) as Question[];
+      } catch (e: any) {
+        console.warn('Rebalance warn:', e);
+      }
+
+      let currentQuizId = id || '';
       if (isEditing && id) {
         await quizService.updateQuiz(id, quizInput);
+        currentQuizId = id;
+
+        // Synchronize questions with backend
+        const existingBackendQs = await quizService.getQuestions(id, false);
+        const existingIds = new Set(existingBackendQs.map(eq => eq.id));
+        const currentActiveIds = new Set(processedQuestions.map(pq => pq.id));
+
+        // 1. Delete questions removed from state
+        for (const eq of existingBackendQs) {
+          if (!currentActiveIds.has(eq.id)) {
+            await quizService.deleteQuestion(eq.id);
+          }
+        }
+
+        // 2. Update existing questions or create new ones
+        for (const q of processedQuestions) {
+          if (q.id && existingIds.has(q.id)) {
+            await quizService.updateQuestion(q.id, {
+              content: q.content,
+              type: q.type,
+              options: q.options,
+              score: q.score,
+              points: q.points,
+              isLocked: q.isLocked,
+              explanation: q.explanation,
+              order: q.order,
+              imageUrl: q.imageUrl,
+            });
+          } else {
+            await quizService.createQuestion(id, q);
+          }
+        }
       } else {
         const created = await quizService.createQuiz(quizInput);
         currentQuizId = created.id;
+
+        // Save newly created questions
+        for (const q of processedQuestions) {
+          await quizService.createQuestion(created.id, q);
+        }
       }
 
-      // Save questions
-      if (currentQuizId) {
-        for (const q of questions) {
-          if (!q.quizId) {
-            await quizService.createQuestion(currentQuizId, q);
-          }
-        }
-        if (publishImmediately) {
-          await quizService.publishQuiz(currentQuizId);
-        }
+      if (publishImmediately && currentQuizId) {
+        await quizService.publishQuiz(currentQuizId);
       }
 
       addToast({
@@ -221,8 +347,15 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         message: publishImmediately ? 'Bài thi đã được xuất bản cho học sinh!' : 'Đã lưu vào danh sách bản thảo.',
       });
       navigate('/teacher/quizzes');
-    } catch {
-      addToast({ type: 'error', title: 'Lưu bài kiểm tra thất bại' });
+    } catch (err: any) {
+      console.error('Lỗi khi lưu bài kiểm tra:', err);
+      const rawMsg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi lưu bài kiểm tra. Vui lòng kiểm tra lại kết nối.';
+      const displayMsg = Array.isArray(rawMsg) ? rawMsg.join(', ') : rawMsg;
+      addToast({
+        type: 'error',
+        title: 'Lưu bài kiểm tra thất bại',
+        message: displayMsg,
+      });
     } finally {
       setIsSaving(false);
     }
@@ -245,17 +378,24 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
   const handleImportBankQuestions = async () => {
     if (selectedBankQIds.length === 0) return;
     
-    // We can't import to backend unless we have a quizId. 
-    // If it's a draft (no id), we just clone them into local state.
     const selectedQs = bankQuestions.filter(q => selectedBankQIds.includes(q.id));
     const cloned = selectedQs.map((q, idx) => ({
       ...q,
-      id: `q-${Date.now()}-${idx}`,
-      quizId: id || '',
-      options: q.options.map((opt, oIdx) => ({ ...opt, id: `opt-${Date.now()}-${idx}-${oIdx}` }))
+      id: `q-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+      quizId: '',
+      options: q.options.map((opt, oIdx) => ({
+        ...opt,
+        id: `opt-${Date.now()}-${idx}-${oIdx}`,
+      })),
     }));
     
-    setQuestions([...questions, ...cloned]);
+    const nextQuestions = [...questions, ...cloned];
+    try {
+      setQuestions(rebalance(nextQuestions, Number(totalPoints)) as Question[]);
+    } catch {
+      setQuestions(nextQuestions);
+    }
+
     setShowBankModal(false);
     addToast({ type: 'success', title: `Đã nhập ${cloned.length} câu hỏi từ ngân hàng` });
   };
@@ -277,7 +417,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
 
   const handleImportDocx = async (file: File) => {
     try {
-      addToast({ type: 'success', title: 'Đang xử lý file, vui lòng đợi...' });
+      addToast({ type: 'info', title: 'Đang xử lý file, vui lòng đợi...' });
 
       // Upload and parse via uploadService
       const parsedData = await uploadService.parseDocument(file);
@@ -299,18 +439,26 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         PLACEHOLDER_PREFIXES.some(p => q.content.trim().startsWith(p));
 
       const converted = parsedQs.map((q: any, idx: number) => {
-        const opts = (q.options || []).map((o: any, oIdx: number) => ({
+        let opts = (q.options || []).map((o: any, oIdx: number) => ({
           id: `opt-import-${Date.now()}-${idx}-${oIdx}`,
-          text: o.text || o.label || '',
+          text: (o.text || o.label || '').trim(),
           isCorrect: o.isCorrect ?? false,
-        }));
+        })).filter((o: any) => o.text !== '');
+
+        // If no options marked correct, mark the first one as default
+        if (opts.length > 0 && !opts.some((o: any) => o.isCorrect)) {
+          opts[0].isCorrect = true;
+        }
+
         const correctCount = opts.filter((o: any) => o.isCorrect).length;
         return {
-          id: `q-import-${Date.now()}-${idx}`,
-          quizId: id || '',
-          content: q.content,
+          id: `q-import-${Date.now()}-${idx}-${Math.random().toString(36).slice(2, 7)}`,
+          quizId: '',
+          content: q.content.trim(),
           type: correctCount > 1 ? 'MULTIPLE_CHOICE' : 'SINGLE_CHOICE',
           score: 2,
+          points: 0,
+          isLocked: false,
           explanation: '',
           options: opts,
           order: 0,
@@ -335,7 +483,12 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
           order: existing.length + i + 1,
         }));
 
-        return [...existing, ...appended];
+        const combined = [...existing, ...appended];
+        try {
+          return rebalance(combined, Number(totalPoints)) as Question[];
+        } catch {
+          return combined;
+        }
       });
 
       addToast({ type: 'success', title: `Đã nhập ${converted.length} câu hỏi từ file` });

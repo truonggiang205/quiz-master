@@ -98,11 +98,12 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
     const source = questions[index];
     const duplicated: Question = {
       ...source,
-      id: `q-${Date.now()}`,
+      id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
+      quizId: '',
       content: `${source.content} (Bản sao)`,
       options: source.options.map((opt, i) => ({
         ...opt,
-        id: `opt-${Date.now()}-${i}`,
+        id: `opt-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 7)}`,
       })),
       order: questions.length + 1,
       isLocked: false,

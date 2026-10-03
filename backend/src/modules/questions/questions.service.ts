@@ -116,6 +116,9 @@ export class QuestionsService {
         type: bankQ.type,
         options: bankQ.options.map((opt: any) => ({ ...opt, id: `opt-${Date.now()}-${idx}-${Math.random().toString(36).substring(7)}` })),
         score: bankQ.score,
+        points: bankQ.points || 0,
+        isLocked: bankQ.isLocked || false,
+        subject: bankQ.subject,
         explanation: bankQ.explanation,
         order: existingCount + idx + 1,
       });
@@ -147,13 +150,16 @@ export class QuestionsService {
     }
 
     const newQuestion = this.questionRepo.create({
-      id: `q-${Date.now()}`,
+      id: `q-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       quizId,
       content: dto.content,
       imageUrl: finalImageUrl,
       type: dto.type as any,
       options: optionsWithIds,
       score: dto.score ?? 2.0,
+      points: dto.points !== undefined ? dto.points : 0,
+      isLocked: dto.isLocked ?? false,
+      subject: dto.subject,
       explanation: dto.explanation || '',
       order: dto.order || existingCount + 1,
       teacherId,

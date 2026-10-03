@@ -72,6 +72,14 @@ export const quizService = {
     throw new Error('Failed to create question');
   },
 
+  async updateQuestion(id: string, question: Partial<Question>): Promise<Question> {
+    const res = await apiClient.patch(`/questions/${id}`, question);
+    if (res.data?.data) {
+      return res.data.data;
+    }
+    throw new Error('Failed to update question');
+  },
+
   async deleteQuestion(id: string): Promise<boolean> {
     await apiClient.delete(`/questions/${id}`);
     return true;

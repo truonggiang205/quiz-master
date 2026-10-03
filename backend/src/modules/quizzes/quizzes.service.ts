@@ -84,11 +84,13 @@ export class QuizzesService {
   async createQuiz(dto: CreateQuizDto, teacher: { id: string; name: string }) {
     const now = new Date().toISOString();
     const newQuiz = this.quizRepo.create({
-      id: `quiz-${Date.now()}`,
+      id: `quiz-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
       title: dto.title,
       description: dto.description || '',
       subject: dto.subject,
       durationMinutes: dto.durationMinutes || 45,
+      mode: dto.mode || 'QUIZ',
+      totalPoints: dto.totalPoints || 1000,
       status: 'DRAFT',
       startTime: dto.startTime || now,
       endTime: dto.endTime || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),

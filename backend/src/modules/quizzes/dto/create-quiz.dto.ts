@@ -80,4 +80,9 @@ export class CreateQuizDto {
   @ApiPropertyOptional({ type: [String] })
   @IsOptional()
   assignedStudentIds?: string[];
+
+  @ApiPropertyOptional({ example: 1000, default: 1000 })
+  @IsOptional()
+  @IsNumber()
+  totalPoints?: number;
 }

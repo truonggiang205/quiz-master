@@ -5,6 +5,7 @@ import { AnswerOptionCard } from './AnswerOptionCard';
 import { Badge } from '../common/Badge';
 import { Flag, Upload, Image as ImageIcon, X } from 'lucide-react';
 import { uploadService } from '../../services/upload.service';
+import { resolveImageUrl } from '../../utils/image.util';
 import 'katex/dist/katex.min.css';
 import Latex from 'react-latex-next';
 import { useUiStore } from '../../stores/ui.store';
@@ -118,7 +119,13 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
             <Latex>{question.content}</Latex>
           </h2>
           {question.imageUrl && (
-            <img src={question.imageUrl.startsWith('http') ? question.imageUrl : `http://localhost:3000${question.imageUrl}`} alt="Đề bài" className="w-full max-h-[800px] rounded-xl object-contain border border-slate-200 dark:border-slate-700" />
+            <div className="mt-3">
+              <img
+                src={resolveImageUrl(question.imageUrl)}
+                alt="Đề bài"
+                className="w-full max-h-[800px] rounded-xl object-contain border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40"
+              />
+            </div>
           )}
         </div>
 
@@ -143,7 +150,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     {essayImageUrls.map((url, idx) => (
                       <div key={idx} className="relative group rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2">
-                        <img src={url.startsWith('http') || url.startsWith('data:') ? url : `http://localhost:3000${url}`} alt={`Bài làm ${idx + 1}`} className="w-full h-40 object-cover rounded-lg" />
+                        <img src={resolveImageUrl(url)} alt={`Bài làm ${idx + 1}`} className="w-full h-40 object-cover rounded-lg" />
                         <button
                           type="button"
                           onClick={() => onRemoveEssayImage && onRemoveEssayImage(idx)}

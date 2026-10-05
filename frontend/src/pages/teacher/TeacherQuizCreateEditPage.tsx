@@ -322,6 +322,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               explanation: q.explanation,
               order: q.order,
               imageUrl: q.imageUrl,
+              essayRubric: q.essayRubric,
             });
           } else {
             await quizService.createQuestion(id, q);

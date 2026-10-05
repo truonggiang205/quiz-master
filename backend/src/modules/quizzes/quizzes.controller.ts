@@ -14,11 +14,13 @@ import { CreateQuizDto } from './dto/create-quiz.dto.js';
 import { UpdateQuizDto } from './dto/update-quiz.dto.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../../common/guards/roles.guard.js';
+import { Roles } from '../../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 
 @ApiTags('Quizzes')
 @Controller('quizzes')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class QuizzesController {
   constructor(private readonly quizzesService: QuizzesService) {}
 
@@ -40,6 +42,7 @@ export class QuizzesController {
   }
 
   @Post()
+  @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Tạo bài kiểm tra mới (Teacher)' })
   async createQuiz(
     @Body() dto: CreateQuizDto,
@@ -54,6 +57,7 @@ export class QuizzesController {
   }
 
   @Patch(':id')
+  @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Cập nhật bài kiểm tra (Teacher)' })
   async updateQuiz(@Param('id') id: string, @Body() dto: UpdateQuizDto) {
     const updated = await this.quizzesService.updateQuiz(id, dto);
@@ -61,6 +65,7 @@ export class QuizzesController {
   }
 
   @Delete(':id')
+  @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Xóa bài kiểm tra (Teacher)' })
   async deleteQuiz(@Param('id') id: string) {
     const res = await this.quizzesService.deleteQuiz(id);
@@ -68,6 +73,7 @@ export class QuizzesController {
   }
 
   @Post(':id/publish')
+  @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Xuất bản bài kiểm tra (Teacher)' })
   async publishQuiz(@Param('id') id: string) {
     const updated = await this.quizzesService.publishQuiz(id);
@@ -75,6 +81,7 @@ export class QuizzesController {
   }
 
   @Post(':id/unpublish')
+  @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Gỡ bài kiểm tra về trạng thái bản thảo (Teacher)' })
   async unpublishQuiz(@Param('id') id: string) {
     const updated = await this.quizzesService.unpublishQuiz(id);

@@ -1,0 +1,32 @@
+{
+  "name": "quiz-master",
+  "version": "1.0.0",
+  "description": "",
+  "scripts": {
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:headed": "playwright test --headed",
+    "test:e2e:debug": "playwright test --debug",
+    "test:e2e:report": "playwright show-report"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/truonggiang205/quiz-master.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/truonggiang205/quiz-master/issues"
+  },
+  "homepage": "https://github.com/truonggiang205/quiz-master#readme",
+  "devDependencies": {
+    "@playwright/test": "^1.63.0",
+    "@types/bcrypt": "^6.0.0",
+    "@types/node": "^26.6.4",
+    "bcrypt": "^6.0.0",
+    "dotenv": "^18.0.5",
+    "mysql2": "^3.24.5"
+  }
+}

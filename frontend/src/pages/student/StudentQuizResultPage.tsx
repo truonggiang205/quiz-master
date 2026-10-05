@@ -7,9 +7,10 @@ import { useUiStore } from '../../stores/ui.store';
 import { Submission } from '../../types/submission';
 import { ResultOverview } from '../../components/student/ResultOverview';
 import { AnswerReleaseCountdown } from '../../components/quiz/AnswerReleaseCountdown';
-import { ArrowLeft, CheckCircle2, XCircle, Sparkles, BookOpen, AlertCircle, X } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Sparkles, BookOpen, AlertCircle, X, Clock } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
 import Latex from 'react-latex-next';
+import { resolveImageUrl } from '../../utils/image.util';
 
 export const StudentQuizResultPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -149,17 +150,22 @@ export const StudentQuizResultPage: React.FC = () => {
                   <div className="flex items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-700/60">
                     <div className="flex items-center gap-2.5">
                       <span className="text-sm font-black text-sky-600 dark:text-sky-400">
-                        Câu {idx + 1}
-                      </span>
-                      {item.isCorrect ? (
+                         Câu {idx + 1}
+                       </span>
+                      {item.isCorrect === true ? (
                         <Badge variant="mint" size="sm">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           Chính xác (+{((item.scoreAwarded || 0) / 100).toFixed(2)} điểm)
                         </Badge>
-                      ) : (
+                      ) : item.isCorrect === false ? (
                         <Badge variant="rose" size="sm">
                           <XCircle className="w-3.5 h-3.5" />
                           Chưa chính xác (0 điểm)
+                        </Badge>
+                      ) : (
+                        <Badge variant="amber" size="sm">
+                          <Clock className="w-3.5 h-3.5" />
+                          Chờ giáo viên chấm điểm
                         </Badge>
                       )}
                     </div>
@@ -170,7 +176,13 @@ export const StudentQuizResultPage: React.FC = () => {
                   </p>
                   
                   {item.questionImageUrl && (
-                    <img src={item.questionImageUrl.startsWith('http') ? item.questionImageUrl : `http://localhost:3000${item.questionImageUrl}`} alt="Đề bài" className="w-full max-h-[800px] rounded-xl object-contain border border-slate-200 dark:border-slate-700" />
+                    <div className="mt-3">
+                      <img
+                        src={resolveImageUrl(item.questionImageUrl)}
+                        alt="Đề bài"
+                        className="w-full max-h-[800px] rounded-xl object-contain border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40"
+                      />
+                    </div>
                   )}
 
                   {/* Options with colored feedback or Essay Image/Text */}
@@ -190,7 +202,7 @@ export const StudentQuizResultPage: React.FC = () => {
                             <span className="text-xs font-bold text-slate-500 mb-2 block">Ảnh bài làm của bạn:</span>
                             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 w-full">
                               {item.essayImageUrl.split('|||').map((url, i) => (
-                                <img key={i} src={url.startsWith('http') ? url : `http://localhost:3000${url}`} alt={`Bài làm tự luận ${i+1}`} className="w-full max-h-[800px] rounded-lg object-contain border border-slate-300 dark:border-slate-600" />
+                                <img key={i} src={resolveImageUrl(url)} alt={`Bài làm tự luận ${i+1}`} className="w-full max-h-[800px] rounded-lg object-contain border border-slate-300 dark:border-slate-600" />
                               ))}
                             </div>
                           </div>

@@ -5,6 +5,7 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { uploadService } from '../../services/upload.service';
 import { rebalance } from '../../utils/points.util';
 import { useUiStore } from '../../stores/ui.store';
+import { resolveImageUrl } from '../../utils/image.util';
 
 interface QuestionBuilderProps {
   questions: Question[];
@@ -76,6 +77,17 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
     if (!file) return;
     try {
       setUploadingImageFor(index);
+      try {
+        const res = await uploadService.uploadFile(file, 'quiz-master/de-bai');
+        if (res?.url) {
+          handleUpdateQuestion(index, { imageUrl: res.url });
+          setUploadingImageFor(null);
+          return;
+        }
+      } catch (uploadErr) {
+        console.warn('Direct upload failed, fallback to base64 DataURL', uploadErr);
+      }
+
       const reader = new FileReader();
       reader.onloadend = () => {
         handleUpdateQuestion(index, { imageUrl: reader.result as string });
@@ -433,7 +445,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                 <div className="mt-3">
                   {q.imageUrl ? (
                     <div className="relative inline-block group">
-                      <img src={q.imageUrl} alt="Đề bài" className="max-h-40 rounded-xl border border-slate-200 dark:border-slate-700" />
+                      <img src={resolveImageUrl(q.imageUrl)} alt="Đề bài" className="max-h-40 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/40" />
                       <button
                         type="button"
                         onClick={() => handleUpdateQuestion(qIndex, { imageUrl: undefined })}

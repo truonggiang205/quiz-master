@@ -5,6 +5,7 @@ import { Submission, DetailedAnswerReview } from '../../types/submission';
 import { useUiStore } from '../../stores/ui.store';
 import { ArrowLeft, CheckCircle, XCircle, Save, HelpCircle } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
+import { resolveImageUrl } from '../../utils/image.util';
 
 export const TeacherGradingPage: React.FC = () => {
   const { quizId, submissionId } = useParams<{ quizId: string; submissionId: string }>();
@@ -155,7 +156,7 @@ export const TeacherGradingPage: React.FC = () => {
               <div dangerouslySetInnerHTML={{ __html: ans.questionContent }} />
               {ans.questionImageUrl && (
                 <div className="mt-4">
-                  <img src={ans.questionImageUrl.startsWith('http') ? ans.questionImageUrl : `http://localhost:3000${ans.questionImageUrl}`} alt="Đề bài" className="max-w-full rounded-xl border border-slate-200 dark:border-slate-700" style={{ maxHeight: '300px' }} />
+                  <img src={resolveImageUrl(ans.questionImageUrl)} alt="Đề bài" className="max-w-full rounded-xl border border-slate-200 dark:border-slate-700" style={{ maxHeight: '300px' }} />
                 </div>
               )}
             </div>
@@ -178,7 +179,7 @@ export const TeacherGradingPage: React.FC = () => {
                     <span className="text-xs font-semibold text-slate-500 mb-1 block">Hình ảnh đính kèm:</span>
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-1">
                       {ans.essayImageUrl.split('|||').map((url, i) => (
-                        <img key={i} src={url.startsWith('http') ? url : `http://localhost:3000${url}`} alt={`Bài làm tự luận ${i+1}`} className="max-w-full rounded-xl object-contain border border-slate-200" style={{ maxHeight: '400px' }} />
+                        <img key={i} src={resolveImageUrl(url)} alt={`Bài làm tự luận ${i+1}`} className="max-w-full rounded-xl object-contain border border-slate-200" style={{ maxHeight: '400px' }} />
                       ))}
                     </div>
                   </div>

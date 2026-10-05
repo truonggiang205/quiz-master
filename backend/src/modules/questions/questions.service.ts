@@ -46,6 +46,7 @@ export class QuestionsService {
         imageUrl: q.imageUrl,
         type: q.type,
         score: q.score,
+        points: q.points,
         order: q.order,
         options: (q.options || []).map((opt) => ({
           id: opt.id,
@@ -89,7 +90,9 @@ export class QuestionsService {
       imageUrl: finalImageUrl,
       type: dto.type as any,
       options: optionsWithIds,
+      essayRubric: dto.essayRubric || null,
       score: dto.score ?? 2.0,
+      points: dto.points !== undefined ? dto.points : 0,
       explanation: dto.explanation || '',
       order: 0, // order doesn't matter much in bank
       subject: dto.subject || 'Chưa phân loại',
@@ -115,6 +118,7 @@ export class QuestionsService {
         imageUrl: bankQ.imageUrl,
         type: bankQ.type,
         options: bankQ.options.map((opt: any) => ({ ...opt, id: `opt-${Date.now()}-${idx}-${Math.random().toString(36).substring(7)}` })),
+        essayRubric: bankQ.essayRubric || null,
         score: bankQ.score,
         points: bankQ.points || 0,
         isLocked: bankQ.isLocked || false,
@@ -156,6 +160,7 @@ export class QuestionsService {
       imageUrl: finalImageUrl,
       type: dto.type as any,
       options: optionsWithIds,
+      essayRubric: dto.essayRubric || null,
       score: dto.score ?? 2.0,
       points: dto.points !== undefined ? dto.points : 0,
       isLocked: dto.isLocked ?? false,
@@ -210,6 +215,7 @@ export class QuestionsService {
     if (dto.isLocked !== undefined) question.isLocked = dto.isLocked;
     if (dto.explanation !== undefined) question.explanation = dto.explanation;
     if (dto.order !== undefined) question.order = dto.order;
+    if (dto.essayRubric !== undefined) question.essayRubric = dto.essayRubric;
 
     const saved = await this.questionRepo.save(question);
     await this.syncQuizStats(question.quizId);

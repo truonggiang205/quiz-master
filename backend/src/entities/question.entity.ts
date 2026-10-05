@@ -28,7 +28,7 @@ export class QuestionEntity {
   @Column({ type: 'text' })
   content: string;
 
-  @Column({ type: 'text', nullable: true })
+  @Column({ type: 'longtext', nullable: true })
   imageUrl?: string;
 
   @Column({ type: 'varchar', length: 30, default: 'SINGLE_CHOICE' })
@@ -36,6 +36,9 @@ export class QuestionEntity {
 
   @Column({ type: 'json' })
   options: QuestionOption[];
+
+  @Column({ type: 'json', nullable: true })
+  essayRubric?: any;
 
   @Column({ type: 'double', default: 2.0 })
   score: number;

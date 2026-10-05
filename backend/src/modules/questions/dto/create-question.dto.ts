@@ -46,11 +46,12 @@ export class CreateQuestionDto {
   @IsEnum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'ESSAY'])
   type!: string;
 
-  @ApiProperty({ type: [AnswerOptionDto] })
+  @ApiPropertyOptional({ type: [AnswerOptionDto] })
+  @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => AnswerOptionDto)
-  options!: AnswerOptionDto[];
+  options?: AnswerOptionDto[];
 
   @ApiProperty({ example: 2.0, default: 2.0 })
   @IsNumber()
@@ -82,4 +83,8 @@ export class CreateQuestionDto {
   @IsOptional()
   @IsString()
   subject?: string;
+
+  @ApiPropertyOptional({ example: { acceptedAnswers: ['Đáp án mẫu'], criteria: [] } })
+  @IsOptional()
+  essayRubric?: any;
 }

@@ -38,7 +38,8 @@ export class QuestionsService {
     });
 
     // ALWAYS mask answers and explanation for students
-    if (userRole !== 'TEACHER') {
+    const isTeacher = userRole?.toUpperCase() === 'TEACHER';
+    if (!isTeacher) {
       return questions.map((q) => ({
         id: q.id,
         quizId: q.quizId,

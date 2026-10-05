@@ -25,7 +25,8 @@ export class QuizzesService {
   ) {}
 
   async getAllQuizzes(userRole?: string, userId?: string) {
-    if (userRole === 'TEACHER') {
+    const normalizedRole = userRole?.toUpperCase();
+    if (normalizedRole === 'TEACHER') {
       return this.quizRepo.find({
         where: { teacherId: userId },
         order: { createdAt: 'DESC' },

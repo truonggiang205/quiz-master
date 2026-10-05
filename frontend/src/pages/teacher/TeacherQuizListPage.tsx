@@ -68,9 +68,10 @@ export const TeacherQuizListPage: React.FC = () => {
   };
 
   const filteredQuizzes = quizzes.filter((q) => {
-    const matchSearch =
-      q.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      q.subject.toLowerCase().includes(searchTerm.toLowerCase());
+    const title = (q.title || '').toLowerCase();
+    const subject = (q.subject || '').toLowerCase();
+    const term = (searchTerm || '').toLowerCase();
+    const matchSearch = title.includes(term) || subject.includes(term);
     const matchStatus = statusFilter === 'ALL' || q.status === statusFilter;
     return matchSearch && matchStatus;
   });

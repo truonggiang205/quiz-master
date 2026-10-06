@@ -109,6 +109,32 @@ export const quizService = {
     return [];
   },
 
+  async syncQuestionsDiff(
+    quizId: string,
+    diff: { created?: any[]; updated?: { id: string; changes: any }[]; deletedIds?: string[] },
+  ): Promise<any> {
+    const res = await apiClient.post(`/quizzes/${quizId}/questions/sync`, diff);
+    return res.data?.data;
+  },
+
+  async updateQuestionInQuiz(quizId: string, questionId: string, question: Partial<Question>): Promise<Question> {
+    const res = await apiClient.patch(`/quizzes/${quizId}/questions/${questionId}`, question);
+    return res.data?.data;
+  },
+
+  async saveToBankFromExam(
+    examId: string,
+    questionIds: string[],
+    subject?: string,
+  ): Promise<{ savedCount: number; duplicateCount: number; totalRequested: number }> {
+    const res = await apiClient.post('/questions/bank/from-exam', {
+      examId,
+      questionIds,
+      subject,
+    });
+    return res.data?.data;
+  },
+
   async parseDocxQuestions(file: File): Promise<Question[]> {
     const formData = new FormData();
     formData.append('file', file);

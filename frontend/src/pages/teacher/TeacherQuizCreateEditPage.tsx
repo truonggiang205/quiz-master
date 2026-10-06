@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useRef } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { quizService } from '../../services/quiz.service';
 import { submissionService } from '../../services/submission.service';
@@ -10,9 +10,10 @@ import { Question } from '../../types/question';
 import { QuestionBuilder } from '../../components/teacher/QuestionBuilder';
 import { useUiStore } from '../../stores/ui.store';
 import { uploadService } from '../../services/upload.service';
-import { ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Calendar, Users, Database } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Calendar, Users, Database, Search, ExternalLink, BookmarkPlus } from 'lucide-react';
 import Latex from 'react-latex-next';
 import { rebalance } from '../../utils/points.util';
+import { NumberInput } from '../../components/common/NumberInput';
 
 export const TeacherQuizCreateEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -55,6 +56,17 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
   const [customReleaseDate, setCustomReleaseDate] = useState('');
 
   const [questions, setQuestions] = useState<Question[]>([]);
+  const initialQuestionsRef = useRef<Question[]>([]);
+  const [saveStatus, setSaveStatus] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+
+  // Modal sao chép câu hỏi vào ngân hàng
+  const [showSaveBankModal, setShowSaveBankModal] = useState(false);
+  const [selectedSaveBankQIds, setSelectedSaveBankQIds] = useState<string[]>([]);
+  const [saveBankSubject, setSaveBankSubject] = useState('');
+  const [saveBankSearch, setSaveBankSearch] = useState('');
+  const [saveBankTypeFilter, setSaveBankTypeFilter] = useState('ALL');
+  const [isSavingToBank, setIsSavingToBank] = useState(false);
+
   const [isSaving, setIsSaving] = useState(false);
   const [hasSubmissions, setHasSubmissions] = useState(false);
   const [submissionsCount, setSubmissionsCount] = useState(0);
@@ -109,6 +121,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             setCustomReleaseDate(new Date(quiz.answerReleaseAt).toISOString().slice(0, 16));
           }
         }
+        initialQuestionsRef.current = JSON.parse(JSON.stringify(qs));
         setQuestions(qs);
       };
       
@@ -325,52 +338,111 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
       }
 
       let currentQuizId = id || '';
+      setSaveStatus('saving');
+
       if (isEditing && id) {
         await quizService.updateQuiz(id, quizInput);
         currentQuizId = id;
 
-        // Synchronize questions with backend
-        const existingBackendQs = await quizService.getQuestions(id, false);
-        const existingIds = new Set(existingBackendQs.map(eq => eq.id));
-        const currentActiveIds = new Set(processedQuestions.map(pq => pq.id));
+        // Đồng bộ câu hỏi theo DIFF (chỉ gửi câu thay đổi, không gửi lại cả 30 câu)
+        const initialMap = new Map((initialQuestionsRef.current || []).map((eq) => [eq.id, eq]));
+        const currentActiveIds = new Set(processedQuestions.map((pq) => pq.id));
 
-        // 1. Delete questions removed from state (chỉ xóa khi chưa có học sinh nộp bài)
-        if (!hasSubmissions) {
-          for (const eq of existingBackendQs) {
-            if (!currentActiveIds.has(eq.id)) {
-              await quizService.deleteQuestion(eq.id);
+        // 1. Delete questions (chỉ khi chưa có bài nộp)
+        const deletedIds = hasSubmissions
+          ? []
+          : (initialQuestionsRef.current || [])
+              .filter((eq) => !currentActiveIds.has(eq.id))
+              .map((eq) => eq.id);
+
+        // 2. Created questions (các câu mới thêm vào danh sách)
+        const created = processedQuestions
+          .filter((pq) => !initialMap.has(pq.id))
+          .map((pq) => ({
+            content: pq.content,
+            type: pq.type,
+            options: pq.options,
+            score: pq.score,
+            points: pq.points,
+            isLocked: pq.isLocked,
+            explanation: pq.explanation,
+            order: pq.order,
+            imageUrl: pq.imageUrl,
+            essayRubric: pq.essayRubric,
+          }));
+
+        // 3. Updated questions (chỉ các câu thực sự có thay đổi)
+        const updated: { id: string; changes: any }[] = [];
+        for (const pq of processedQuestions) {
+          const oldQ = initialMap.get(pq.id);
+          if (oldQ) {
+            const isContentDiff = oldQ.content !== pq.content;
+            const isTypeDiff = oldQ.type !== pq.type;
+            const isScoreDiff = oldQ.score !== pq.score || oldQ.points !== pq.points;
+            const isLockedDiff = oldQ.isLocked !== pq.isLocked;
+            const isExplDiff = (oldQ.explanation || '') !== (pq.explanation || '');
+            const isImageDiff = oldQ.imageUrl !== pq.imageUrl;
+            const isOrderDiff = oldQ.order !== pq.order;
+            const isOptionsDiff = JSON.stringify(oldQ.options) !== JSON.stringify(pq.options);
+            const isRubricDiff = JSON.stringify(oldQ.essayRubric || null) !== JSON.stringify(pq.essayRubric || null);
+
+            if (
+              isContentDiff ||
+              isTypeDiff ||
+              isScoreDiff ||
+              isLockedDiff ||
+              isExplDiff ||
+              isImageDiff ||
+              isOrderDiff ||
+              isOptionsDiff ||
+              isRubricDiff
+            ) {
+              updated.push({
+                id: pq.id,
+                changes: {
+                  content: pq.content,
+                  type: pq.type,
+                  options: pq.options,
+                  score: pq.score,
+                  points: pq.points,
+                  isLocked: pq.isLocked,
+                  explanation: pq.explanation,
+                  order: pq.order,
+                  imageUrl: pq.imageUrl,
+                  essayRubric: pq.essayRubric,
+                },
+              });
             }
           }
         }
 
-        // 2. Update existing questions or create new ones
-        for (const q of processedQuestions) {
-          if (q.id && existingIds.has(q.id)) {
-            await quizService.updateQuestion(q.id, {
-              content: q.content,
-              type: q.type,
-              options: q.options,
-              score: q.score,
-              points: q.points,
-              isLocked: q.isLocked,
-              explanation: q.explanation,
-              order: q.order,
-              imageUrl: q.imageUrl,
-              essayRubric: q.essayRubric,
-            });
-          } else {
-            await quizService.createQuestion(id, q);
-          }
+        // Gọi diff sync trong 1 transaction duy nhất nếu có câu thay đổi
+        if (created.length > 0 || updated.length > 0 || deletedIds.length > 0) {
+          await quizService.syncQuestionsDiff(id, { created, updated, deletedIds });
         }
+        initialQuestionsRef.current = JSON.parse(JSON.stringify(processedQuestions));
       } else {
         const created = await quizService.createQuiz(quizInput);
         currentQuizId = created.id;
 
-        // Save newly created questions
-        for (const q of processedQuestions) {
-          await quizService.createQuestion(created.id, q);
-        }
+        // Lưu câu hỏi mới hàng loạt qua sync endpoint trong 1 transaction
+        await quizService.syncQuestionsDiff(created.id, {
+          created: processedQuestions.map((pq) => ({
+            content: pq.content,
+            type: pq.type,
+            options: pq.options,
+            score: pq.score,
+            points: pq.points,
+            isLocked: pq.isLocked,
+            explanation: pq.explanation,
+            order: pq.order,
+            imageUrl: pq.imageUrl,
+            essayRubric: pq.essayRubric,
+          })),
+        });
       }
+
+      setSaveStatus('saved');
 
       if (publishImmediately && currentQuizId) {
         await quizService.publishQuiz(currentQuizId);
@@ -539,6 +611,50 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
     }
   };
 
+  const handleOpenSaveBankModal = () => {
+    if (!id) {
+      addToast({
+        type: 'warning',
+        title: 'Chưa lưu bài kiểm tra',
+        message: 'Vui lòng nhấn "Lưu bản thảo" hoặc "Xuất bản ngay" trước khi sao chép câu hỏi vào ngân hàng câu hỏi để bảo đảm câu hỏi đã được tạo ID bền vững.',
+      });
+      return;
+    }
+
+    if (questions.length === 0) {
+      addToast({ type: 'warning', title: 'Không có câu hỏi', message: 'Bài thi hiện chưa có câu hỏi nào để lưu vào ngân hàng.' });
+      return;
+    }
+
+    setSaveBankSubject(subject || 'Chưa phân loại');
+    setSelectedSaveBankQIds(questions.map((q) => q.id));
+    setSaveBankSearch('');
+    setSaveBankTypeFilter('ALL');
+    setShowSaveBankModal(true);
+  };
+
+  const handleExecuteSaveToBank = async () => {
+    if (!id || selectedSaveBankQIds.length === 0) return;
+    setIsSavingToBank(true);
+    try {
+      const res = await quizService.saveToBankFromExam(id, selectedSaveBankQIds, saveBankSubject);
+      addToast({
+        type: 'success',
+        title: 'Lưu vào ngân hàng thành công',
+        message: `Đã lưu ${res.savedCount} câu hỏi vào ngân hàng${res.duplicateCount > 0 ? ` (bỏ qua ${res.duplicateCount} câu trùng lặp)` : ''}!`,
+      });
+      setShowSaveBankModal(false);
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'Lưu ngân hàng thất bại',
+        message: err?.response?.data?.message || 'Có lỗi xảy ra khi sao chép câu hỏi vào ngân hàng.',
+      });
+    } finally {
+      setIsSavingToBank(false);
+    }
+  };
+
   return (
     <div className="space-y-6 max-w-5xl mx-auto pb-12">
       {/* Top action bar */}
@@ -552,6 +668,29 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         </Link>
 
         <div className="flex items-center gap-2">
+          {saveStatus === 'saving' && (
+            <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 flex items-center gap-1 mr-1">
+              <span className="w-2 h-2 rounded-full bg-sky-500 animate-ping" />
+              Đang lưu...
+            </span>
+          )}
+          {saveStatus === 'saved' && (
+            <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mr-1">
+              <CheckCircle2 className="w-3.5 h-3.5" />
+              Đã lưu
+            </span>
+          )}
+
+          <button
+            type="button"
+            onClick={handleOpenSaveBankModal}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs"
+            title="Sao chép các câu hỏi trong đề này vào ngân hàng câu hỏi dùng chung"
+          >
+            <BookmarkPlus className="w-4 h-4 text-sky-600 dark:text-sky-400" />
+            Lưu ngân hàng
+          </button>
+
           <button
             type="button"
             onClick={() => handleSave(false)}
@@ -664,11 +803,11 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               Thời lượng làm bài (phút)
             </label>
-            <input
-              type="number"
+            <NumberInput
               min={1}
+              defaultValue={45}
               value={durationMinutes}
-              onChange={(e) => setDurationMinutes(Number(e.target.value))}
+              onChange={(val) => setDurationMinutes(val)}
               className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-900 dark:text-white"
             />
           </div>
@@ -677,11 +816,11 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
               Số lần làm tối đa
             </label>
-            <input
-              type="number"
+            <NumberInput
               min={1}
+              defaultValue={1}
               value={totalAttempts}
-              onChange={(e) => setTotalAttempts(Number(e.target.value))}
+              onChange={(val) => setTotalAttempts(val)}
               className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-900 dark:text-white"
             />
           </div>
@@ -981,6 +1120,224 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               >
                 Nhập {selectedBankQIds.length > 0 ? `(${selectedBankQIds.length})` : ''} câu hỏi
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Save Questions to Bank Modal */}
+      {showSaveBankModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[88vh] border border-slate-200/80 dark:border-slate-800">
+            {/* Header */}
+            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400">
+                  <BookmarkPlus className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
+                    Sao chép câu hỏi vào ngân hàng
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">
+                    Chọn các câu hỏi từ đề thi này để lưu vào kho ngân hàng dùng chung
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowSaveBankModal(false)}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none p-1 rounded-lg"
+              >
+                &times;
+              </button>
+            </div>
+
+            {/* Filter & Options Toolbar */}
+            <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 space-y-3 shrink-0">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                    Môn học / Chủ đề ngân hàng:
+                  </label>
+                  <input
+                    type="text"
+                    value={saveBankSubject}
+                    onChange={(e) => setSaveBankSubject(e.target.value)}
+                    placeholder="Ví dụ: Toán 12, Giải tích, Vật lý..."
+                    className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div className="flex items-end gap-2">
+                  <div className="flex-1">
+                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                      Lọc theo loại:
+                    </label>
+                    <select
+                      value={saveBankTypeFilter}
+                      onChange={(e) => setSaveBankTypeFilter(e.target.value)}
+                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    >
+                      <option value="ALL">Tất cả loại câu hỏi</option>
+                      <option value="SINGLE_CHOICE">Trắc nghiệm đơn</option>
+                      <option value="MULTIPLE_CHOICE">Trắc nghiệm nhiều đáp án</option>
+                      <option value="TRUE_FALSE">Đúng / Sai</option>
+                      <option value="ESSAY">Tự luận</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              <div className="flex items-center justify-between gap-3 pt-1">
+                <div className="relative flex-1 max-w-sm">
+                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={saveBankSearch}
+                    onChange={(e) => setSaveBankSearch(e.target.value)}
+                    placeholder="Tìm theo nội dung câu hỏi..."
+                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                  />
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const allVisibleIds = questions
+                        .filter((q) => {
+                          const matchesType = saveBankTypeFilter === 'ALL' || q.type === saveBankTypeFilter;
+                          const matchesSearch = !saveBankSearch || q.content.toLowerCase().includes(saveBankSearch.toLowerCase());
+                          return matchesType && matchesSearch;
+                        })
+                        .map((q) => q.id);
+                      setSelectedSaveBankQIds(allVisibleIds);
+                    }}
+                    className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline"
+                  >
+                    Chọn tất cả
+                  </button>
+                  <span className="text-slate-300 dark:text-slate-600">•</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedSaveBankQIds([])}
+                    className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                  >
+                    Bỏ chọn
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            {/* Questions List */}
+            <div className="p-6 overflow-y-auto flex-1 space-y-3">
+              {(() => {
+                const filtered = questions.filter((q) => {
+                  const matchesType = saveBankTypeFilter === 'ALL' || q.type === saveBankTypeFilter;
+                  const matchesSearch = !saveBankSearch || q.content.toLowerCase().includes(saveBankSearch.toLowerCase());
+                  return matchesType && matchesSearch;
+                });
+
+                if (filtered.length === 0) {
+                  return (
+                    <div className="text-center py-10 text-xs text-slate-400">
+                      Không tìm thấy câu hỏi phù hợp với bộ lọc tìm kiếm.
+                    </div>
+                  );
+                }
+
+                return filtered.map((q, idx) => {
+                  const isChecked = selectedSaveBankQIds.includes(q.id);
+                  return (
+                    <label
+                      key={q.id}
+                      className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                        isChecked
+                          ? 'bg-sky-50/70 dark:bg-sky-950/30 border-sky-300 dark:border-sky-800 shadow-xs'
+                          : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 hover:border-slate-300'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={isChecked}
+                        onChange={(e) => {
+                          if (e.target.checked) {
+                            setSelectedSaveBankQIds([...selectedSaveBankQIds, q.id]);
+                          } else {
+                            setSelectedSaveBankQIds(selectedSaveBankQIds.filter((qid) => qid !== q.id));
+                          }
+                        }}
+                        className="mt-1 rounded text-sky-600 focus:ring-sky-400"
+                      />
+                      <div className="flex-1 min-w-0">
+                        <div className="flex items-center gap-2 mb-1">
+                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                            Câu {q.order || idx + 1}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                            {q.type === 'SINGLE_CHOICE'
+                              ? 'Trắc nghiệm đơn'
+                              : q.type === 'MULTIPLE_CHOICE'
+                              ? 'Nhiều đáp án'
+                              : q.type === 'TRUE_FALSE'
+                              ? 'Đúng / Sai'
+                              : 'Tự luận'}
+                          </span>
+                        </div>
+                        <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed line-clamp-2">
+                          <Latex>{q.content || '(Chưa có nội dung)'}</Latex>
+                        </p>
+                      </div>
+                    </label>
+                  );
+                });
+              })()}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-slate-800/30">
+              <div className="flex items-center gap-3">
+                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                  Đã chọn: <span className="text-sky-600 dark:text-sky-400 font-mono text-sm">{selectedSaveBankQIds.length}</span> / {questions.length} câu
+                </span>
+                <Link
+                  to="/teacher/question-bank"
+                  target="_blank"
+                  className="hidden sm:inline-flex items-center gap-1 text-xs text-sky-600 hover:underline"
+                >
+                  <span>Xem ngân hàng câu hỏi</span>
+                  <ExternalLink className="w-3 h-3" />
+                </Link>
+              </div>
+
+              <div className="flex items-center gap-2.5">
+                <button
+                  type="button"
+                  onClick={() => setShowSaveBankModal(false)}
+                  className="py-2 px-4 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold transition-colors text-xs border border-slate-200 dark:border-slate-700"
+                >
+                  Hủy
+                </button>
+                <button
+                  type="button"
+                  disabled={selectedSaveBankQIds.length === 0 || isSavingToBank}
+                  onClick={handleExecuteSaveToBank}
+                  className="py-2 px-5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 text-xs shadow-sm flex items-center gap-1.5"
+                >
+                  {isSavingToBank ? (
+                    <>
+                      <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                      <span>Đang lưu...</span>
+                    </>
+                  ) : (
+                    <>
+                      <BookmarkPlus className="w-3.5 h-3.5" />
+                      <span>Lưu vào ngân hàng ({selectedSaveBankQIds.length})</span>
+                    </>
+                  )}
+                </button>
+              </div>
             </div>
           </div>
         </div>

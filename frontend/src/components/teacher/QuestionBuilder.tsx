@@ -6,6 +6,7 @@ import { uploadService } from '../../services/upload.service';
 import { rebalance } from '../../utils/points.util';
 import { useUiStore } from '../../stores/ui.store';
 import { resolveImageUrl } from '../../utils/image.util';
+import { NumberInput } from '../common/NumberInput';
 
 interface QuestionBuilderProps {
   questions: Question[];
@@ -367,17 +368,14 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                     {/* Points input */}
                     <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title={hasSubmissions ? "Bài thi đã có học sinh làm bài, không thể sửa điểm trực tiếp" : "Phần dư 0.01đ được cộng vào các câu đầu để tổng điểm khớp 100%"}>
                       <span>Điểm:</span>
-                      <input
-                        type="number"
+                      <NumberInput
                         step="0.01"
-                        min="0"
+                        min={0}
+                        precision={2}
                         disabled={hasSubmissions}
-                        value={((q.points || 0) / 100).toFixed(2)}
-                        onChange={(e) => {
-                          const val = parseFloat(e.target.value);
-                          if (!isNaN(val)) {
-                            handleUpdateQuestion(qIndex, { points: Math.round(val * 100) });
-                          }
+                        value={Number(((q.points || 0) / 100).toFixed(2))}
+                        onChange={(val) => {
+                          handleUpdateQuestion(qIndex, { points: Math.round(val * 100) });
                         }}
                         className={`w-20 rounded-xl border px-2 py-1 text-center font-bold text-amber-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 ${hasSubmissions ? 'opacity-60 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : (q.isLocked ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-700')}`}
                       />
@@ -648,19 +646,18 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                                     }}
                                     className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
                                   />
-                                  <input
-                                    type="number"
+                                  <NumberInput
                                     placeholder="Điểm"
-                                    min="0"
+                                    min={0}
                                     step="0.1"
+                                    defaultValue={0}
                                     title="Điểm tối đa cho tiêu chí này"
                                     value={criterion.maxPoints || 0}
-                                    onChange={(e) => {
-                                      const pts = parseFloat(e.target.value) || 0;
+                                    onChange={(pts) => {
                                       const newCriteria = [...(q.essayRubric?.criteria || [])];
                                       newCriteria[cIndex] = { ...criterion, maxPoints: pts };
                                       handleUpdateQuestion(qIndex, {
-                                        essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
+                                        essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria },
                                       });
                                     }}
                                     className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-center text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"

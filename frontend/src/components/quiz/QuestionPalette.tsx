@@ -1,18 +1,23 @@
 import React from 'react';
 import { useQuizStore } from '../../stores/quiz.store';
 import { Flag, CheckCircle2 } from 'lucide-react';
+import { isQuestionAnswered } from '../../utils/quiz.utils';
 
 export const QuestionPalette: React.FC = () => {
   const {
     questions,
     currentQuestionIndex,
     answers,
+    essayAnswers,
+    essayTextAnswers,
     flaggedQuestionIds,
     goToQuestion,
   } = useQuizStore();
 
-  const answeredCount = Object.keys(answers).filter(
-    (qId) => answers[qId] && answers[qId].length > 0,
+  const answerState = { answers, essayAnswers, essayTextAnswers };
+
+  const answeredCount = questions.filter((q) =>
+    isQuestionAnswered(q, answerState),
   ).length;
 
   return (
@@ -33,7 +38,7 @@ export const QuestionPalette: React.FC = () => {
       <div className="grid grid-cols-5 gap-2">
         {questions.map((q, idx) => {
           const isCurrent = idx === currentQuestionIndex;
-          const isAnswered = answers[q.id] && answers[q.id].length > 0;
+          const isAnswered = isQuestionAnswered(q, answerState);
           const isFlagged = flaggedQuestionIds.includes(q.id);
 
           let buttonStyle = 'bg-slate-100 dark:bg-slate-700/70 text-slate-600 dark:text-slate-300 hover:bg-slate-200';

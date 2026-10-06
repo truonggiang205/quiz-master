@@ -1,4 +1,4 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 export interface StudentAnswer {
   questionId: string;
@@ -15,12 +15,14 @@ export class SubmissionEntity {
   @PrimaryColumn({ type: 'varchar', length: 64 })
   id: string;
 
+  @Index()
   @Column({ type: 'varchar', length: 64 })
   quizId: string;
 
   @Column({ type: 'varchar', length: 255, nullable: true })
   quizTitle: string;
 
+  @Index()
   @Column({ type: 'varchar', length: 64 })
   studentId: string;
 
@@ -39,6 +41,7 @@ export class SubmissionEntity {
   @Column({ type: 'double', default: 10 })
   maxScore: number;
 
+  @Index()
   @Column({ type: 'double', default: 0 })
   percentage: number;
 
@@ -60,6 +63,7 @@ export class SubmissionEntity {
   @Column({ type: 'varchar', length: 50, nullable: true })
   submittedAt: string;
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 

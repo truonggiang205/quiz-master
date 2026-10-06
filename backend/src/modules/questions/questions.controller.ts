@@ -16,6 +16,8 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { QuestionsService } from './questions.service.js';
 import { CreateQuestionDto } from './dto/create-question.dto.js';
 import { UpdateQuestionDto } from './dto/update-question.dto.js';
+import { SyncQuestionsDiffDto } from './dto/sync-questions-diff.dto.js';
+import { SaveFromExamDto } from './dto/save-from-exam.dto.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
@@ -62,6 +64,29 @@ export class QuestionsController {
     return createSuccessResponse(updated, 'Cập nhật câu hỏi thành công');
   }
 
+  @Patch('quizzes/:quizId/questions/:questionId')
+  @Patch('exams/:quizId/questions/:questionId')
+  @ApiOperation({ summary: 'Cập nhật 1 câu hỏi cụ thể trong bài kiểm tra (Teacher)' })
+  async updateQuestionInQuiz(
+    @Param('quizId') quizId: string,
+    @Param('questionId') questionId: string,
+    @Body() dto: UpdateQuestionDto,
+  ) {
+    const updated = await this.questionsService.updateQuestionInQuiz(quizId, questionId, dto);
+    return createSuccessResponse(updated, 'Cập nhật câu hỏi thành công');
+  }
+
+  @Post('quizzes/:quizId/questions/sync')
+  @ApiOperation({ summary: 'Đồng bộ câu hỏi theo diff trong 1 transaction duy nhất' })
+  async syncQuestionsDiff(
+    @Param('quizId') quizId: string,
+    @Body() dto: SyncQuestionsDiffDto,
+    @CurrentUser() user: any,
+  ) {
+    const result = await this.questionsService.syncQuestionsDiff(quizId, dto, user?.id);
+    return createSuccessResponse(result, 'Đồng bộ câu hỏi thành công');
+  }
+
   @Patch('quizzes/:quizId/questions/bulk')
   @ApiOperation({ summary: 'Cập nhật hàng loạt câu hỏi (ví dụ: điểm số)' })
   async bulkUpdateQuestions(
@@ -103,6 +128,20 @@ export class QuestionsController {
   ) {
     const created = await this.questionsService.saveToBank(user.id, dto);
     return createSuccessResponse(created, 'Lưu vào ngân hàng thành công');
+  }
+
+  @Post('questions/bank/from-exam')
+  @Post('question-bank/from-exam')
+  @ApiOperation({ summary: 'Sao chép câu hỏi từ bài kiểm tra vào ngân hàng câu hỏi' })
+  async saveToBankFromExam(
+    @CurrentUser() user: any,
+    @Body() dto: SaveFromExamDto,
+  ) {
+    const result = await this.questionsService.saveToBankFromExam(user.id, dto);
+    return createSuccessResponse(
+      result,
+      `Đã lưu ${result.savedCount} câu hỏi vào ngân hàng${result.duplicateCount > 0 ? ` (bỏ qua ${result.duplicateCount} câu trùng lặp)` : ''}`,
+    );
   }
 
   @Post('quizzes/:quizId/import-bank')

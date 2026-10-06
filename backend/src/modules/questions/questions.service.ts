@@ -1,10 +1,13 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
+import crypto from 'crypto';
 import { QuestionEntity, QuestionOption, SubmissionEntity } from '../../entities/index.js';
 import { EssayRubricEntity } from '../grading/entities/essay-rubric.entity.js';
 import { CreateQuestionDto } from './dto/create-question.dto.js';
 import { UpdateQuestionDto } from './dto/update-question.dto.js';
+import { SyncQuestionsDiffDto } from './dto/sync-questions-diff.dto.js';
+import { SaveFromExamDto } from './dto/save-from-exam.dto.js';
 import { UploadService } from '../upload/upload.service.js';
 import { QuizzesService } from '../quizzes/quizzes.service.js';
 import { gradeWithRubric } from '../grading/rubric/rubric-grader.js';
@@ -225,8 +228,11 @@ export class QuestionsService {
     if (dto.order !== undefined) question.order = dto.order;
     if (dto.essayRubric !== undefined) question.essayRubric = dto.essayRubric;
 
+    const pointsChanged = !hasSubmissions && (dto.score !== undefined || dto.points !== undefined);
     const saved = await this.questionRepo.save(question);
-    await this.syncQuizStats(question.quizId);
+    if (pointsChanged) {
+      await this.syncQuizStats(question.quizId);
+    }
 
     // Khi giáo viên điền/cập nhật đáp án tự luận:
     // 1. Đồng bộ sang EssayRubricEntity
@@ -239,6 +245,237 @@ export class QuestionsService {
     }
 
     return saved;
+  }
+
+  async updateQuestionInQuiz(quizId: string, questionId: string, dto: UpdateQuestionDto) {
+    const question = await this.questionRepo.findOneBy({ id: questionId });
+    if (!question || question.quizId !== quizId) {
+      throw new NotFoundException(`Không tìm thấy câu hỏi ${questionId} trong bài kiểm tra ${quizId}`);
+    }
+    return this.updateQuestion(questionId, dto);
+  }
+
+  async syncQuestionsDiff(quizId: string, dto: SyncQuestionsDiffDto, teacherId?: string) {
+    const quiz = await this.quizzesService.getQuizById(quizId, 'TEACHER');
+    if (!quiz) {
+      throw new NotFoundException('Không tìm thấy bài kiểm tra để đồng bộ câu hỏi');
+    }
+
+    const submissionsCount = await this.submissionRepo.count({ where: { quizId } });
+    const hasSubmissions = submissionsCount > 0;
+
+    let createdCount = 0;
+    let updatedCount = 0;
+    let deletedCount = 0;
+    let statsNeedSync = false;
+    const essayQuestionsToGrade: QuestionEntity[] = [];
+
+    await this.questionRepo.manager.transaction(async (manager) => {
+      const qRepo = manager.getRepository(QuestionEntity);
+
+      // 1. Xóa các câu hỏi bị lược bỏ (chỉ xóa khi chưa có học sinh nộp bài)
+      if (dto.deletedIds && dto.deletedIds.length > 0) {
+        if (!hasSubmissions) {
+          const deleteRes = await qRepo.delete({ id: In(dto.deletedIds), quizId });
+          deletedCount = deleteRes.affected || dto.deletedIds.length;
+          statsNeedSync = true;
+        }
+      }
+
+      // 2. Tạo mới các câu hỏi được thêm vào
+      if (dto.created && dto.created.length > 0) {
+        const existingCount = await qRepo.count({ where: { quizId } });
+        const newEntities: QuestionEntity[] = [];
+
+        for (let i = 0; i < dto.created.length; i++) {
+          const cDto = dto.created[i];
+          const optionsWithIds: QuestionOption[] = (cDto.options || []).map((opt, idx) => ({
+            id: opt.id || `opt-${Date.now()}-${i}-${idx}`,
+            text: opt.text,
+            isCorrect: opt.isCorrect,
+          }));
+
+          let finalImageUrl = cDto.imageUrl;
+          if (finalImageUrl && finalImageUrl.startsWith('data:image/')) {
+            try {
+              const folder = await this.getQuestionFolder(quizId);
+              const uploadResult = await this.uploadService.uploadBase64(finalImageUrl, folder);
+              finalImageUrl = uploadResult.secure_url || uploadResult.url;
+            } catch (e) {
+              console.error('Lỗi tải ảnh:', e);
+            }
+          }
+
+          const entity = qRepo.create({
+            id: `q-${Date.now()}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+            quizId,
+            content: cDto.content,
+            imageUrl: finalImageUrl,
+            type: cDto.type as any,
+            options: optionsWithIds,
+            essayRubric: cDto.essayRubric || null,
+            score: cDto.score ?? 2.0,
+            points: cDto.points !== undefined ? cDto.points : 0,
+            isLocked: cDto.isLocked ?? false,
+            subject: cDto.subject,
+            explanation: cDto.explanation || '',
+            order: cDto.order || existingCount + i + 1,
+            teacherId: teacherId || quiz.teacherId,
+          });
+          newEntities.push(entity);
+        }
+
+        await qRepo.save(newEntities);
+        createdCount = newEntities.length;
+        statsNeedSync = true;
+      }
+
+      // 3. Cập nhật các câu hỏi có thay đổi (chỉ ghi đè trường thay đổi)
+      if (dto.updated && dto.updated.length > 0) {
+        const updateIds = dto.updated.map((u) => u.id);
+        const existingQuestions = await qRepo.find({ where: { id: In(updateIds), quizId } });
+        const updateMap = new Map(dto.updated.map((u) => [u.id, u.changes]));
+
+        for (const q of existingQuestions) {
+          const changes = updateMap.get(q.id);
+          if (!changes) continue;
+
+          if (!hasSubmissions) {
+            if (changes.score !== undefined && changes.score !== q.score) {
+              q.score = changes.score;
+              statsNeedSync = true;
+            }
+            if (changes.points !== undefined && changes.points !== q.points) {
+              q.points = changes.points;
+              statsNeedSync = true;
+            }
+          }
+
+          if (changes.options) {
+            q.options = changes.options.map((opt, idx) => ({
+              id: opt.id || `opt-${Date.now()}-${idx}`,
+              text: opt.text,
+              isCorrect: opt.isCorrect,
+            }));
+          }
+
+          if (changes.content !== undefined) q.content = changes.content;
+          if (changes.imageUrl !== undefined) q.imageUrl = changes.imageUrl;
+          if (changes.type !== undefined) q.type = changes.type as any;
+          if (changes.isLocked !== undefined) q.isLocked = changes.isLocked;
+          if (changes.explanation !== undefined) q.explanation = changes.explanation;
+          if (changes.order !== undefined) q.order = changes.order;
+          if (changes.essayRubric !== undefined) q.essayRubric = changes.essayRubric;
+
+          updatedCount++;
+          if (q.type === 'ESSAY' && q.essayRubric) {
+            essayQuestionsToGrade.push(q);
+          }
+        }
+
+        if (existingQuestions.length > 0) {
+          await qRepo.save(existingQuestions);
+        }
+      }
+    });
+
+    // 4. Đồng bộ tổng điểm & số câu của quiz duy nhất một lần ở cuối transaction
+    if (statsNeedSync) {
+      await this.syncQuizStats(quizId);
+    }
+
+    // 5. Tự động chấm tự luận nếu bài thi đã có bài nộp
+    for (const eq of essayQuestionsToGrade) {
+      await this.syncEssayRubricEntity(eq);
+      if (hasSubmissions) {
+        await this.autoGradeExistingSubmissions(eq);
+      }
+    }
+
+    return {
+      success: true,
+      quizId,
+      createdCount,
+      updatedCount,
+      deletedCount,
+    };
+  }
+
+  async saveToBankFromExam(teacherId: string, dto: SaveFromExamDto) {
+    const quiz = await this.quizzesService.getQuizById(dto.examId, 'TEACHER');
+    if (!quiz) {
+      throw new NotFoundException('Không tìm thấy bài kiểm tra nguồn');
+    }
+    if (quiz.teacherId !== teacherId) {
+      throw new ForbiddenException('Bạn không sở hữu bài kiểm tra này');
+    }
+
+    const examQuestions = await this.questionRepo.find({
+      where: { quizId: dto.examId, id: In(dto.questionIds) },
+    });
+
+    if (examQuestions.length === 0) {
+      return { savedCount: 0, duplicateCount: 0, totalRequested: dto.questionIds.length };
+    }
+
+    const existingBank = await this.questionRepo.find({
+      where: { teacherId, isBank: true },
+    });
+
+    const getHash = (content: string, type: string) => {
+      const normalized = (content || '').trim().toLowerCase().replace(/\s+/g, ' ');
+      return crypto.createHash('md5').update(`${normalized}::${type}`).digest('hex');
+    };
+
+    const existingHashes = new Set(existingBank.map((q) => getHash(q.content, q.type)));
+
+    let savedCount = 0;
+    let duplicateCount = 0;
+    const questionsToInsert: QuestionEntity[] = [];
+
+    const now = Date.now();
+    for (let i = 0; i < examQuestions.length; i++) {
+      const q = examQuestions[i];
+      const hash = getHash(q.content, q.type);
+
+      if (existingHashes.has(hash)) {
+        duplicateCount++;
+        continue;
+      }
+
+      existingHashes.add(hash);
+      savedCount++;
+
+      const cloned = this.questionRepo.create({
+        id: `q-bank-${now}-${i}-${Math.random().toString(36).slice(2, 8)}`,
+        teacherId,
+        isBank: true,
+        quizId: undefined,
+        content: q.content,
+        imageUrl: q.imageUrl,
+        type: q.type,
+        options: JSON.parse(JSON.stringify(q.options || [])),
+        essayRubric: q.essayRubric ? JSON.parse(JSON.stringify(q.essayRubric)) : null,
+        score: q.score,
+        points: q.points,
+        explanation: q.explanation || '',
+        order: 0,
+        subject: dto.subject || quiz.subject || 'Chưa phân loại',
+      });
+      questionsToInsert.push(cloned);
+    }
+
+    if (questionsToInsert.length > 0) {
+      await this.questionRepo.manager.transaction(async (manager) => {
+        await manager.getRepository(QuestionEntity).save(questionsToInsert);
+      });
+    }
+
+    return {
+      savedCount,
+      duplicateCount,
+      totalRequested: dto.questionIds.length,
+    };
   }
 
   async bulkUpdateQuestions(quizId: string, updates: { id: string; points?: number; isLocked?: boolean }[]) {

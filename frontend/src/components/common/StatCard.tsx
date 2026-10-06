@@ -1,5 +1,6 @@
 import React from 'react';
 import { motion } from 'framer-motion';
+import { ArrowUpRight } from 'lucide-react';
 
 interface StatCardProps {
   title: string;
@@ -9,6 +10,8 @@ interface StatCardProps {
   variant?: 'lavender' | 'mint' | 'peach' | 'sky' | 'rose';
   trend?: string;
   delay?: number;
+  onClick?: () => void;
+  clickableHint?: string;
 }
 
 const variantStyles = {
@@ -47,19 +50,42 @@ export const StatCard: React.FC<StatCardProps> = ({
   variant = 'lavender',
   trend,
   delay = 0,
+  onClick,
+  clickableHint,
 }) => {
   const styles = variantStyles[variant];
+  const isClickable = Boolean(onClick);
 
   return (
     <motion.div
       initial={{ opacity: 0, y: 15 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.35, delay }}
-      className={`group relative p-5 bg-white/90 dark:bg-slate-800/90 rounded-3xl border ${styles.border} ${styles.glow} shadow-sm hover:shadow-md backdrop-blur-sm`}
+      onClick={onClick}
+      role={isClickable ? 'button' : undefined}
+      tabIndex={isClickable ? 0 : undefined}
+      onKeyDown={
+        isClickable
+          ? (e) => {
+              if (e.key === 'Enter' || e.key === ' ') {
+                e.preventDefault();
+                onClick?.();
+              }
+            }
+          : undefined
+      }
+      className={`group relative p-5 bg-white/90 dark:bg-slate-800/90 rounded-3xl border ${styles.border} ${styles.glow} shadow-sm backdrop-blur-sm select-none ${
+        isClickable
+          ? 'cursor-pointer hover:shadow-lg hover:-translate-y-1 active:scale-[0.98] transition-all duration-200 focus:outline-none focus:ring-2 focus:ring-sky-400'
+          : 'hover:shadow-md'
+      }`}
     >
       <div className="flex items-center justify-between gap-3 mb-3">
-        <span className="text-sm font-medium text-slate-500 dark:text-slate-400">
+        <span className="text-sm font-medium text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
           {title}
+          {isClickable && (
+            <ArrowUpRight className="w-3.5 h-3.5 text-slate-400 group-hover:text-sky-600 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-all opacity-70 group-hover:opacity-100" />
+          )}
         </span>
         <div className={`p-2.5 rounded-2xl ${styles.iconBg} transition-transform group-hover:scale-110`}>
           {icon}
@@ -77,11 +103,18 @@ export const StatCard: React.FC<StatCardProps> = ({
         )}
       </div>
 
-      {subtitle && (
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-1">
-          {subtitle}
-        </p>
-      )}
+      <div className="mt-1 flex items-center justify-between gap-2">
+        {subtitle && (
+          <p className="text-xs text-slate-500 dark:text-slate-400 truncate">
+            {subtitle}
+          </p>
+        )}
+        {clickableHint && isClickable && (
+          <span className="text-[11px] font-semibold text-sky-600 dark:text-sky-400 opacity-0 group-hover:opacity-100 transition-opacity whitespace-nowrap ml-auto">
+            {clickableHint} →
+          </span>
+        )}
+      </div>
     </motion.div>
   );
 };

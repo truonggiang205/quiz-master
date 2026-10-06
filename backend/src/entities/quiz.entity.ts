@@ -1,4 +1,4 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn } from 'typeorm';
+import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Index } from 'typeorm';
 
 export type QuizStatus = 'DRAFT' | 'PUBLISHED' | 'CLOSED';
 
@@ -13,12 +13,14 @@ export class QuizEntity {
   @Column({ type: 'text', nullable: true })
   description: string;
 
+  @Index()
   @Column({ type: 'varchar', length: 100 })
   subject: string;
 
   @Column({ type: 'int', default: 45 })
   durationMinutes: number;
 
+  @Index()
   @Column({ type: 'varchar', length: 20, default: 'DRAFT' })
   status: QuizStatus;
 
@@ -52,6 +54,7 @@ export class QuizEntity {
   @Column({ type: 'varchar', length: 50, nullable: true })
   answerReleaseAt: string;
 
+  @Index()
   @Column({ type: 'varchar', length: 64 })
   teacherId: string;
 
@@ -73,6 +76,7 @@ export class QuizEntity {
   @Column({ type: 'json', nullable: true })
   assignedStudentIds?: string[];
 
+  @Index()
   @CreateDateColumn()
   createdAt: Date;
 

@@ -6,6 +6,7 @@ import { useUiStore } from '../../stores/ui.store';
 import { ArrowLeft, CheckCircle, XCircle, Save, HelpCircle, Sparkles } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
 import { resolveImageUrl } from '../../utils/image.util';
+import { NumberInput } from '../../components/common/NumberInput';
 
 export const TeacherGradingPage: React.FC = () => {
   const { quizId, submissionId } = useParams<{ quizId: string; submissionId: string }>();
@@ -40,8 +41,8 @@ export const TeacherGradingPage: React.FC = () => {
     load();
   }, [submissionId, addToast]);
 
-  const handleGradeChange = (questionId: string, value: string, maxScore: number) => {
-    let numVal = parseFloat(value);
+  const handleGradeChange = (questionId: string, val: number, maxScore: number) => {
+    let numVal = val;
     if (isNaN(numVal)) numVal = 0;
     if (numVal < 0) numVal = 0;
     if (numVal > maxScore) numVal = maxScore;
@@ -138,14 +139,14 @@ export const TeacherGradingPage: React.FC = () => {
               {ans.questionType === 'ESSAY' && (
                 <div className="flex items-center gap-3 bg-sky-50 dark:bg-sky-900/30 px-4 py-2 rounded-xl">
                   <span className="text-sm font-bold text-sky-700 dark:text-sky-300">Chấm điểm:</span>
-                  <input
-                    type="number"
+                  <NumberInput
                     min={0}
                     max={ans.score / 100}
                     step={0.25}
+                    defaultValue={0}
                     value={grades[ans.questionId] ?? 0}
-                    onChange={(e) => handleGradeChange(ans.questionId, e.target.value, ans.score / 100)}
-                    className="w-20 text-center font-bold px-2 py-1.5 rounded-lg border border-sky-200 dark:border-sky-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500"
+                    onChange={(val) => handleGradeChange(ans.questionId, val, ans.score / 100)}
+                    className="w-20 text-center font-bold px-2 py-1.5 rounded-lg border border-sky-200 dark:border-sky-700 bg-white dark:bg-slate-800 focus:outline-none focus:ring-2 focus:ring-sky-500 text-xs text-slate-800 dark:text-white"
                   />
                   <span className="text-sm font-medium text-slate-500">/ {(ans.score / 100).toFixed(2)}</span>
                 </div>

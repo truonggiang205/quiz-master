@@ -10,6 +10,7 @@ import { QuizTimer } from '../../components/quiz/QuizTimer';
 import { ConfirmationModal } from '../../components/common/ConfirmationModal';
 import { ArrowLeft, ArrowRight, Send, Flag } from 'lucide-react';
 import { motion } from 'framer-motion';
+import { isQuestionAnswered } from '../../utils/quiz.utils';
 
 export const StudentQuizTakingPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -194,11 +195,12 @@ export const StudentQuizTakingPage: React.FC = () => {
   const selectedOptions = answers[currentQ.id] || [];
   const isFlagged = flaggedQuestionIds.includes(currentQ.id);
 
-  const answeredCount = questions.filter(
-    (q) => (answers[q.id] && answers[q.id].length > 0) || essayAnswers[q.id] || essayTextAnswers[q.id],
+  const answerState = { answers, essayAnswers, essayTextAnswers };
+  const answeredCount = questions.filter((q) =>
+    isQuestionAnswered(q, answerState),
   ).length;
   const unansweredCount = questions.length - answeredCount;
-  const progressPercent = Math.round((answeredCount / questions.length) * 100);
+  const progressPercent = questions.length > 0 ? Math.round((answeredCount / questions.length) * 100) : 0;
 
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-10">

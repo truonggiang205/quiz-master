@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams, Link } from 'react-router-dom';
 import { quizService } from '../../services/quiz.service';
+import { submissionService } from '../../services/submission.service';
 import { ClassroomService } from '../../services/classroom.service';
 import { StudentService } from '../../services/student.service';
 import { Classroom } from '../../types/classroom';
@@ -9,7 +10,7 @@ import { Question } from '../../types/question';
 import { QuestionBuilder } from '../../components/teacher/QuestionBuilder';
 import { useUiStore } from '../../stores/ui.store';
 import { uploadService } from '../../services/upload.service';
-import { ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Shield, Calendar, Users, UserPlus, Database } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Calendar, Users, Database } from 'lucide-react';
 import Latex from 'react-latex-next';
 import { rebalance } from '../../utils/points.util';
 
@@ -55,11 +56,23 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
 
   const [questions, setQuestions] = useState<Question[]>([]);
   const [isSaving, setIsSaving] = useState(false);
+  const [hasSubmissions, setHasSubmissions] = useState(false);
+  const [submissionsCount, setSubmissionsCount] = useState(0);
 
   useEffect(() => {
     if (isEditing && id) {
       const loadExisting = async () => {
-        const quiz = await quizService.getQuizById(id);
+        const [quiz, qs, results] = await Promise.all([
+          quizService.getQuizById(id),
+          quizService.getQuestions(id, false),
+          submissionService.getQuizResults(id).catch(() => null),
+        ]);
+
+        if (results?.submissions?.length) {
+          setHasSubmissions(true);
+          setSubmissionsCount(results.submissions.length);
+        }
+
         if (quiz) {
           setTitle(quiz.title);
           setDescription(quiz.description);
@@ -96,7 +109,6 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             setCustomReleaseDate(new Date(quiz.answerReleaseAt).toISOString().slice(0, 16));
           }
         }
-        const qs = await quizService.getQuestions(id, false);
         setQuestions(qs);
       };
       
@@ -273,8 +285,8 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         assignedStudentIds: cleanAssignedStudentIds,
       };
 
-      // Clean options and rebalance points
-      let processedQuestions = questions.map((q, idx) => ({
+      // Clean options, format essayRubric, and conditionally rebalance points
+      let processedQuestions: Question[] = questions.map((q, idx) => ({
         ...q,
         order: idx + 1,
         content: q.content.trim(),
@@ -284,12 +296,32 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               ...o,
               text: o.text.trim(),
             })),
+        essayRubric: q.type === 'ESSAY' && q.essayRubric
+          ? {
+              acceptedAnswers: (q.essayRubric.acceptedAnswers || [])
+                .map((a: string) => (typeof a === 'string' ? a.trim() : ''))
+                .filter((a: string) => a.length > 0),
+              criteria: (q.essayRubric.criteria || []).map((c: any) => ({
+                id: c.id || `crit-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`,
+                description: c.description?.trim() || '',
+                keywords: (c.keywords || [])
+                  .map((k: string) => (typeof k === 'string' ? k.trim() : ''))
+                  .filter((k: string) => k.length > 0),
+                maxPoints: Number(c.maxPoints) || 0,
+                requireAll: !!c.requireAll,
+              })),
+              totalScore: q.points || Math.round((q.score || 2) * 100),
+            }
+          : q.essayRubric,
       }));
 
-      try {
-        processedQuestions = rebalance(processedQuestions, Number(totalPoints)) as Question[];
-      } catch (e: any) {
-        console.warn('Rebalance warn:', e);
+      // Chỉ rebalance điểm khi bài thi chưa có học sinh làm bài
+      if (!hasSubmissions) {
+        try {
+          processedQuestions = rebalance(processedQuestions, Number(totalPoints)) as Question[];
+        } catch (e: any) {
+          console.warn('Rebalance warn:', e);
+        }
       }
 
       let currentQuizId = id || '';
@@ -302,10 +334,12 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         const existingIds = new Set(existingBackendQs.map(eq => eq.id));
         const currentActiveIds = new Set(processedQuestions.map(pq => pq.id));
 
-        // 1. Delete questions removed from state
-        for (const eq of existingBackendQs) {
-          if (!currentActiveIds.has(eq.id)) {
-            await quizService.deleteQuestion(eq.id);
+        // 1. Delete questions removed from state (chỉ xóa khi chưa có học sinh nộp bài)
+        if (!hasSubmissions) {
+          for (const eq of existingBackendQs) {
+            if (!currentActiveIds.has(eq.id)) {
+              await quizService.deleteQuestion(eq.id);
+            }
           }
         }
 
@@ -345,7 +379,9 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
       addToast({
         type: 'success',
         title: isEditing ? 'Cập nhật thành công' : 'Đã tạo bài kiểm tra',
-        message: publishImmediately ? 'Bài thi đã được xuất bản cho học sinh!' : 'Đã lưu vào danh sách bản thảo.',
+        message: hasSubmissions
+          ? 'Đã cập nhật bài thi và tự động chấm điểm cho học sinh!'
+          : (publishImmediately ? 'Bài thi đã được xuất bản cho học sinh!' : 'Đã lưu vào danh sách bản thảo.'),
       });
       navigate('/teacher/quizzes');
     } catch (err: any) {
@@ -537,6 +573,23 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
           </button>
         </div>
       </div>
+
+      {/* Submissions notice banner */}
+      {hasSubmissions && (
+        <div className="flex items-start gap-3.5 p-4 sm:p-5 bg-sky-50/90 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800/80 rounded-3xl text-xs text-sky-900 dark:text-sky-200 shadow-sm backdrop-blur-sm">
+          <div className="p-2 rounded-xl bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400 shrink-0">
+            <Sparkles className="w-5 h-5" />
+          </div>
+          <div className="space-y-1">
+            <h4 className="text-sm font-bold text-sky-950 dark:text-white flex items-center gap-2">
+              Bài thi đã có {submissionsCount} học sinh nộp bài
+            </h4>
+            <p className="text-slate-600 dark:text-slate-300 leading-relaxed text-xs">
+              Điểm số câu hỏi được giữ cố định để bảo đảm tính công bằng. Bạn có thể tự do cập nhật nội dung, lời giải và <strong>cấu hình đáp án tự luận (chấm tuyệt đối & tiêu chí từ khóa)</strong>. Khi bấm lưu, hệ thống sẽ <strong>tự động chấm điểm (auto-grade)</strong> lại các bài làm tự luận của học sinh!
+            </p>
+          </div>
+        </div>
+      )}
 
       {/* Main Settings Card */}
       <div className="bg-white/90 dark:bg-slate-800/90 rounded-3xl p-6 sm:p-8 border border-slate-200/80 dark:border-slate-700/80 shadow-xs space-y-6 backdrop-blur-sm">
@@ -860,6 +913,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         questions={questions} 
         onChange={setQuestions}
         totalPoints={totalPoints}
+        hasSubmissions={hasSubmissions}
         onImportFromBank={handleOpenBankModal}
         onSaveToBank={handleSaveToBank}
         onImportFromDocx={handleImportDocx}

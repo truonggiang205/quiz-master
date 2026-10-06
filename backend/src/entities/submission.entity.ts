@@ -7,6 +7,7 @@ export interface StudentAnswer {
   essayText?: string;
   isCorrect?: boolean;
   scoreAwarded: number;
+  isManuallyGraded?: boolean;
 }
 
 @Entity('submissions')

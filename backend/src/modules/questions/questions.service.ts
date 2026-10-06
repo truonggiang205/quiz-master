@@ -2,10 +2,13 @@ import { Injectable, NotFoundException, BadRequestException } from '@nestjs/comm
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { QuestionEntity, QuestionOption, SubmissionEntity } from '../../entities/index.js';
+import { EssayRubricEntity } from '../grading/entities/essay-rubric.entity.js';
 import { CreateQuestionDto } from './dto/create-question.dto.js';
 import { UpdateQuestionDto } from './dto/update-question.dto.js';
 import { UploadService } from '../upload/upload.service.js';
 import { QuizzesService } from '../quizzes/quizzes.service.js';
+import { gradeWithRubric } from '../grading/rubric/rubric-grader.js';
+import { DEFAULT_GRADING_CONFIG } from '../grading/grading.config.js';
 import * as mammoth from 'mammoth';
 import * as cheerio from 'cheerio';
 
@@ -16,6 +19,8 @@ export class QuestionsService {
     private readonly questionRepo: Repository<QuestionEntity>,
     @InjectRepository(SubmissionEntity)
     private readonly submissionRepo: Repository<SubmissionEntity>,
+    @InjectRepository(EssayRubricEntity)
+    private readonly rubricRepo: Repository<EssayRubricEntity>,
     private readonly quizzesService: QuizzesService,
     private readonly uploadService: UploadService,
   ) { }
@@ -182,11 +187,15 @@ export class QuestionsService {
       throw new NotFoundException('Không tìm thấy câu hỏi để cập nhật');
     }
 
-    if (dto.score !== undefined || dto.points !== undefined) {
-      const submissionsCount = await this.submissionRepo.count({ where: { quizId: question.quizId } });
-      if (submissionsCount > 0) {
-        throw new BadRequestException('Không thể sửa điểm trực tiếp vì bài thi đã có học sinh làm bài. Vui lòng tạo phiên bản mới.');
-      }
+    const submissionsCount = await this.submissionRepo.count({ where: { quizId: question.quizId } });
+    const hasSubmissions = submissionsCount > 0;
+
+    // Nếu bài thi đã có học sinh làm bài: giữ nguyên điểm của câu hỏi (score và points),
+    // không ném lỗi BadRequestException để giáo viên vẫn có thể cập nhật nội dung,
+    // lời giải, và đặc biệt là cấu hình đáp án tự luận (essayRubric) để tự động chấm điểm!
+    if (!hasSubmissions) {
+      if (dto.score !== undefined) question.score = dto.score;
+      if (dto.points !== undefined) question.points = dto.points;
     }
 
     if (dto.options) {
@@ -211,8 +220,6 @@ export class QuestionsService {
     if (dto.content !== undefined) question.content = dto.content;
     if (dto.imageUrl !== undefined) question.imageUrl = finalImageUrl;
     if (dto.type !== undefined) question.type = dto.type as any;
-    if (dto.score !== undefined) question.score = dto.score;
-    if (dto.points !== undefined) question.points = dto.points;
     if (dto.isLocked !== undefined) question.isLocked = dto.isLocked;
     if (dto.explanation !== undefined) question.explanation = dto.explanation;
     if (dto.order !== undefined) question.order = dto.order;
@@ -220,6 +227,17 @@ export class QuestionsService {
 
     const saved = await this.questionRepo.save(question);
     await this.syncQuizStats(question.quizId);
+
+    // Khi giáo viên điền/cập nhật đáp án tự luận:
+    // 1. Đồng bộ sang EssayRubricEntity
+    // 2. Tự động chấm điểm (auto-grade) cho các bài thi học sinh đã nộp trước đó!
+    if (saved.type === 'ESSAY' && saved.essayRubric) {
+      await this.syncEssayRubricEntity(saved);
+      if (hasSubmissions) {
+        await this.autoGradeExistingSubmissions(saved);
+      }
+    }
+
     return saved;
   }
 
@@ -230,15 +248,8 @@ export class QuestionsService {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
     }
 
-    // Check if any student already submitted (optional, but requirement says "Nếu bài thi đã có học sinh làm bài thì không cho sửa điểm trực tiếp")
-    // Wait, the requirement says "Nếu bài thi đã có học sinh làm bài thì không cho sửa điểm trực tiếp". We should check submissions.
-    // I will implement this check in bulk update.
-    
-    // First, let's just get questions and update them.
     const submissionsCount = await this.submissionRepo.count({ where: { quizId } });
-    if (submissionsCount > 0) {
-      throw new BadRequestException('Không thể sửa điểm trực tiếp vì bài thi đã có học sinh làm bài. Vui lòng tạo phiên bản mới.');
-    }
+    const hasSubmissions = submissionsCount > 0;
 
     const questions = await this.questionRepo.find({ where: { quizId } });
     const questionMap = new Map(questions.map(q => [q.id, q]));
@@ -248,7 +259,12 @@ export class QuestionsService {
     for (const update of updates) {
       const q = questionMap.get(update.id);
       if (q) {
-        if (update.points !== undefined) q.points = update.points;
+        // Chỉ cho phép sửa điểm khi chưa có học sinh nộp bài
+        if (!hasSubmissions && update.points !== undefined) {
+          q.points = update.points;
+        } else if (hasSubmissions && update.points !== undefined && update.points !== q.points) {
+          throw new BadRequestException('Không thể sửa điểm trực tiếp vì bài thi đã có học sinh làm bài. Vui lòng tạo phiên bản mới.');
+        }
         if (update.isLocked !== undefined) q.isLocked = update.isLocked;
         toSave.push(q);
       }
@@ -265,6 +281,13 @@ export class QuestionsService {
       throw new NotFoundException('Không tìm thấy câu hỏi để xóa');
     }
 
+    if (question.quizId) {
+      const submissionsCount = await this.submissionRepo.count({ where: { quizId: question.quizId } });
+      if (submissionsCount > 0) {
+        throw new BadRequestException('Không thể xóa câu hỏi vì bài thi đã có học sinh làm bài.');
+      }
+    }
+
     if (question.imageUrl) {
       await this.uploadService.deleteFileByUrl(question.imageUrl);
     }
@@ -275,6 +298,117 @@ export class QuestionsService {
       await this.syncQuizStats(quizId);
     }
     return { id, deleted: true };
+  }
+
+  private async syncEssayRubricEntity(question: QuestionEntity) {
+    if (!this.rubricRepo || !question.essayRubric) return;
+    try {
+      const existing = await this.rubricRepo.findOneBy({ questionId: question.id });
+      const entity = existing ?? this.rubricRepo.create({ id: `rubric-${Date.now()}` });
+      entity.questionId = question.id;
+      entity.acceptedAnswers = question.essayRubric.acceptedAnswers || null;
+      entity.criteria = question.essayRubric.criteria || [];
+      entity.totalScore = question.essayRubric.totalScore || Number(question.points) || 100;
+      await this.rubricRepo.save(entity);
+    } catch (e) {
+      console.warn('Lỗi khi đồng bộ EssayRubricEntity:', e);
+    }
+  }
+
+  /**
+   * Tự động chấm bài làm tự luận cho tất cả học sinh đã nộp trước đó khi giáo viên cập nhật đáp án / rubric
+   */
+  async autoGradeExistingSubmissions(question: QuestionEntity): Promise<number> {
+    if (!question.quizId || question.type !== 'ESSAY') return 0;
+
+    const rubric = question.essayRubric;
+    const acceptedAnswers: string[] = [];
+    if (Array.isArray(rubric?.acceptedAnswers)) {
+      acceptedAnswers.push(
+        ...rubric.acceptedAnswers
+          .filter((a: any) => typeof a === 'string' && a.trim().length > 0)
+          .map((a: string) => a.trim()),
+      );
+    }
+
+    if (Array.isArray(question.options)) {
+      const correctOpts = question.options.filter((o) => o.isCorrect && o.text?.trim().length > 0);
+      for (const opt of correctOpts) {
+        const trimmed = opt.text.trim();
+        if (!acceptedAnswers.includes(trimmed)) {
+          acceptedAnswers.push(trimmed);
+        }
+      }
+    }
+
+    const criteria = Array.isArray(rubric?.criteria)
+      ? rubric.criteria.filter((c: any) => Array.isArray(c.keywords) && c.keywords.length > 0)
+      : [];
+
+    const hasTeacherAnswer = acceptedAnswers.length > 0 || criteria.length > 0;
+    if (!hasTeacherAnswer) return 0;
+
+    const submissions = await this.submissionRepo.find({ where: { quizId: question.quizId } });
+    if (!submissions.length) return 0;
+
+    const questionPoints = Number(question.points) || (Number(question.score) ? Math.round(Number(question.score) * 100) : 100);
+
+    let gradedCount = 0;
+
+    for (const sub of submissions) {
+      if (!Array.isArray(sub.answers)) continue;
+
+      let subUpdated = false;
+      for (const ans of sub.answers) {
+        if (ans.questionId === question.id) {
+          // Chỉ tự động chấm nếu giáo viên chưa chấm thủ công cho câu này
+          if (!ans.isManuallyGraded) {
+            const studentText = (ans.essayText || '').trim();
+            if (!studentText) {
+              ans.scoreAwarded = 0;
+              ans.isCorrect = false;
+              subUpdated = true;
+            } else {
+              const gradeResult = gradeWithRubric(
+                {
+                  questionId: question.id,
+                  submissionId: sub.id,
+                  studentAnswer: studentText,
+                  rubric: {
+                    questionId: question.id,
+                    acceptedAnswers,
+                    criteria,
+                    totalScore: questionPoints,
+                  },
+                },
+                DEFAULT_GRADING_CONFIG,
+              );
+
+              const scoreAwarded = Math.min(questionPoints, Math.max(0, Math.round(gradeResult.score)));
+              ans.scoreAwarded = scoreAwarded;
+              ans.isCorrect = scoreAwarded > 0;
+              subUpdated = true;
+            }
+          }
+        }
+      }
+
+      if (subUpdated) {
+        let totalRawScore = 0;
+        for (const a of sub.answers) {
+          totalRawScore += Number(a.scoreAwarded) || 0;
+        }
+        sub.correctCount = sub.answers.filter((a) => a.isCorrect === true).length;
+        sub.wrongCount = sub.answers.filter((a) => a.isCorrect === false).length;
+        sub.score = totalRawScore;
+        const maxScore = sub.maxScore || 1000;
+        sub.percentage = maxScore > 0 ? Number(((totalRawScore / maxScore) * 100).toFixed(1)) : 0;
+        await this.submissionRepo.save(sub);
+        gradedCount++;
+      }
+    }
+
+    return gradedCount;
   }
 
   async parseDocxQuestions(fileBuffer: Buffer) {
@@ -354,9 +488,8 @@ export class QuestionsService {
 
   private async syncQuizStats(quizId: string) {
     if (!quizId) return;
-    const quizQuestions = await this.questionRepo.find({ where: { quizId } });
+    const quizQuestions = (await this.questionRepo.find({ where: { quizId } })) || [];
     const count = quizQuestions.length;
-    // We should probably sync totalScore based on points or keep both, but requirement says sum integer points
     const totalScore = quizQuestions.reduce((sum, q) => sum + (Number(q.score) || 0), 0);
     // Actually, we are asked to sync total score... let's just use the existing quizzesService.updateQuestionStats and maybe update points
     await this.quizzesService.updateQuestionStats(quizId, count, totalScore);

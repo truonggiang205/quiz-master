@@ -1,6 +1,6 @@
 import React from 'react';
-import { Question, QuestionType, AnswerOption, EssayRubric, EssayCriterion } from '../../types/question';
-import { Plus, Trash2, Copy, CheckCircle, Circle, Square, CheckSquare, Upload, Image as ImageIcon, X, Save, RefreshCw, Lock, Unlock, AlertTriangle } from 'lucide-react';
+import { Question, QuestionType, AnswerOption, EssayRubric } from '../../types/question';
+import { Plus, Trash2, Copy, CheckCircle, Circle, Square, CheckSquare, Upload, Image as ImageIcon, X, Save, RefreshCw, Lock, Unlock, AlertTriangle, Sparkles } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadService } from '../../services/upload.service';
 import { rebalance } from '../../utils/points.util';
@@ -11,6 +11,7 @@ interface QuestionBuilderProps {
   questions: Question[];
   onChange: (questions: Question[]) => void;
   totalPoints: number;
+  hasSubmissions?: boolean;
   onImportFromBank?: () => void;
   onSaveToBank?: (qIndex: number) => void;
   onImportFromDocx?: (file: File) => void;
@@ -20,6 +21,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
   questions,
   onChange,
   totalPoints,
+  hasSubmissions = false,
   onImportFromBank,
   onSaveToBank,
   onImportFromDocx,
@@ -28,6 +30,9 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
   const { addToast } = useUiStore();
 
   const safeRebalance = (qs: Question[]) => {
+    if (hasSubmissions) {
+      return qs;
+    }
     try {
       return rebalance(qs, totalPoints) as Question[];
     } catch (e: any) {
@@ -102,6 +107,14 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
   };
 
   const handleDeleteQuestion = (index: number) => {
+    if (hasSubmissions) {
+      addToast({
+        type: 'warning',
+        title: 'Không thể xóa câu hỏi',
+        message: 'Bài thi đã có học sinh làm bài. Không thể xóa câu hỏi để bảo toàn dữ liệu bài nộp.',
+      });
+      return;
+    }
     const next = questions.filter((_, i) => i !== index);
     onChange(safeRebalance(next));
   };
@@ -344,19 +357,21 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                   <div className="flex items-center gap-2">
                     <button
                       type="button"
+                      disabled={hasSubmissions}
                       onClick={() => handleUpdateQuestion(qIndex, { isLocked: !q.isLocked })}
-                      title={q.isLocked ? "Mở khóa điểm" : "Khóa điểm"}
-                      className={`p-1.5 rounded-lg transition-colors ${q.isLocked ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800'}`}
+                      title={hasSubmissions ? "Bài thi đã có học sinh làm bài, điểm số được cố định" : (q.isLocked ? "Mở khóa điểm" : "Khóa điểm")}
+                      className={`p-1.5 rounded-lg transition-colors ${hasSubmissions ? 'opacity-40 cursor-not-allowed text-slate-400' : (q.isLocked ? 'bg-amber-100 text-amber-600 dark:bg-amber-900/40 dark:text-amber-400' : 'text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800')}`}
                     >
                       {q.isLocked ? <Lock className="w-4 h-4" /> : <Unlock className="w-4 h-4" />}
                     </button>
                     {/* Points input */}
-                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title="Phần dư 0.01đ được cộng vào các câu đầu để tổng điểm khớp 100%">
+                    <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400" title={hasSubmissions ? "Bài thi đã có học sinh làm bài, không thể sửa điểm trực tiếp" : "Phần dư 0.01đ được cộng vào các câu đầu để tổng điểm khớp 100%"}>
                       <span>Điểm:</span>
                       <input
                         type="number"
                         step="0.01"
                         min="0"
+                        disabled={hasSubmissions}
                         value={((q.points || 0) / 100).toFixed(2)}
                         onChange={(e) => {
                           const val = parseFloat(e.target.value);
@@ -364,9 +379,9 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                             handleUpdateQuestion(qIndex, { points: Math.round(val * 100) });
                           }
                         }}
-                        className={`w-20 rounded-xl border px-2 py-1 text-center font-bold text-amber-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 ${q.isLocked ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-700'}`}
+                        className={`w-20 rounded-xl border px-2 py-1 text-center font-bold text-amber-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300 ${hasSubmissions ? 'opacity-60 cursor-not-allowed bg-slate-100 dark:bg-slate-800' : (q.isLocked ? 'border-amber-300 bg-amber-50 dark:border-amber-700 dark:bg-amber-900/20' : 'border-slate-200 bg-slate-50 dark:border-slate-700 dark:bg-slate-700')}`}
                       />
-                      {questions.length > 1 && (
+                      {questions.length > 1 && !hasSubmissions && (
                         <button
                           type="button"
                           title="Đặt mức điểm này làm mặc định cho tất cả câu"
@@ -398,9 +413,10 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                   </button>
                   <button
                     type="button"
+                    disabled={hasSubmissions}
                     onClick={() => handleDeleteQuestion(qIndex)}
-                    title="Xóa câu hỏi"
-                    className="p-1.5 rounded-xl text-rose-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40"
+                    title={hasSubmissions ? "Bài thi đã có học sinh làm bài, không thể xóa câu hỏi" : "Xóa câu hỏi"}
+                    className={`p-1.5 rounded-xl ${hasSubmissions ? 'opacity-30 cursor-not-allowed text-slate-400' : 'text-rose-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40'}`}
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -549,6 +565,15 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                 <div className="space-y-4 border-t border-slate-100 dark:border-slate-700/60 pt-4 mt-2">
                   <div>
                     <h4 className="text-sm font-bold text-slate-800 dark:text-white mb-2">Cấu hình chấm tự luận tự động</h4>
+
+                    <div className="flex items-center gap-2 mb-3 p-2.5 bg-sky-50 dark:bg-sky-950/40 border border-sky-200/80 dark:border-sky-800/80 rounded-xl text-xs text-sky-800 dark:text-sky-300">
+                      <Sparkles className="w-4 h-4 text-sky-500 shrink-0" />
+                      <span>
+                        {hasSubmissions
+                          ? 'Bài thi đã có học sinh làm bài. Khi bạn thêm/sửa đáp án và bấm lưu, hệ thống sẽ tự động chấm điểm (auto-grade) lại cho các bài làm đã nộp!'
+                          : 'Điền các câu trả lời đúng tuyệt đối hoặc từ khóa để hệ thống tự động chấm điểm khi học sinh nộp bài.'}
+                      </span>
+                    </div>
                     
                     <div className="space-y-3">
                       <div>

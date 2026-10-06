@@ -69,4 +69,9 @@ export const submissionService = {
     const res = await apiClient.post(`/submissions/${submissionId}/grade`, { grades });
     return res.data?.data;
   },
+
+  async regradeQuizEssays(quizId: string): Promise<{ regradedCount: number; message: string }> {
+    const res = await apiClient.post(`/quizzes/${quizId}/regrade-essays`);
+    return res.data?.data;
+  },
 };

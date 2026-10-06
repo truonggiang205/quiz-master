@@ -7,14 +7,17 @@ import { QuizResultsResponse } from '../../types/submission';
 import { SubmissionsTable } from '../../components/teacher/SubmissionsTable';
 import { UnsubmittedTable } from '../../components/teacher/UnsubmittedTable';
 import { StatCard } from '../../components/common/StatCard';
-import { ArrowLeft, Award, TrendingUp, Users, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Award, TrendingUp, Users, CheckCircle2, Sparkles, Edit } from 'lucide-react';
+import { useUiStore } from '../../stores/ui.store';
 
 export const TeacherQuizResultsPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const [quiz, setQuiz] = useState<Quiz | null>(null);
   const [results, setResults] = useState<QuizResultsResponse | null>(null);
   const [loading, setLoading] = useState(true);
+  const [isRegrading, setIsRegrading] = useState(false);
   const [activeTab, setActiveTab] = useState<'submitted' | 'unsubmitted'>('submitted');
+  const { addToast } = useUiStore();
 
   useEffect(() => {
     if (!id) return;
@@ -32,6 +35,34 @@ export const TeacherQuizResultsPage: React.FC = () => {
     };
     load();
   }, [id]);
+
+  const handleRegradeEssays = async () => {
+    if (!id) return;
+    setIsRegrading(true);
+    addToast({
+      type: 'info',
+      title: 'Đang chấm tự động...',
+      message: 'Hệ thống đang tự động chấm bài tự luận theo đáp án của giáo viên.',
+    });
+    try {
+      const res = await submissionService.regradeQuizEssays(id);
+      addToast({
+        type: 'success',
+        title: 'Chấm tự động thành công',
+        message: res.message || `Đã chấm lại ${res.regradedCount} bài nộp`,
+      });
+      const resData = await submissionService.getQuizResults(id);
+      setResults(resData);
+    } catch (err: any) {
+      addToast({
+        type: 'error',
+        title: 'Lỗi',
+        message: err?.response?.data?.message || 'Không thể tự động chấm lại bài tự luận',
+      });
+    } finally {
+      setIsRegrading(false);
+    }
+  };
 
   if (loading || !quiz || !results) {
     return (
@@ -57,12 +88,34 @@ export const TeacherQuizResultsPage: React.FC = () => {
           <ArrowLeft className="w-4 h-4" />
           Quay lại danh sách đề thi
         </Link>
-        <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-          Kết Quả Thi: {quiz.title}
-        </h1>
-        <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-          Môn {quiz.subject} • {quiz.questionCount} câu hỏi • Thời lượng {quiz.durationMinutes} phút
-        </p>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight">
+              Kết Quả Thi: {quiz.title}
+            </h1>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Môn {quiz.subject} • {quiz.questionCount} câu hỏi • Thời lượng {quiz.durationMinutes} phút
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <Link
+              to={`/teacher/quizzes/${quiz.id}/edit`}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors shadow-xs"
+            >
+              <Edit className="w-3.5 h-3.5" />
+              Sửa đáp án / đề
+            </Link>
+            <button
+              type="button"
+              onClick={handleRegradeEssays}
+              disabled={isRegrading}
+              className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 shadow-md transition-all disabled:opacity-50"
+            >
+              <Sparkles className="w-3.5 h-3.5" />
+              {isRegrading ? 'Đang chấm...' : 'Chấm tự động lại bài tự luận'}
+            </button>
+          </div>
+        </div>
       </div>
 
       {/* Aggregate KPI cards */}

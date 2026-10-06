@@ -3,7 +3,7 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { submissionService } from '../../services/submission.service';
 import { Submission, DetailedAnswerReview } from '../../types/submission';
 import { useUiStore } from '../../stores/ui.store';
-import { ArrowLeft, CheckCircle, XCircle, Save, HelpCircle } from 'lucide-react';
+import { ArrowLeft, CheckCircle, XCircle, Save, HelpCircle, Sparkles } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
 import { resolveImageUrl } from '../../utils/image.util';
 
@@ -186,6 +186,28 @@ export const TeacherGradingPage: React.FC = () => {
                 ) : !ans.essayText ? (
                   <p className="text-slate-400 italic">Học sinh chưa nộp bài tự luận.</p>
                 ) : null}
+
+                {/* Rubric reference if available */}
+                {ans.essayRubric && (
+                  <div className="mt-1 p-3 bg-white dark:bg-slate-800 rounded-xl border border-sky-200/80 dark:border-sky-800/80 text-xs">
+                    <p className="font-bold text-sky-700 dark:text-sky-300 mb-1 flex items-center gap-1.5">
+                      <Sparkles className="w-3.5 h-3.5" />
+                      Đáp án chấm tự động của giáo viên:
+                    </p>
+                    {ans.essayRubric.acceptedAnswers && ans.essayRubric.acceptedAnswers.length > 0 && (
+                      <div className="mb-1 text-slate-700 dark:text-slate-300">
+                        <span className="font-semibold text-slate-500">Đáp án chuẩn: </span>
+                        {ans.essayRubric.acceptedAnswers.join(' | ')}
+                      </div>
+                    )}
+                    {ans.essayRubric.criteria && ans.essayRubric.criteria.length > 0 && (
+                      <div className="text-slate-700 dark:text-slate-300">
+                        <span className="font-semibold text-slate-500">Tiêu chí: </span>
+                        {ans.essayRubric.criteria.map((c: any) => `${c.description} (${c.keywords?.join(', ')})`).join(' • ')}
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             ) : (
               <div className="space-y-2">

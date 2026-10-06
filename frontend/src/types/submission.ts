@@ -20,6 +20,7 @@ export interface DetailedAnswerReview extends StudentAnswer {
     isCorrect?: boolean;
   }[];
   explanation?: string;
+  essayRubric?: any;
 }
 
 export interface Submission {

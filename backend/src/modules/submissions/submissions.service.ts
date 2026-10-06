@@ -5,6 +5,7 @@ import {
   SubmissionEntity,
   QuizEntity,
   QuestionEntity,
+  QuestionType,
   StudentAnswer,
   UserEntity,
 } from '../../entities/index.js';
@@ -479,6 +480,7 @@ export class SubmissionsService {
         ans.scoreAwarded = Number(manualGrade.scoreAwarded) || 0;
         if (ans.scoreAwarded > 0) ans.isCorrect = true;
         else ans.isCorrect = false;
+        ans.isManuallyGraded = true;
       }
 
       totalRawScore += Number(ans.scoreAwarded) || 0;
@@ -496,5 +498,131 @@ export class SubmissionsService {
     sub.percentage = percentage;
     
     return await this.submissionRepo.save(sub);
+  }
+
+  /**
+   * Tự động chấm lại toàn bộ câu hỏi tự luận theo đáp án/rubric hiện tại của giáo viên
+   */
+  async regradeQuizEssays(quizId: string) {
+    const quiz = await this.quizRepo.findOneBy({ id: quizId });
+    if (!quiz) {
+      throw new NotFoundException('Không tìm thấy bài kiểm tra');
+    }
+
+    const quizQuestions = await this.questionRepo.find({
+      where: { quizId, type: 'ESSAY' as QuestionType },
+    });
+
+    if (!quizQuestions.length) {
+      return { regradedCount: 0, message: 'Bài thi không có câu hỏi tự luận' };
+    }
+
+    const submissions = await this.submissionRepo.find({ where: { quizId } });
+    if (!submissions.length) {
+      return { regradedCount: 0, message: 'Chưa có bài nộp nào' };
+    }
+
+    let regradedCount = 0;
+
+    for (const sub of submissions) {
+      if (!Array.isArray(sub.answers)) continue;
+      let subUpdated = false;
+
+      for (const ans of sub.answers) {
+        const q = quizQuestions.find((ques) => ques.id === ans.questionId);
+        if (!q || q.type !== 'ESSAY') continue;
+
+        // Bỏ qua nếu giáo viên đã chấm thủ công
+        if (ans.isManuallyGraded) continue;
+
+        let rubric = q.essayRubric;
+        if (!rubric) {
+          try {
+            const stored = await this.rubricRepo.findOneBy({ questionId: q.id });
+            if (stored) {
+              rubric = {
+                acceptedAnswers: stored.acceptedAnswers || [],
+                criteria: stored.criteria || [],
+                totalScore: stored.totalScore || Number(q.points) || 100,
+              };
+            }
+          } catch (e) {}
+        }
+
+        const acceptedAnswers: string[] = [];
+        if (Array.isArray(rubric?.acceptedAnswers)) {
+          acceptedAnswers.push(
+            ...rubric.acceptedAnswers
+              .filter((a: any) => typeof a === 'string' && a.trim().length > 0)
+              .map((a: string) => a.trim()),
+          );
+        }
+
+        if (Array.isArray(q.options)) {
+          const correctOpts = q.options.filter((o) => o.isCorrect && o.text?.trim().length > 0);
+          for (const opt of correctOpts) {
+            const trimmed = opt.text.trim();
+            if (!acceptedAnswers.includes(trimmed)) {
+              acceptedAnswers.push(trimmed);
+            }
+          }
+        }
+
+        const criteria = Array.isArray(rubric?.criteria)
+          ? rubric.criteria.filter((c: any) => Array.isArray(c.keywords) && c.keywords.length > 0)
+          : [];
+
+        const hasTeacherAnswer = acceptedAnswers.length > 0 || criteria.length > 0;
+        if (!hasTeacherAnswer) continue;
+
+        const studentText = (ans.essayText || '').trim();
+        const questionPoints = Number(q.points) || (Number(q.score) ? Math.round(Number(q.score) * 100) : 100);
+
+        if (!studentText) {
+          ans.scoreAwarded = 0;
+          ans.isCorrect = false;
+          subUpdated = true;
+        } else {
+          const gradeResult = gradeWithRubric(
+            {
+              questionId: q.id,
+              submissionId: sub.id,
+              studentAnswer: studentText,
+              rubric: {
+                questionId: q.id,
+                acceptedAnswers,
+                criteria,
+                totalScore: questionPoints,
+              },
+            },
+            DEFAULT_GRADING_CONFIG,
+          );
+
+          const scoreAwarded = Math.min(questionPoints, Math.max(0, Math.round(gradeResult.score)));
+          ans.scoreAwarded = scoreAwarded;
+          ans.isCorrect = scoreAwarded > 0;
+          subUpdated = true;
+        }
+      }
+
+      if (subUpdated) {
+        let totalRawScore = 0;
+        for (const a of sub.answers) {
+          totalRawScore += Number(a.scoreAwarded) || 0;
+        }
+        sub.correctCount = sub.answers.filter((a) => a.isCorrect === true).length;
+        sub.wrongCount = sub.answers.filter((a) => a.isCorrect === false).length;
+        sub.score = totalRawScore;
+        const maxScore = sub.maxScore || 1000;
+        sub.percentage = maxScore > 0 ? Number(((totalRawScore / maxScore) * 100).toFixed(1)) : 0;
+        await this.submissionRepo.save(sub);
+        regradedCount++;
+      }
+    }
+
+    return {
+      regradedCount,
+      message: `Đã tự động chấm lại ${regradedCount} bài nộp tự luận`,
+    };
   }
 }

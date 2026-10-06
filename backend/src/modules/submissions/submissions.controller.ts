@@ -84,4 +84,11 @@ export class SubmissionsController {
     const res = await this.submissionsService.gradeSubmission(id, dto.grades, user.id);
     return createSuccessResponse(res, 'Chấm điểm thành công');
   }
+
+  @Post('quizzes/:quizId/regrade-essays')
+  @ApiOperation({ summary: 'Tự động chấm lại toàn bộ câu hỏi tự luận theo đáp án của giáo viên' })
+  async regradeEssays(@Param('quizId') quizId: string) {
+    const res = await this.submissionsService.regradeQuizEssays(quizId);
+    return createSuccessResponse(res, res.message);
+  }
 }

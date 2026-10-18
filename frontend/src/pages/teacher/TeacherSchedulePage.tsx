@@ -27,6 +27,7 @@ import {
 import { TeachingService } from '../../services/teaching.service';
 import { ClassroomService } from '../../services/classroom.service';
 import { Modal } from '../../components/common/Modal';
+import { TimePicker24h } from '../../components/common/TimePicker24h';
 import type { Lesson, LessonParticipant, CreateLessonPayload, UpdateLessonPayload } from '../../types/teaching';
 import type { Classroom } from '../../types/classroom';
 import { useNavigate } from 'react-router-dom';
@@ -311,9 +312,9 @@ export const TeacherSchedulePage: React.FC = () => {
     return `${pad(dStart.getDate())}/${pad(dStart.getMonth() + 1)} - ${pad(dEnd.getDate())}/${pad(dEnd.getMonth() + 1)}/${dEnd.getFullYear()}`;
   }, [viewMode, currentDate, weekDays]);
 
-  // Dynamic hours range (defaults to 7:00 -> 22:00, expands if lessons outside)
+  // Dynamic hours range (defaults to 7:00 -> 23:00, expands if lessons outside)
   const START_DEFAULT = 7;
-  const END_DEFAULT = 22;
+  const END_DEFAULT = 23;
   const HOUR_HEIGHT = 68;
 
   const { startHour, endHour, hours } = useMemo(() => {
@@ -671,17 +672,24 @@ export const TeacherSchedulePage: React.FC = () => {
               >
                 {/* Left Column: Time Axis Labels */}
                 <div className="border-r border-slate-100 dark:border-slate-800 select-none bg-slate-50/30 dark:bg-slate-900/30">
-                  {hours.map((hour) => (
-                    <div
-                      key={hour}
-                      className="relative text-[11px] font-semibold text-slate-400 text-center"
-                      style={{ height: `${HOUR_HEIGHT}px` }}
-                    >
-                      <span className="-top-2.5 relative block bg-white dark:bg-slate-900 px-1 mx-auto w-fit text-[11px]">
-                        {String(hour).padStart(2, '0')}:00
-                      </span>
-                    </div>
-                  ))}
+                  {hours.map((hour) => {
+                    const isFirst = hour === startHour;
+                    return (
+                      <div
+                        key={hour}
+                        className="relative text-[11px] font-semibold text-slate-400"
+                        style={{ height: `${HOUR_HEIGHT}px` }}
+                      >
+                        <span
+                          className={`absolute right-2 px-1 text-[11px] font-mono font-medium text-slate-500 dark:text-slate-400 bg-white dark:bg-slate-900 z-10 ${
+                            isFirst ? 'top-1' : '-top-2.5'
+                          }`}
+                        >
+                          {String(hour).padStart(2, '0')}:00
+                        </span>
+                      </div>
+                    );
+                  })}
                 </div>
 
                 {/* 7 Day Columns */}
@@ -709,8 +717,8 @@ export const TeacherSchedulePage: React.FC = () => {
 
                           {/* Quick Add Button on Slot Hover */}
                           <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity pointer-events-none">
-                            <span className="flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-full shadow-xs border border-blue-200 dark:border-blue-900">
-                              <Plus className="w-3 h-3" /> {hour}:00
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800 px-2.5 py-1 rounded-full shadow-md border border-blue-200 dark:border-blue-900">
+                              <Plus className="w-3 h-3" /> {String(hour).padStart(2, '0')}:00
                             </span>
                           </div>
                         </div>
@@ -724,8 +732,11 @@ export const TeacherSchedulePage: React.FC = () => {
                             top: `${(((now.getHours() * 60 + now.getMinutes()) - startHour * 60) / 60) * HOUR_HEIGHT}px`,
                           }}
                         >
-                          <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shadow-sm ring-2 ring-white animate-pulse" />
+                          <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shadow-sm ring-2 ring-white dark:ring-slate-900 animate-pulse" />
                           <div className="flex-1 h-[2px] bg-red-500 shadow-sm" />
+                          <span className="text-[10px] font-mono font-bold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950/90 px-1.5 py-0.5 rounded border border-red-200 dark:border-red-900 shadow-xs mr-1">
+                            {String(now.getHours()).padStart(2, '0')}:{String(now.getMinutes()).padStart(2, '0')}
+                          </span>
                         </div>
                       )}
 
@@ -949,24 +960,23 @@ export const TeacherSchedulePage: React.FC = () => {
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Giờ Bắt Đầu <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="time"
+                    <TimePicker24h
                       value={formData.startTime}
-                      onChange={(e) => setFormData({ ...formData, startTime: e.target.value })}
+                      onChange={(val) => setFormData({ ...formData, startTime: val })}
+                      placeholder="18:00"
                       required
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
                   </div>
                   <div>
                     <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                       Giờ Kết Thúc <span className="text-red-500">*</span>
                     </label>
-                    <input
-                      type="time"
+                    <TimePicker24h
                       value={formData.endTime}
-                      onChange={(e) => setFormData({ ...formData, endTime: e.target.value })}
+                      onChange={(val) => setFormData({ ...formData, endTime: val })}
+                      placeholder="19:30"
+                      startTimeReference={formData.startTime}
                       required
-                      className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-3 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                     />
                   </div>
                 </div>

@@ -14,6 +14,7 @@ import { ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Calendar, Users, Databa
 import Latex from 'react-latex-next';
 import { rebalance } from '../../utils/points.util';
 import { NumberInput } from '../../components/common/NumberInput';
+import { Modal } from '../../components/common/Modal';
 
 export const TeacherQuizCreateEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -1059,289 +1060,261 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
       />
 
       {/* Bank Import Modal */}
-      {showBankModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[85vh]">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                <Database className="w-5 h-5 text-sky-500" /> Ngân hàng câu hỏi của tôi
-              </h3>
-              <button onClick={() => setShowBankModal(false)} className="text-slate-400 hover:text-slate-600">
-                &times;
-              </button>
+      <Modal
+        isOpen={showBankModal}
+        onClose={() => setShowBankModal(false)}
+        maxWidth="3xl"
+        title="Ngân hàng câu hỏi của tôi"
+        description="Chọn các câu hỏi từ ngân hàng để thêm vào bài thi"
+        footer={
+          <div className="flex justify-end gap-3 w-full">
+            <button
+              type="button"
+              onClick={() => setShowBankModal(false)}
+              className="py-2.5 px-5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium transition-colors text-sm"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              disabled={selectedBankQIds.length === 0}
+              onClick={handleImportBankQuestions}
+              className="py-2.5 px-5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 text-sm shadow-sm"
+            >
+              Nhập {selectedBankQIds.length > 0 ? `(${selectedBankQIds.length})` : ''} câu hỏi
+            </button>
+          </div>
+        }
+      >
+        {isLoadingBank ? (
+          <div className="flex justify-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
+          </div>
+        ) : bankQuestions.length === 0 ? (
+          <div className="text-center py-8">
+            <p className="text-slate-500 dark:text-slate-400">Ngân hàng câu hỏi của bạn đang trống.</p>
+            <p className="text-xs text-slate-400 mt-2">Hãy lưu các câu hỏi hay vào ngân hàng để sử dụng lại sau này.</p>
+          </div>
+        ) : (
+          <div className="space-y-3">
+            {bankQuestions.map((q, idx) => (
+              <label key={q.id} className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-colors ${selectedBankQIds.includes(q.id) ? 'bg-sky-50/50 border-sky-200 dark:bg-sky-900/20 dark:border-sky-800' : 'bg-slate-50 border-slate-200 hover:bg-white dark:bg-slate-800 dark:border-slate-700'}`}>
+                <input 
+                  type="checkbox"
+                  checked={selectedBankQIds.includes(q.id)}
+                  onChange={(e) => {
+                    if (e.target.checked) setSelectedBankQIds([...selectedBankQIds, q.id]);
+                    else setSelectedBankQIds(selectedBankQIds.filter(id => id !== q.id));
+                  }}
+                  className="mt-1 rounded text-sky-600 focus:ring-sky-400"
+                />
+                <div>
+                  <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Câu {idx + 1}: <Latex>{q.content}</Latex></p>
+                  <p className="text-xs text-slate-500 mt-1">Loại: {q.type === 'SINGLE_CHOICE' ? 'Một đáp án' : q.type === 'MULTIPLE_CHOICE' ? 'Nhiều đáp án' : q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : 'Tự luận'} • Điểm: {q.score}</p>
+                </div>
+              </label>
+            ))}
+          </div>
+        )}
+      </Modal>
+
+      {/* Save Questions to Bank Modal */}
+      <Modal
+        isOpen={showSaveBankModal}
+        onClose={() => setShowSaveBankModal(false)}
+        maxWidth="3xl"
+        title="Sao chép câu hỏi vào ngân hàng"
+        description="Chọn các câu hỏi từ đề thi này để lưu vào kho ngân hàng dùng chung"
+        footer={
+          <div className="flex items-center justify-between w-full">
+            <div className="flex items-center gap-3">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                Đã chọn: <span className="text-sky-600 dark:text-sky-400 font-mono text-sm">{selectedSaveBankQIds.length}</span> / {questions.length} câu
+              </span>
+              <Link
+                to="/teacher/question-bank"
+                target="_blank"
+                className="hidden sm:inline-flex items-center gap-1 text-xs text-sky-600 hover:underline"
+              >
+                <span>Xem ngân hàng câu hỏi</span>
+                <ExternalLink className="w-3 h-3" />
+              </Link>
             </div>
-            
-            <div className="p-6 overflow-y-auto flex-1">
-              {isLoadingBank ? (
-                <div className="flex justify-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-sky-600"></div>
-                </div>
-              ) : bankQuestions.length === 0 ? (
-                <div className="text-center py-8">
-                  <p className="text-slate-500 dark:text-slate-400">Ngân hàng câu hỏi của bạn đang trống.</p>
-                  <p className="text-xs text-slate-400 mt-2">Hãy lưu các câu hỏi hay vào ngân hàng để sử dụng lại sau này.</p>
-                </div>
-              ) : (
-                <div className="space-y-3">
-                  {bankQuestions.map((q, idx) => (
-                    <label key={q.id} className={`flex items-start gap-3 p-4 rounded-2xl border cursor-pointer transition-colors ${selectedBankQIds.includes(q.id) ? 'bg-sky-50/50 border-sky-200 dark:bg-sky-900/20 dark:border-sky-800' : 'bg-slate-50 border-slate-200 hover:bg-white dark:bg-slate-800 dark:border-slate-700'}`}>
-                      <input 
-                        type="checkbox"
-                        checked={selectedBankQIds.includes(q.id)}
-                        onChange={(e) => {
-                          if (e.target.checked) setSelectedBankQIds([...selectedBankQIds, q.id]);
-                          else setSelectedBankQIds(selectedBankQIds.filter(id => id !== q.id));
-                        }}
-                        className="mt-1 rounded text-sky-600 focus:ring-sky-400"
-                      />
-                      <div>
-                        <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Câu {idx + 1}: <Latex>{q.content}</Latex></p>
-                        <p className="text-xs text-slate-500 mt-1">Loại: {q.type === 'SINGLE_CHOICE' ? 'Một đáp án' : q.type === 'MULTIPLE_CHOICE' ? 'Nhiều đáp án' : q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : 'Tự luận'} • Điểm: {q.score}</p>
-                      </div>
-                    </label>
-                  ))}
-                </div>
-              )}
-            </div>
-            
-            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex justify-end gap-3 shrink-0">
+
+            <div className="flex items-center gap-2.5">
               <button
                 type="button"
-                onClick={() => setShowBankModal(false)}
-                className="py-2.5 px-5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium transition-colors text-sm"
+                onClick={() => setShowSaveBankModal(false)}
+                className="py-2 px-4 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold transition-colors text-xs border border-slate-200 dark:border-slate-700"
               >
                 Hủy
               </button>
               <button
                 type="button"
-                disabled={selectedBankQIds.length === 0}
-                onClick={handleImportBankQuestions}
-                className="py-2.5 px-5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50 text-sm shadow-sm"
+                disabled={selectedSaveBankQIds.length === 0 || isSavingToBank}
+                onClick={handleExecuteSaveToBank}
+                className="py-2 px-5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 text-xs shadow-sm flex items-center gap-1.5"
               >
-                Nhập {selectedBankQIds.length > 0 ? `(${selectedBankQIds.length})` : ''} câu hỏi
+                {isSavingToBank ? (
+                  <>
+                    <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
+                    <span>Đang lưu...</span>
+                  </>
+                ) : (
+                  <>
+                    <BookmarkPlus className="w-3.5 h-3.5" />
+                    <span>Lưu vào ngân hàng ({selectedSaveBankQIds.length})</span>
+                  </>
+                )}
               </button>
             </div>
           </div>
-        </div>
-      )}
-
-      {/* Save Questions to Bank Modal */}
-      {showSaveBankModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-3xl overflow-hidden flex flex-col max-h-[88vh] border border-slate-200/80 dark:border-slate-800">
-            {/* Header */}
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-sky-100 dark:bg-sky-900/60 text-sky-600 dark:text-sky-400">
-                  <BookmarkPlus className="w-5 h-5" />
-                </div>
-                <div>
-                  <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                    Sao chép câu hỏi vào ngân hàng
-                  </h3>
-                  <p className="text-xs text-slate-500 dark:text-slate-400">
-                    Chọn các câu hỏi từ đề thi này để lưu vào kho ngân hàng dùng chung
-                  </p>
-                </div>
+        }
+      >
+        <div className="space-y-4">
+          {/* Filter & Options Toolbar */}
+          <div className="p-3.5 sm:p-4 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 space-y-3">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              <div>
+                <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
+                  Môn học / Chủ đề ngân hàng:
+                </label>
+                <input
+                  type="text"
+                  value={saveBankSubject}
+                  onChange={(e) => setSaveBankSubject(e.target.value)}
+                  placeholder="Ví dụ: Toán 12, Giải tích, Vật lý..."
+                  className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
               </div>
-              <button
-                type="button"
-                onClick={() => setShowSaveBankModal(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 text-lg leading-none p-1 rounded-lg"
-              >
-                &times;
-              </button>
-            </div>
 
-            {/* Filter & Options Toolbar */}
-            <div className="p-4 sm:p-5 bg-slate-50/70 dark:bg-slate-800/50 border-b border-slate-100 dark:border-slate-800 space-y-3 shrink-0">
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <div>
+              <div className="flex items-end gap-2">
+                <div className="flex-1">
                   <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                    Môn học / Chủ đề ngân hàng:
+                    Lọc theo loại:
                   </label>
-                  <input
-                    type="text"
-                    value={saveBankSubject}
-                    onChange={(e) => setSaveBankSubject(e.target.value)}
-                    placeholder="Ví dụ: Toán 12, Giải tích, Vật lý..."
+                  <select
+                    value={saveBankTypeFilter}
+                    onChange={(e) => setSaveBankTypeFilter(e.target.value)}
                     className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-
-                <div className="flex items-end gap-2">
-                  <div className="flex-1">
-                    <label className="block text-[11px] font-bold text-slate-600 dark:text-slate-400 mb-1">
-                      Lọc theo loại:
-                    </label>
-                    <select
-                      value={saveBankTypeFilter}
-                      onChange={(e) => setSaveBankTypeFilter(e.target.value)}
-                      className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                    >
-                      <option value="ALL">Tất cả loại câu hỏi</option>
-                      <option value="SINGLE_CHOICE">Trắc nghiệm đơn</option>
-                      <option value="MULTIPLE_CHOICE">Trắc nghiệm nhiều đáp án</option>
-                      <option value="TRUE_FALSE">Đúng / Sai</option>
-                      <option value="ESSAY">Tự luận</option>
-                    </select>
-                  </div>
-                </div>
-              </div>
-
-              <div className="flex items-center justify-between gap-3 pt-1">
-                <div className="relative flex-1 max-w-sm">
-                  <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={saveBankSearch}
-                    onChange={(e) => setSaveBankSearch(e.target.value)}
-                    placeholder="Tìm theo nội dung câu hỏi..."
-                    className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
-                  />
-                </div>
-
-                <div className="flex items-center gap-2">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const allVisibleIds = questions
-                        .filter((q) => {
-                          const matchesType = saveBankTypeFilter === 'ALL' || q.type === saveBankTypeFilter;
-                          const matchesSearch = !saveBankSearch || q.content.toLowerCase().includes(saveBankSearch.toLowerCase());
-                          return matchesType && matchesSearch;
-                        })
-                        .map((q) => q.id);
-                      setSelectedSaveBankQIds(allVisibleIds);
-                    }}
-                    className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline"
                   >
-                    Chọn tất cả
-                  </button>
-                  <span className="text-slate-300 dark:text-slate-600">•</span>
-                  <button
-                    type="button"
-                    onClick={() => setSelectedSaveBankQIds([])}
-                    className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
-                  >
-                    Bỏ chọn
-                  </button>
+                    <option value="ALL">Tất cả loại câu hỏi</option>
+                    <option value="SINGLE_CHOICE">Trắc nghiệm đơn</option>
+                    <option value="MULTIPLE_CHOICE">Trắc nghiệm nhiều đáp án</option>
+                    <option value="TRUE_FALSE">Đúng / Sai</option>
+                    <option value="ESSAY">Tự luận</option>
+                  </select>
                 </div>
               </div>
             </div>
 
-            {/* Questions List */}
-            <div className="p-6 overflow-y-auto flex-1 space-y-3">
-              {(() => {
-                const filtered = questions.filter((q) => {
-                  const matchesType = saveBankTypeFilter === 'ALL' || q.type === saveBankTypeFilter;
-                  const matchesSearch = !saveBankSearch || q.content.toLowerCase().includes(saveBankSearch.toLowerCase());
-                  return matchesType && matchesSearch;
-                });
-
-                if (filtered.length === 0) {
-                  return (
-                    <div className="text-center py-10 text-xs text-slate-400">
-                      Không tìm thấy câu hỏi phù hợp với bộ lọc tìm kiếm.
-                    </div>
-                  );
-                }
-
-                return filtered.map((q, idx) => {
-                  const isChecked = selectedSaveBankQIds.includes(q.id);
-                  return (
-                    <label
-                      key={q.id}
-                      className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
-                        isChecked
-                          ? 'bg-sky-50/70 dark:bg-sky-950/30 border-sky-300 dark:border-sky-800 shadow-xs'
-                          : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 hover:border-slate-300'
-                      }`}
-                    >
-                      <input
-                        type="checkbox"
-                        checked={isChecked}
-                        onChange={(e) => {
-                          if (e.target.checked) {
-                            setSelectedSaveBankQIds([...selectedSaveBankQIds, q.id]);
-                          } else {
-                            setSelectedSaveBankQIds(selectedSaveBankQIds.filter((qid) => qid !== q.id));
-                          }
-                        }}
-                        className="mt-1 rounded text-sky-600 focus:ring-sky-400"
-                      />
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                            Câu {q.order || idx + 1}
-                          </span>
-                          <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
-                            {q.type === 'SINGLE_CHOICE'
-                              ? 'Trắc nghiệm đơn'
-                              : q.type === 'MULTIPLE_CHOICE'
-                              ? 'Nhiều đáp án'
-                              : q.type === 'TRUE_FALSE'
-                              ? 'Đúng / Sai'
-                              : 'Tự luận'}
-                          </span>
-                        </div>
-                        <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed line-clamp-2">
-                          <Latex>{q.content || '(Chưa có nội dung)'}</Latex>
-                        </p>
-                      </div>
-                    </label>
-                  );
-                });
-              })()}
-            </div>
-
-            {/* Footer */}
-            <div className="px-6 py-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="flex items-center gap-3">
-                <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
-                  Đã chọn: <span className="text-sky-600 dark:text-sky-400 font-mono text-sm">{selectedSaveBankQIds.length}</span> / {questions.length} câu
-                </span>
-                <Link
-                  to="/teacher/question-bank"
-                  target="_blank"
-                  className="hidden sm:inline-flex items-center gap-1 text-xs text-sky-600 hover:underline"
-                >
-                  <span>Xem ngân hàng câu hỏi</span>
-                  <ExternalLink className="w-3 h-3" />
-                </Link>
+            <div className="flex items-center justify-between gap-3 pt-1">
+              <div className="relative flex-1 max-w-sm">
+                <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={saveBankSearch}
+                  onChange={(e) => setSaveBankSearch(e.target.value)}
+                  placeholder="Tìm theo nội dung câu hỏi..."
+                  className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
+                />
               </div>
 
-              <div className="flex items-center gap-2.5">
+              <div className="flex items-center gap-2">
                 <button
                   type="button"
-                  onClick={() => setShowSaveBankModal(false)}
-                  className="py-2 px-4 bg-white dark:bg-slate-800 hover:bg-slate-100 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold transition-colors text-xs border border-slate-200 dark:border-slate-700"
+                  onClick={() => {
+                    const allVisibleIds = questions
+                      .filter((q) => {
+                        const matchesType = saveBankTypeFilter === 'ALL' || q.type === saveBankTypeFilter;
+                        const matchesSearch = !saveBankSearch || q.content.toLowerCase().includes(saveBankSearch.toLowerCase());
+                        return matchesType && matchesSearch;
+                      })
+                      .map((q) => q.id);
+                    setSelectedSaveBankQIds(allVisibleIds);
+                  }}
+                  className="text-xs font-semibold text-sky-600 dark:text-sky-400 hover:underline"
                 >
-                  Hủy
+                  Chọn tất cả
                 </button>
+                <span className="text-slate-300 dark:text-slate-600">•</span>
                 <button
                   type="button"
-                  disabled={selectedSaveBankQIds.length === 0 || isSavingToBank}
-                  onClick={handleExecuteSaveToBank}
-                  className="py-2 px-5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-bold transition-all disabled:opacity-50 text-xs shadow-sm flex items-center gap-1.5"
+                  onClick={() => setSelectedSaveBankQIds([])}
+                  className="text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
                 >
-                  {isSavingToBank ? (
-                    <>
-                      <div className="w-3.5 h-3.5 rounded-full border-2 border-white border-t-transparent animate-spin" />
-                      <span>Đang lưu...</span>
-                    </>
-                  ) : (
-                    <>
-                      <BookmarkPlus className="w-3.5 h-3.5" />
-                      <span>Lưu vào ngân hàng ({selectedSaveBankQIds.length})</span>
-                    </>
-                  )}
+                  Bỏ chọn
                 </button>
               </div>
             </div>
           </div>
+
+          {/* Questions List */}
+          <div className="space-y-3">
+            {(() => {
+              const filtered = questions.filter((q) => {
+                const matchesType = saveBankTypeFilter === 'ALL' || q.type === saveBankTypeFilter;
+                const matchesSearch = !saveBankSearch || q.content.toLowerCase().includes(saveBankSearch.toLowerCase());
+                return matchesType && matchesSearch;
+              });
+
+              if (filtered.length === 0) {
+                return (
+                  <div className="text-center py-10 text-xs text-slate-400">
+                    Không tìm thấy câu hỏi phù hợp với bộ lọc tìm kiếm.
+                  </div>
+                );
+              }
+
+              return filtered.map((q, idx) => {
+                const isChecked = selectedSaveBankQIds.includes(q.id);
+                return (
+                  <label
+                    key={q.id}
+                    className={`flex items-start gap-3 p-3.5 rounded-2xl border cursor-pointer transition-all ${
+                      isChecked
+                        ? 'bg-sky-50/70 dark:bg-sky-950/30 border-sky-300 dark:border-sky-800 shadow-xs'
+                        : 'bg-white dark:bg-slate-800/80 border-slate-200 dark:border-slate-700/80 hover:border-slate-300'
+                    }`}
+                  >
+                    <input
+                      type="checkbox"
+                      checked={isChecked}
+                      onChange={(e) => {
+                        if (e.target.checked) {
+                          setSelectedSaveBankQIds([...selectedSaveBankQIds, q.id]);
+                        } else {
+                          setSelectedSaveBankQIds(selectedSaveBankQIds.filter((qid) => qid !== q.id));
+                        }
+                      }}
+                      className="mt-1 rounded text-sky-600 focus:ring-sky-400"
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2 mb-1">
+                        <span className="text-xs font-bold text-slate-700 dark:text-slate-300">
+                          Câu {q.order || idx + 1}
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-semibold bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">
+                          {q.type === 'SINGLE_CHOICE'
+                            ? 'Trắc nghiệm đơn'
+                            : q.type === 'MULTIPLE_CHOICE'
+                            ? 'Nhiều đáp án'
+                            : q.type === 'TRUE_FALSE'
+                            ? 'Đúng / Sai'
+                            : 'Tự luận'}
+                        </span>
+                      </div>
+                      <p className="text-xs text-slate-800 dark:text-slate-200 leading-relaxed line-clamp-2">
+                        <Latex>{q.content || '(Chưa có nội dung)'}</Latex>
+                      </p>
+                    </div>
+                  </label>
+                );
+              });
+            })()}
+          </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

@@ -29,6 +29,10 @@ const TeacherQuizPreviewPage = React.lazy(() => import('../pages/teacher/Teacher
 const TeacherProfilePage = React.lazy(() => import('../pages/teacher/TeacherProfilePage').then(module => ({ default: module.TeacherProfilePage })));
 const TeacherAppealsPage = React.lazy(() => import('../pages/teacher/TeacherAppealsPage').then(module => ({ default: module.TeacherAppealsPage })));
 const TeacherQuestionBankPage = React.lazy(() => import('../pages/teacher/TeacherQuestionBankPage').then(module => ({ default: module.TeacherQuestionBankPage })));
+const TeacherSchedulePage = React.lazy(() => import('../pages/teacher/TeacherSchedulePage').then(module => ({ default: module.TeacherSchedulePage })));
+const TeacherLearningLogsPage = React.lazy(() => import('../pages/teacher/TeacherLearningLogsPage').then(module => ({ default: module.TeacherLearningLogsPage })));
+const TeacherTuitionPage = React.lazy(() => import('../pages/teacher/TeacherTuitionPage').then(module => ({ default: module.TeacherTuitionPage })));
+const TeacherScoresPage = React.lazy(() => import('../pages/teacher/TeacherScoresPage').then(module => ({ default: module.TeacherScoresPage })));
 const ReportBugPage = React.lazy(() => import('../pages/ReportBugPage').then(module => ({ default: module.ReportBugPage })));
 
 // Student Pages (Lazy Loaded)
@@ -84,6 +88,10 @@ export const AppRoutes: React.FC = () => {
             <Route element={<RoleGuard allowedRole="TEACHER" />}>
               <Route element={<TeacherLayout />}>
                 <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
+                <Route path="/teacher/schedule" element={<TeacherSchedulePage />} />
+                <Route path="/teacher/learning-logs" element={<TeacherLearningLogsPage />} />
+                <Route path="/teacher/tuition" element={<TeacherTuitionPage />} />
+                <Route path="/teacher/scores" element={<TeacherScoresPage />} />
                 <Route path="/teacher/students" element={<TeacherStudentsPage />} />
                 <Route path="/teacher/classes" element={<TeacherClassroomsPage />} />
                 <Route path="/teacher/classes/:id" element={<TeacherClassroomDetailPage />} />

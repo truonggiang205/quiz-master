@@ -9,6 +9,7 @@ import { ResultOverview } from '../../components/student/ResultOverview';
 import { AnswerReleaseCountdown } from '../../components/quiz/AnswerReleaseCountdown';
 import { ArrowLeft, CheckCircle2, XCircle, Sparkles, BookOpen, AlertCircle, X, Clock } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
+import { Modal } from '../../components/common/Modal';
 import Latex from 'react-latex-next';
 import { resolveImageUrl } from '../../utils/image.util';
 
@@ -269,42 +270,49 @@ export const StudentQuizResultPage: React.FC = () => {
       )}
 
       {/* Appeal Modal */}
-      {showAppealModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm animate-in fade-in duration-200">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl shadow-xl w-full max-w-md overflow-hidden animate-in zoom-in-95 duration-200 border border-slate-200 dark:border-slate-700">
-            <div className="p-6 border-b border-slate-100 dark:border-slate-700 flex items-center justify-between bg-slate-50/50 dark:bg-slate-800/50">
-              <h3 className="font-black text-slate-800 dark:text-white text-lg flex items-center gap-2">
-                <AlertCircle className="w-5 h-5 text-orange-500" />
-                Yêu cầu phúc khảo
-              </h3>
-              <button 
-                onClick={() => setShowAppealModal(false)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-700 hover:bg-slate-200 dark:hover:bg-slate-600 rounded-full p-2 transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-            <div className="p-6 space-y-4">
-              <p className="text-sm text-slate-600 dark:text-slate-300">
-                Nếu bạn cảm thấy điểm số không chính xác, hãy viết rõ lý do và gửi cho giáo viên xem xét lại.
-              </p>
-              <textarea
-                value={appealReason}
-                onChange={(e) => setAppealReason(e.target.value)}
-                placeholder="VD: Câu 3 em chọn đáp án đúng nhưng hệ thống ghi nhận sai..."
-                className="w-full h-32 px-4 py-3 text-sm rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:border-sky-500 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors resize-none"
-              />
-              <button
-                onClick={handleAppealSubmit}
-                disabled={submittingAppeal}
-                className="w-full bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white font-bold py-3 rounded-xl transition-colors shadow-md"
-              >
-                {submittingAppeal ? 'Đang gửi...' : 'Gửi yêu cầu'}
-              </button>
-            </div>
+      <Modal
+        isOpen={showAppealModal}
+        onClose={() => setShowAppealModal(false)}
+        title="Yêu cầu phúc khảo"
+        icon={
+          <div className="p-2 bg-orange-50 dark:bg-orange-950/60 text-orange-500 rounded-xl">
+            <AlertCircle className="w-5 h-5" />
           </div>
+        }
+        maxWidth="md"
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setShowAppealModal(false)}
+              className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              type="button"
+              onClick={handleAppealSubmit}
+              disabled={submittingAppeal || !appealReason.trim()}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-orange-500 hover:bg-orange-600 text-white disabled:opacity-50 transition-colors shadow-sm"
+            >
+              {submittingAppeal ? 'Đang gửi...' : 'Gửi yêu cầu'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
+            Nếu bạn cảm thấy điểm số không chính xác, hãy viết rõ lý do và gửi cho giáo viên xem xét lại.
+          </p>
+          <textarea
+            value={appealReason}
+            onChange={(e) => setAppealReason(e.target.value)}
+            placeholder="VD: Câu 3 em chọn đáp án đúng nhưng hệ thống ghi nhận sai..."
+            rows={4}
+            className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors resize-none"
+          />
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

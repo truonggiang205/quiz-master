@@ -28,6 +28,7 @@ import {
 } from 'lucide-react';
 import { useUiStore } from '../../stores/ui.store';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Modal } from '../../components/common/Modal';
 import {
   BarChart,
   Bar,
@@ -933,187 +934,159 @@ export const TeacherClassroomDetailPage: React.FC = () => {
       </div>
 
       {/* Import Excel Modal */}
-      <AnimatePresence>
-        {showImportModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm overflow-y-auto"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) closeImportModal();
-            }}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-lg overflow-hidden border border-slate-100 dark:border-slate-800 my-8"
+      <Modal
+        isOpen={showImportModal}
+        onClose={closeImportModal}
+        title="Nhập Danh Sách Học Sinh Từ Excel"
+        icon={
+          <div className="p-2 bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 rounded-xl">
+            <FileSpreadsheet className="w-5 h-5" />
+          </div>
+        }
+        maxWidth="lg"
+        onSubmit={handleImportSubmit}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={closeImportModal}
+              className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                <div className="flex items-center gap-2">
-                  <FileSpreadsheet className="w-5 h-5 text-emerald-600" />
-                  <h3 className="text-lg font-black text-slate-800 dark:text-white">
-                    Nhập Danh Sách Học Sinh Từ Excel
-                  </h3>
+              Đóng
+            </button>
+            <button
+              type="submit"
+              disabled={!selectedFile || isImporting}
+              className="px-5 py-2.5 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-xl font-bold transition-all text-sm shadow-md shadow-sky-500/20"
+            >
+              {isImporting ? 'Đang xử lý...' : 'Bắt đầu Nhập'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {/* Download sample template banner */}
+          <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/50 flex items-center justify-between gap-3">
+            <div className="text-xs">
+              <p className="font-bold text-sky-800 dark:text-sky-200">
+                Chưa có mẫu file Excel?
+              </p>
+              <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
+                Định dạng chuẩn: Họ tên, Email, Username, SĐT
+              </p>
+            </div>
+            <button
+              type="button"
+              onClick={handleDownloadSampleTemplate}
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0"
+            >
+              <Download className="w-3.5 h-3.5" />
+              Tải file mẫu
+            </button>
+          </div>
+
+          {/* File Dropzone */}
+          <div
+            onClick={() => fileInputRef.current?.click()}
+            className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
+              selectedFile
+                ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20'
+                : 'border-slate-200 dark:border-slate-700 hover:border-sky-400 dark:hover:border-sky-600 bg-slate-50/50 dark:bg-slate-800/40'
+            }`}
+          >
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={handleFileChange}
+              className="hidden"
+            />
+
+            {selectedFile ? (
+              <div className="flex items-center justify-center gap-3">
+                <FileCheck className="w-8 h-8 text-emerald-600 shrink-0" />
+                <div className="text-left truncate">
+                  <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
+                    {selectedFile.name}
+                  </p>
+                  <p className="text-xs text-slate-400">
+                    {(selectedFile.size / 1024).toFixed(1)} KB &bull; Bấm để đổi file khác
+                  </p>
                 </div>
-                <button
-                  onClick={closeImportModal}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 p-2 rounded-xl transition-colors"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+              </div>
+            ) : (
+              <div>
+                <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
+                <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
+                  Bấm vào đây để chọn file Excel
+                </p>
+                <p className="text-xs text-slate-400 mt-1">
+                  Hỗ trợ định dạng .xlsx, .xls (tối đa 5MB)
+                </p>
+              </div>
+            )}
+          </div>
+
+          {/* Import Results Box */}
+          {importResult && (
+            <motion.div
+              initial={{ opacity: 0, y: 10 }}
+              animate={{ opacity: 1, y: 0 }}
+              className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-3"
+            >
+              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
+                Kết Quả Nhập Dữ Liệu
+              </h4>
+
+              <div className="grid grid-cols-3 gap-2 text-center">
+                <div className="bg-emerald-50 dark:bg-emerald-950/60 p-2 rounded-xl border border-emerald-200/50 dark:border-emerald-800/50">
+                  <p className="text-[10px] text-emerald-600 font-bold uppercase">
+                    Thành công
+                  </p>
+                  <p className="text-lg font-black text-emerald-700 dark:text-emerald-400">
+                    {importResult.successCount}
+                  </p>
+                </div>
+                <div className="bg-amber-50 dark:bg-amber-950/60 p-2 rounded-xl border border-amber-200/50 dark:border-amber-800/50">
+                  <p className="text-[10px] text-amber-600 font-bold uppercase">
+                    Bỏ qua
+                  </p>
+                  <p className="text-lg font-black text-amber-700 dark:text-amber-400">
+                    {importResult.skippedCount}
+                  </p>
+                </div>
+                <div className="bg-rose-50 dark:bg-rose-950/60 p-2 rounded-xl border border-rose-200/50 dark:border-rose-800/50">
+                  <p className="text-[10px] text-rose-600 font-bold uppercase">Lỗi</p>
+                  <p className="text-lg font-black text-rose-700 dark:text-rose-400">
+                    {importResult.errorCount ?? importResult.errors?.length ?? 0}
+                  </p>
+                </div>
               </div>
 
-              <div className="p-6 space-y-4">
-                {/* Download sample template banner */}
-                <div className="p-3.5 rounded-2xl bg-sky-50 dark:bg-sky-950/40 border border-sky-100 dark:border-sky-900/50 flex items-center justify-between gap-3">
-                  <div className="text-xs">
-                    <p className="font-bold text-sky-800 dark:text-sky-200">
-                      Chưa có mẫu file Excel?
-                    </p>
-                    <p className="text-slate-500 dark:text-slate-400 text-[11px] mt-0.5">
-                      Định dạng chuẩn: Họ tên, Email, Username, SĐT
-                    </p>
-                  </div>
-                  <button
-                    type="button"
-                    onClick={handleDownloadSampleTemplate}
-                    className="flex items-center gap-1.5 px-3 py-1.5 bg-sky-600 hover:bg-sky-700 text-white rounded-xl text-xs font-bold transition-all shadow-xs shrink-0"
-                  >
-                    <Download className="w-3.5 h-3.5" />
-                    Tải file mẫu
-                  </button>
+              {/* Error details list */}
+              {importResult.errors && importResult.errors.length > 0 && (
+                <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
+                  <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
+                    <AlertTriangle className="w-3.5 h-3.5" />
+                    Chi tiết các dòng bị lỗi / bỏ qua:
+                  </p>
+                  {importResult.errors.map((err, i) => (
+                    <div
+                      key={i}
+                      className="text-xs bg-white dark:bg-slate-900 p-2 rounded-lg border border-rose-100 dark:border-rose-950 text-slate-700 dark:text-slate-300 flex items-start gap-2"
+                    >
+                      <span className="font-bold text-rose-500 shrink-0">
+                        Dòng {err.row}:
+                      </span>
+                      <span>{err.message}</span>
+                    </div>
+                  ))}
                 </div>
-
-                {/* Upload Form */}
-                <form onSubmit={handleImportSubmit} className="space-y-4">
-                  {/* File Dropzone */}
-                  <div
-                    onClick={() => fileInputRef.current?.click()}
-                    className={`border-2 border-dashed rounded-2xl p-6 text-center cursor-pointer transition-all ${
-                      selectedFile
-                        ? 'border-emerald-500 bg-emerald-50/30 dark:bg-emerald-950/20'
-                        : 'border-slate-200 dark:border-slate-700 hover:border-sky-400 dark:hover:border-sky-600 bg-slate-50/50 dark:bg-slate-800/40'
-                    }`}
-                  >
-                    <input
-                      ref={fileInputRef}
-                      type="file"
-                      accept=".xlsx, .xls"
-                      onChange={handleFileChange}
-                      className="hidden"
-                    />
-
-                    {selectedFile ? (
-                      <div className="flex items-center justify-center gap-3">
-                        <FileCheck className="w-8 h-8 text-emerald-600 shrink-0" />
-                        <div className="text-left truncate">
-                          <p className="text-sm font-bold text-slate-800 dark:text-white truncate">
-                            {selectedFile.name}
-                          </p>
-                          <p className="text-xs text-slate-400">
-                            {(selectedFile.size / 1024).toFixed(1)} KB &bull; Bấm để đổi file khác
-                          </p>
-                        </div>
-                      </div>
-                    ) : (
-                      <div>
-                        <Upload className="w-8 h-8 text-slate-400 mx-auto mb-2" />
-                        <p className="text-sm font-bold text-slate-700 dark:text-slate-300">
-                          Bấm vào đây để chọn file Excel
-                        </p>
-                        <p className="text-xs text-slate-400 mt-1">
-                          Hỗ trợ định dạng .xlsx, .xls (tối đa 5MB)
-                        </p>
-                      </div>
-                    )}
-                  </div>
-
-                  {/* Import Results Box */}
-                  {importResult && (
-                    <motion.div
-                      initial={{ opacity: 0, y: 10 }}
-                      animate={{ opacity: 1, y: 0 }}
-                      className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-800/70 border border-slate-200 dark:border-slate-700 space-y-3"
-                    >
-                      <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">
-                        Kết Quả Nhập Dữ Liệu
-                      </h4>
-
-                      <div className="grid grid-cols-3 gap-2 text-center">
-                        <div className="bg-emerald-50 dark:bg-emerald-950/60 p-2 rounded-xl border border-emerald-200/50 dark:border-emerald-800/50">
-                          <p className="text-[10px] text-emerald-600 font-bold uppercase">
-                            Thành công
-                          </p>
-                          <p className="text-lg font-black text-emerald-700 dark:text-emerald-400">
-                            {importResult.successCount}
-                          </p>
-                        </div>
-                        <div className="bg-amber-50 dark:bg-amber-950/60 p-2 rounded-xl border border-amber-200/50 dark:border-amber-800/50">
-                          <p className="text-[10px] text-amber-600 font-bold uppercase">
-                            Bỏ qua
-                          </p>
-                          <p className="text-lg font-black text-amber-700 dark:text-amber-400">
-                            {importResult.skippedCount}
-                          </p>
-                        </div>
-                        <div className="bg-rose-50 dark:bg-rose-950/60 p-2 rounded-xl border border-rose-200/50 dark:border-rose-800/50">
-                          <p className="text-[10px] text-rose-600 font-bold uppercase">Lỗi</p>
-                          <p className="text-lg font-black text-rose-700 dark:text-rose-400">
-                            {importResult.errorCount ?? importResult.errors?.length ?? 0}
-                          </p>
-                        </div>
-                      </div>
-
-                      {/* Error details list */}
-                      {importResult.errors && importResult.errors.length > 0 && (
-                        <div className="space-y-1.5 max-h-40 overflow-y-auto pr-1">
-                          <p className="text-[11px] font-bold text-rose-600 dark:text-rose-400 flex items-center gap-1">
-                            <AlertTriangle className="w-3.5 h-3.5" />
-                            Chi tiết các dòng bị lỗi / bỏ qua:
-                          </p>
-                          {importResult.errors.map((err, i) => (
-                            <div
-                              key={i}
-                              className="text-xs bg-white dark:bg-slate-900 p-2 rounded-lg border border-rose-100 dark:border-rose-950 text-slate-700 dark:text-slate-300 flex items-start gap-2"
-                            >
-                              <span className="font-bold text-rose-500 shrink-0">
-                                Dòng {err.row}:
-                              </span>
-                              <span>{err.message}</span>
-                            </div>
-                          ))}
-                        </div>
-                      )}
-                    </motion.div>
-                  )}
-
-                  {/* Actions */}
-                  <div className="pt-2 flex gap-3">
-                    <button
-                      type="button"
-                      onClick={closeImportModal}
-                      className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition-colors text-sm"
-                    >
-                      Đóng
-                    </button>
-                    <button
-                      type="submit"
-                      disabled={!selectedFile || isImporting}
-                      className="flex-1 py-2.5 px-4 bg-sky-600 hover:bg-sky-700 disabled:opacity-50 text-white rounded-xl font-bold transition-all text-sm shadow-md shadow-sky-500/20"
-                    >
-                      {isImporting ? 'Đang xử lý...' : 'Bắt đầu Nhập'}
-                    </button>
-                  </div>
-                </form>
-              </div>
+              )}
             </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

@@ -29,6 +29,16 @@ import { BugReportModule } from './modules/bug-report/bug-report.module.js';
 import { GradingModule } from './modules/grading/grading.module.js';
 import { EssayRubricEntity } from './modules/grading/entities/essay-rubric.entity.js';
 import { GradingResultEntity } from './modules/grading/entities/grading-result.entity.js';
+import {
+  LessonEntity,
+  LessonParticipantEntity,
+  LearningLogEntity,
+  ScoreRecordEntity,
+  TuitionItemEntity,
+  TuitionAdjustmentEntity,
+  TuitionPaymentEntity,
+} from './modules/teaching/entities/index.js';
+import { TeachingModule } from './modules/teaching/teaching.module.js';
 import { LoggerMiddleware } from './common/middleware/logger.middleware.js';
 
 dotenv.config();
@@ -45,7 +55,27 @@ dotenv.config();
       ssl: {
         rejectUnauthorized: false,
       },
-      entities: [UserEntity, QuizEntity, QuestionEntity, SubmissionEntity, ClassEntity, NotificationEntity, AppealEntity, ConversationEntity, MessageEntity, BugReportEntity, EssayRubricEntity, GradingResultEntity],
+      entities: [
+        UserEntity,
+        QuizEntity,
+        QuestionEntity,
+        SubmissionEntity,
+        ClassEntity,
+        NotificationEntity,
+        AppealEntity,
+        ConversationEntity,
+        MessageEntity,
+        BugReportEntity,
+        EssayRubricEntity,
+        GradingResultEntity,
+        LessonEntity,
+        LessonParticipantEntity,
+        LearningLogEntity,
+        ScoreRecordEntity,
+        TuitionItemEntity,
+        TuitionAdjustmentEntity,
+        TuitionPaymentEntity,
+      ],
       synchronize: true, // Auto creates and syncs tables with Aiven MySQL
       logging: false,
     }),
@@ -64,6 +94,7 @@ dotenv.config();
     ChatModule,
     BugReportModule,
     GradingModule,
+    TeachingModule,
   ],
 })
 export class AppModule implements NestModule {

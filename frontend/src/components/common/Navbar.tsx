@@ -19,7 +19,7 @@ interface NavbarProps {
 
 export const Navbar: React.FC<NavbarProps> = ({ showSidebarToggle = false }) => {
   const { user, logout } = useAuthStore();
-  const { toggleSidebar } = useUiStore();
+  const { isSidebarOpen, toggleSidebar } = useUiStore();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const navigate = useNavigate();
 
@@ -44,11 +44,16 @@ export const Navbar: React.FC<NavbarProps> = ({ showSidebarToggle = false }) => 
             </button>
           )}
 
-          <Link to="/" className="flex items-center gap-2.5 group">
+          <Link
+            to="/"
+            className={`items-center gap-2.5 group transition-all duration-200 ${
+              showSidebarToggle && !isSidebarOpen ? 'hidden md:hidden' : 'flex'
+            }`}
+          >
             <img 
               src="/logo.png" 
               alt="QuizMaster Logo" 
-              className="h-10 md:h-12 w-auto object-contain transition-transform transform scale-[1.75] origin-left group-hover:scale-[1.85]" 
+              className="h-9 w-auto max-w-[140px] object-contain transition-transform group-hover:scale-105" 
             />
           </Link>
         </div>

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { Submission } from '../../types/submission';
 import { Search, ArrowUpDown } from 'lucide-react';
 import { Badge } from '../common/Badge';
+import { UserAvatar } from '../common/UserAvatar';
 
 interface SubmissionsTableProps {
   submissions: Submission[];
@@ -70,10 +71,10 @@ export const SubmissionsTable: React.FC<SubmissionsTableProps> = ({ submissions 
               <tr key={s.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-700/30 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <img
+                    <UserAvatar
                       src={s.studentAvatar}
-                      alt={s.studentName}
-                      className="w-8 h-8 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                      name={s.studentName}
+                      size="sm"
                     />
                     <div>
                       <div className="font-semibold text-slate-900 dark:text-white">

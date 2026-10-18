@@ -4,6 +4,7 @@ import { dashboardService } from '../../services/dashboard.service';
 import { StatCard } from '../../components/common/StatCard';
 import { TeacherCharts, ScoreDistributionItem } from '../../components/teacher/TeacherCharts';
 import { Badge } from '../../components/common/Badge';
+import { UserAvatar } from '../../components/common/UserAvatar';
 import { useAuthStore } from '../../stores/auth.store';
 import {
   FileQuestion,
@@ -632,10 +633,10 @@ export const TeacherDashboard: React.FC = () => {
                   className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 px-3 rounded-2xl transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <img
-                      src={sub.studentAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256'}
-                      alt={sub.studentName}
-                      className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                    <UserAvatar
+                      src={sub.studentAvatar}
+                      name={sub.studentName}
+                      size="md"
                     />
                     <div>
                       <div className="font-bold text-xs text-slate-900 dark:text-white">
@@ -769,10 +770,9 @@ export const TeacherDashboard: React.FC = () => {
                   className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 px-3 rounded-2xl transition-colors"
                 >
                   <div className="flex items-center gap-3">
-                    <img
-                      src={stu.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256'}
-                      alt={stu.name}
-                      className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                    <UserAvatar
+                      user={stu}
+                      size="header"
                     />
                     <div>
                       <div className="font-bold text-xs text-slate-900 dark:text-white">

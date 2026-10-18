@@ -27,6 +27,7 @@ import html2canvas from 'html2canvas';
 import { TeachingService } from '../../services/teaching.service';
 import { ClassroomService } from '../../services/classroom.service';
 import { Modal } from '../../components/common/Modal';
+import { UserAvatar } from '../../components/common/UserAvatar';
 import type { LearningLog, Lesson, SaveLearningLogPayload } from '../../types/teaching';
 import type { Classroom } from '../../types/classroom';
 import { useSearchParams } from 'react-router-dom';
@@ -35,6 +36,7 @@ interface RosterStudent {
   id: string;
   name: string;
   email?: string;
+  avatar?: string;
   className: string;
   classId: string;
   subject?: string;
@@ -214,6 +216,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
               id: s.id,
               name: s.name,
               email: s.email,
+              avatar: s.avatar,
               className: cls.name,
               classId: cls.id,
               subject: cls.subject || 'Tổng hợp',
@@ -231,6 +234,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
           id: log.student.id,
           name: log.student.name,
           email: log.student.email,
+          avatar: log.student.avatar,
           className: log.class?.name || 'Lớp học',
           classId: log.classId,
           subject: log.class?.subject || 'Tổng hợp',
@@ -248,6 +252,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
               id: p.student.id,
               name: p.student.name,
               email: p.student.email,
+              avatar: p.student.avatar,
               className: l.class?.name || 'Lớp học',
               classId: l.classId,
               subject: l.class?.subject || 'Tổng hợp',
@@ -647,7 +652,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
       {/* 1. TOP HEADER & MONTH NAVIGATOR */}
       <div className="bg-white dark:bg-slate-900 rounded-2xl p-5 shadow-sm border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-3">
-          <div className="p-3 bg-indigo-50 dark:bg-indigo-950/60 rounded-xl text-indigo-600 dark:text-indigo-400 shrink-0">
+          <div className="p-3 bg-blue-50 dark:bg-blue-950/60 rounded-xl text-blue-600 dark:text-blue-400 shrink-0">
             <FileText className="w-6 h-6" />
           </div>
           <div>
@@ -671,7 +676,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
           </button>
 
           <div className="relative px-3 py-1 text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-1.5 cursor-pointer">
-            <Calendar className="w-3.5 h-3.5 text-indigo-500" />
+            <Calendar className="w-3.5 h-3.5 text-blue-600" />
             <span>{formattedMonthLabel}</span>
             <input
               type="month"
@@ -793,27 +798,25 @@ export const TeacherLearningLogsPage: React.FC = () => {
                               onClick={() => setActiveStudentId(student.id)}
                               className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all relative ${
                                 isActive
-                                  ? 'bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/60 shadow-xs'
+                                  ? 'bg-blue-50/90 dark:bg-blue-950/60 border border-blue-200/80 dark:border-blue-800/60 shadow-xs'
                                   : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/50 border border-transparent'
                               }`}
                             >
                               {isActive && (
-                                <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-indigo-600 rounded-r" />
+                                <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-blue-600 rounded-r" />
                               )}
-                              <div
-                                className={`w-8 h-8 rounded-full text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-xs ${
-                                  isActive
-                                    ? 'bg-indigo-600'
-                                    : 'bg-slate-400 dark:bg-slate-600'
-                                }`}
-                              >
-                                {getInitials(student.name)}
-                              </div>
+                              <UserAvatar
+                                user={student}
+                                size="md"
+                                ring={isActive}
+                                ringColor="ring-blue-300 dark:ring-blue-700"
+                                className="shadow-xs"
+                              />
                               <div className="min-w-0 flex-1">
                                 <div
                                   className={`text-xs font-bold leading-tight truncate ${
                                     isActive
-                                      ? 'text-indigo-950 dark:text-indigo-100'
+                                      ? 'text-blue-950 dark:text-blue-100'
                                       : 'text-slate-800 dark:text-slate-200'
                                   }`}
                                 >
@@ -860,13 +863,15 @@ export const TeacherLearningLogsPage: React.FC = () => {
                       onClick={() => setActiveStudentId(s.id)}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                         isActive
-                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
+                          ? 'bg-blue-600 text-white shadow-xs shadow-blue-500/20'
                           : 'bg-slate-100/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-slate-700'
                       }`}
                     >
-                      <span className="w-5 h-5 rounded-full bg-indigo-600 text-white text-[9px] font-extrabold flex items-center justify-center">
-                        {getInitials(s.name)}
-                      </span>
+                      <UserAvatar
+                        user={s}
+                        size={20}
+                        className="shadow-xs"
+                      />
                       <span>{s.name}</span>
                     </button>
                   );
@@ -971,7 +976,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
               <button
                 type="button"
                 onClick={() => handleOpenEdit()}
-                className="px-3.5 py-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm shadow-indigo-500/20 transition-colors"
+                className="px-3.5 py-1.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm shadow-blue-500/20 transition-colors"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Ghi nhật ký</span>
@@ -985,19 +990,30 @@ export const TeacherLearningLogsPage: React.FC = () => {
             ref={captureRef}
             className="w-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden"
           >
-            {/* Clean Light-Tone Card Header with Clear Hierarchy */}
-            <div className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-slate-800 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-              <div>
-                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">
-                  {activeStudent ? activeStudent.name : 'NHẬT KÝ HỌC TẬP'}
-                </h2>
-                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                  {activeStudent ? `${activeStudent.subject || 'Tổng hợp'} • ${activeStudent.className}` : 'Theo dõi tiến trình bài tập và nhận xét'}
-                </p>
+            {/* Academic Education Header with Real Student Avatar & Clean Hierarchy */}
+            <div className="bg-gradient-to-r from-blue-50/80 via-sky-50/50 to-white dark:from-slate-800/80 dark:via-slate-800/50 dark:to-slate-900 border-b border-blue-100 dark:border-slate-800 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+              <div className="flex items-center gap-3.5 min-w-0">
+                {activeStudent && (
+                  <UserAvatar
+                    user={activeStudent}
+                    size="lg"
+                    ring
+                    ringColor="ring-blue-200 dark:ring-blue-800"
+                    className="shadow-xs"
+                  />
+                )}
+                <div className="min-w-0">
+                  <h2 className="text-base sm:text-lg font-bold text-blue-600 dark:text-blue-400 uppercase tracking-tight truncate">
+                    {activeStudent ? activeStudent.name : 'NHẬT KÝ HỌC TẬP'}
+                  </h2>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5 truncate">
+                    {activeStudent ? `${activeStudent.subject || 'Tổng hợp'} • ${activeStudent.className}` : 'Theo dõi tiến trình bài tập và nhận xét'}
+                  </p>
+                </div>
               </div>
 
               <div className="flex items-center gap-2 flex-wrap shrink-0">
-                <span className="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold border border-indigo-200 dark:border-indigo-800">
+                <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 text-xs font-semibold border border-blue-200 dark:border-blue-800">
                   {studentSessions.length} Buổi học
                 </span>
                 {columns.fee && totalFeeInMonth > 0 && (
@@ -1014,7 +1030,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
             {/* EMPTY STATE */}
             {displayedSessions.length === 0 ? (
               <div className="p-12 text-center">
-                <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
+                <div className="w-14 h-14 bg-blue-50 dark:bg-blue-950/60 text-blue-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
                   <FileSpreadsheet className="w-7 h-7" />
                 </div>
                 <h3 className="text-base font-bold text-slate-800 dark:text-white">
@@ -1028,7 +1044,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
                 <div className="mt-4 flex items-center justify-center gap-2">
                   <button
                     onClick={() => handleOpenEdit()}
-                    className="px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm"
+                    className="px-4 py-2 bg-blue-600 hover:bg-blue-700 text-white rounded-xl text-xs font-semibold inline-flex items-center gap-1.5 shadow-sm"
                   >
                     <Plus className="w-4 h-4" /> Ghi nhật ký buổi học
                   </button>

@@ -27,6 +27,7 @@ import {
   BookOpen,
 } from 'lucide-react';
 import { useUiStore } from '../../stores/ui.store';
+import { UserAvatar } from '../../components/common/UserAvatar';
 import { motion, AnimatePresence } from 'framer-motion';
 import { Modal } from '../../components/common/Modal';
 import {
@@ -804,16 +805,7 @@ export const TeacherClassroomDetailPage: React.FC = () => {
                         {idx + 1}
                       </div>
                       <div className="col-span-3 flex items-center gap-3 pr-2">
-                        <img
-                          src={
-                            student.avatar ||
-                            `https://ui-avatars.com/api/?name=${encodeURIComponent(
-                              student.name || 'Student'
-                            )}&background=0284c7&color=fff`
-                          }
-                          alt={student.name}
-                          className="w-9 h-9 rounded-full object-cover bg-slate-100 border border-slate-200 dark:border-slate-700 shrink-0"
-                        />
+                        <UserAvatar user={student} size="md" />
                         <div className="truncate">
                           <span className="font-bold text-slate-800 dark:text-slate-200 block truncate">
                             {student.name}

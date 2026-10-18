@@ -5,6 +5,7 @@ import { useUiStore } from '../../stores/ui.store';
 import { ThemeToggle } from './ThemeToggle';
 import { NotificationBell } from './NotificationBell';
 import { formatUserName } from '../../utils/user.utils';
+import { UserAvatar } from './UserAvatar';
 import {
   Menu,
   GraduationCap,
@@ -70,10 +71,11 @@ export const Navbar: React.FC<NavbarProps> = ({ showSidebarToggle = false }) => 
                 id="user-menu-btn"
                 className="flex items-center gap-2 p-1.5 pr-3 rounded-2xl hover:bg-slate-100/80 dark:hover:bg-slate-800 transition-colors border border-transparent hover:border-slate-200 dark:hover:border-slate-700"
               >
-                <img
-                  src={user.avatar}
-                  alt={user.name}
-                  className="w-8 h-8 rounded-xl object-cover ring-2 ring-sky-200 dark:ring-sky-900"
+                <UserAvatar
+                  user={user}
+                  size="sm"
+                  ring
+                  ringColor="ring-sky-200 dark:ring-sky-900"
                 />
                 <div className="hidden sm:flex flex-col text-left">
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate max-w-[120px]">

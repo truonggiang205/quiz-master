@@ -95,6 +95,7 @@ export interface LearningLog {
     id: string;
     name: string;
     email: string;
+    avatar?: string;
   };
   class?: {
     id: string;

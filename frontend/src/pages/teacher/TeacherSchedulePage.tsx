@@ -245,6 +245,13 @@ export const TeacherSchedulePage: React.FC = () => {
       .catch((err) => console.error('Failed to load classes', err));
   }, []);
 
+  // Sync formData.classId when selectedClassId filter changes
+  useEffect(() => {
+    if (selectedClassId && selectedClassId !== 'ALL') {
+      setFormData((prev) => ({ ...prev, classId: selectedClassId }));
+    }
+  }, [selectedClassId]);
+
   // Deterministic, 100% collision-free color mapping for each class / student:
   // 1. Gathers all unique class IDs.
   // 2. Sorts them deterministically so color assignment is completely stable.
@@ -537,6 +544,10 @@ export const TeacherSchedulePage: React.FC = () => {
       };
 
       await TeachingService.createLesson(payload);
+      if (formData.date) {
+        const [y, m, d] = formData.date.split('-').map(Number);
+        setCurrentDate(new Date(y, m - 1, d));
+      }
       setIsCreateModalOpen(false);
       fetchLessons();
     } catch (err: any) {

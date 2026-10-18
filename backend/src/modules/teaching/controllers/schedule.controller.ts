@@ -30,6 +30,7 @@ export class ScheduleController {
   async getLessons(
     @CurrentUser() user: any,
     @Query('classId') classId?: string,
+    @Query('studentId') studentId?: string,
     @Query('startDate') startDate?: string,
     @Query('endDate') endDate?: string,
     @Query('month') month?: string,
@@ -37,6 +38,7 @@ export class ScheduleController {
   ) {
     const data = await this.scheduleService.getLessons(user.id, {
       classId,
+      studentId,
       startDate,
       endDate,
       month,

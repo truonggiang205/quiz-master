@@ -19,6 +19,7 @@ export const TeachingService = {
   // ==================== SCHEDULER ====================
   getLessons: async (params?: {
     classId?: string;
+    studentId?: string;
     startDate?: string;
     endDate?: string;
     month?: string;

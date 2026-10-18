@@ -2,6 +2,11 @@ import { test, expect } from '@playwright/test';
 import { STORAGE_PATHS, TEST_USERS } from '../../utils/constants';
 import { ApiHelper } from '../../utils/api-helper';
 
+const getTodayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+};
+
 test.describe.serial('Teacher Teaching Management System — Scheduler, Logs, Tuition & Scores', () => {
   test.use({ storageState: STORAGE_PATHS.TEACHER });
 
@@ -74,7 +79,7 @@ test.describe.serial('Teacher Teaching Management System — Scheduler, Logs, Tu
     await page.fill('input[placeholder*="VD: Ôn tập"]', lessonTitle);
 
     // Chọn ngày hôm nay và khung giờ chiều (14:00 - 15:30) tránh trùng lặp
-    const today = new Date().toISOString().substring(0, 10);
+    const today = getTodayStr();
     await page.fill('input[type="date"]', today);
     const timeInputs = page.locator('input[type="time"]');
     await timeInputs.nth(0).fill('14:00');
@@ -88,7 +93,7 @@ test.describe.serial('Teacher Teaching Management System — Scheduler, Logs, Tu
   });
 
   test('TC-TCH-SCH-002: Kiểm tra bắt lỗi xung đột lịch dạy (Conflict) và giờ kết thúc <= bắt đầu', async () => {
-    const today = new Date().toISOString().substring(0, 10);
+    const today = getTodayStr();
 
     // 1. Tạo buổi học chuẩn: 08:00 -> 09:30 có phí 150.000 đ
     const res1 = await teacherApi.post('/teacher/schedule', {
@@ -235,7 +240,7 @@ test.describe.serial('Teacher Teaching Management System — Scheduler, Logs, Tu
       assessmentName: 'Kiểm tra 15p Đại Số',
       score: 9.5,
       maxScore: 10,
-      date: new Date().toISOString().substring(0, 10),
+      date: getTodayStr(),
       comment: 'Làm bài xuất sắc',
     });
     expect(scoreRes.status).toBe(201);
@@ -248,7 +253,7 @@ test.describe.serial('Teacher Teaching Management System — Scheduler, Logs, Tu
       assessmentName: 'Kiểm tra Vô Lý',
       score: 12,
       maxScore: 10,
-      date: new Date().toISOString().substring(0, 10),
+      date: getTodayStr(),
     });
     expect(invalidScoreRes.status).toBe(400);
 

@@ -85,6 +85,8 @@ export const AppRoutes: React.FC = () => {
               <Route element={<TeacherLayout />}>
                 <Route path="/teacher/dashboard" element={<TeacherDashboard />} />
                 <Route path="/teacher/students" element={<TeacherStudentsPage />} />
+                <Route path="/teacher/classes" element={<TeacherClassroomsPage />} />
+                <Route path="/teacher/classes/:id" element={<TeacherClassroomDetailPage />} />
                 <Route path="/teacher/classrooms" element={<TeacherClassroomsPage />} />
                 <Route path="/teacher/classrooms/:id" element={<TeacherClassroomDetailPage />} />
                 <Route path="/teacher/quizzes" element={<TeacherQuizListPage />} />

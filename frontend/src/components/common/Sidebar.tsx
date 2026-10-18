@@ -63,7 +63,11 @@ export const Sidebar: React.FC = () => {
   const location = useLocation();
   const activePath = navItems.find(item => {
     const isDashboard = item.path === '/teacher/dashboard' || item.path === '/student/dashboard';
-    return isDashboard ? location.pathname === item.path : location.pathname.startsWith(item.path);
+    if (isDashboard) return location.pathname === item.path;
+    if (item.path === '/teacher/classrooms' && (location.pathname.startsWith('/teacher/classrooms') || location.pathname.startsWith('/teacher/classes'))) {
+      return true;
+    }
+    return location.pathname.startsWith(item.path);
   })?.path;
 
   return (

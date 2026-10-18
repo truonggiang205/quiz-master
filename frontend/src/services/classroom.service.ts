@@ -1,5 +1,5 @@
 import { apiClient } from './api';
-import { Classroom } from '../types/classroom';
+import { Classroom, ClassStudent, ImportStudentResult } from '../types/classroom';
 
 export const ClassroomService = {
   // --- Teacher Actions ---
@@ -11,6 +11,29 @@ export const ClassroomService = {
   getTeacherClasses: async (): Promise<Classroom[]> => {
     const res = await apiClient.get('/classrooms/teacher');
     return res.data.data;
+  },
+
+  getClassStudents: async (classId: string, params?: { search?: string; status?: string }): Promise<ClassStudent[]> => {
+    const res = await apiClient.get(`/classrooms/${classId}/students`, { params });
+    return res.data.data;
+  },
+
+  importStudents: async (classId: string, file: File): Promise<ImportStudentResult> => {
+    const formData = new FormData();
+    formData.append('file', file);
+    const res = await apiClient.post(`/classrooms/${classId}/students/import`, formData, {
+      headers: {
+        'Content-Type': 'multipart/form-data',
+      },
+    });
+    return res.data.data;
+  },
+
+  exportStudents: async (classId: string): Promise<Blob> => {
+    const res = await apiClient.get(`/classrooms/${classId}/students/export`, {
+      responseType: 'blob',
+    });
+    return res.data;
   },
 
   removeStudent: async (classId: string, studentId: string): Promise<void> => {

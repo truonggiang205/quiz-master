@@ -307,24 +307,28 @@ export const Sidebar: React.FC = () => {
                         }}
                         onMouseEnter={(e) => handleMouseEnter(entry.label, e)}
                         onMouseLeave={handleMouseLeave}
-                        className={`w-full relative flex items-center justify-between ${
-                          isSidebarOpen ? 'px-3 py-2' : 'justify-center p-2'
+                        className={`w-full relative flex items-center ${
+                          isSidebarOpen ? 'justify-between px-3 py-2' : 'justify-center p-2'
                         } rounded-xl text-xs sm:text-[13px] font-medium transition-colors ${
                           groupActive
                             ? 'bg-sky-50/70 dark:bg-sky-950/40 text-sky-700 dark:text-sky-300 font-semibold'
                             : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-slate-100 hover:bg-slate-100/70 dark:hover:bg-slate-800/60'
                         }`}
                       >
-                        <div className="flex items-center gap-2.5 truncate">
+                        {isSidebarOpen ? (
+                          <>
+                            <div className="flex items-center gap-2.5 truncate">
+                              <GroupIcon className="w-4.5 h-4.5 flex-shrink-0" />
+                              <span className="truncate">{entry.label}</span>
+                            </div>
+                            <ChevronDown
+                              className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
+                                isQuizGroupOpen ? 'rotate-180' : ''
+                              }`}
+                            />
+                          </>
+                        ) : (
                           <GroupIcon className="w-4.5 h-4.5 flex-shrink-0" />
-                          {isSidebarOpen && <span className="truncate">{entry.label}</span>}
-                        </div>
-                        {isSidebarOpen && (
-                          <ChevronDown
-                            className={`w-3.5 h-3.5 text-slate-400 transition-transform duration-200 ${
-                              isQuizGroupOpen ? 'rotate-180' : ''
-                            }`}
-                          />
                         )}
                       </button>
 

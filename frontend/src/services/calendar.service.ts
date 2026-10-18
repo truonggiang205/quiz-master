@@ -1,7 +1,9 @@
 import { apiClient } from './api';
-import { Holiday, DayClassification, DayType, OccasionType, WorkStatus } from '../types/calendar';
+import { Holiday, CalendarDay, DayType, OccasionType, WorkStatus } from '../types/calendar';
 
 // Instant offline fallback holidays for Vietnam (calibrated with 3-axis domain model)
+// Note: Fallbacks have isOfficialSchedule = false because they are baseline fallback rules,
+// not an annual executive decree.
 const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
   {
     id: 'tet-duong-lich',
@@ -12,8 +14,8 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
     workStatus: 'REST_DAY',
     scope: 'GENERAL',
     source: 'FIXED',
-    isOfficialSchedule: true,
-    description: 'Nghỉ Tết Dương Lịch',
+    isOfficialSchedule: false,
+    description: 'Nghỉ Tết Dương Lịch đầu năm mới',
   },
   {
     id: 'tet-nguyen-dan-2026',
@@ -60,7 +62,7 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
     workStatus: 'REST_DAY',
     scope: 'GENERAL',
     source: 'FIXED',
-    isOfficialSchedule: true,
+    isOfficialSchedule: false,
     description: 'Ngày Giải phóng miền Nam 30/4',
   },
   {
@@ -72,7 +74,7 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
     workStatus: 'REST_DAY',
     scope: 'GENERAL',
     source: 'FIXED',
-    isOfficialSchedule: true,
+    isOfficialSchedule: false,
     description: 'Ngày Quốc tế Lao động 1/5',
   },
   {
@@ -96,7 +98,7 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
     workStatus: 'REST_DAY',
     scope: 'GENERAL',
     source: 'FIXED',
-    isOfficialSchedule: true,
+    isOfficialSchedule: false,
     description: 'Kỷ niệm Quốc khánh 02/09',
   },
   {
@@ -141,7 +143,7 @@ export class CalendarService {
   private static cache: Map<string, Holiday[]> = new Map();
 
   /**
-   * Fetch holidays from Backend API with memory caching and fallback.
+   * Fetch holidays from Backend API with in-memory caching and offline fallback.
    * Cache key: calendar-holidays:${year}_${from}_${to}
    */
   static async getHolidays(params: { from?: string; to?: string; year?: number } = {}): Promise<Holiday[]> {
@@ -178,17 +180,17 @@ export class CalendarService {
   }
 
   /**
-   * Check if date is Saturday or Sunday and return DayType.
+   * Evaluate day of week in UTC+7 without local midnight timezone shift.
    */
   static getDayType(input: Date | string): { dayType: DayType; isWeekend: boolean; isSaturday: boolean; isSunday: boolean } {
-    let dateObj: Date;
+    let dayOfWeek: number;
     if (typeof input === 'string') {
       const [y, m, d] = input.substring(0, 10).split('-').map(Number);
-      dateObj = new Date(y, m - 1, d);
+      const date = new Date(Date.UTC(y, m - 1, d, 5, 0, 0));
+      dayOfWeek = date.getUTCDay();
     } else {
-      dateObj = input;
+      dayOfWeek = input.getDay();
     }
-    const dayOfWeek = dateObj.getDay(); // 0 = Sunday, 6 = Saturday
     const isSaturday = dayOfWeek === 6;
     const isSunday = dayOfWeek === 0;
     const dayType: DayType = isSunday ? 'SUNDAY' : isSaturday ? 'SATURDAY' : 'WEEKDAY';
@@ -259,26 +261,23 @@ export class CalendarService {
   }
 
   /**
-   * Full comprehensive classification of any given date according to 3 axes:
-   * A. OCCASION: 'PUBLIC_HOLIDAY' | 'SPECIAL_DAY' | 'NONE'
-   * B. DAY TYPE: 'WEEKDAY' | 'SATURDAY' | 'SUNDAY'
-   * C. WORK STATUS: 'WORKING_DAY' | 'REST_DAY' | 'MAKEUP_WORKING_DAY'
+   * Full comprehensive classification of any given date.
+   * Produces a normalized CalendarDay object separating events from calendar date representation.
    */
-  static classifyDay(input: Date | string, source: Holiday[] | Map<string, Holiday> = []): DayClassification {
+  static classifyDay(input: Date | string, source: Holiday[] | Map<string, Holiday> = []): CalendarDay {
     const dateStr = this.toDateStr(input);
     const todayStr = this.toDateStr(new Date());
     const isToday = dateStr === todayStr;
 
     const { dayType, isWeekend, isSaturday, isSunday } = this.getDayType(input);
-    const holiday = this.getHoliday(input, source);
+    const primaryEvent = this.getHoliday(input, source);
+    const events: Holiday[] = primaryEvent ? [primaryEvent] : [];
 
-    // Determine 3 axes
-    const occasion: OccasionType = holiday?.occasion || (holiday?.type === 'PUBLIC_HOLIDAY' ? 'PUBLIC_HOLIDAY' : holiday?.type === 'SPECIAL_DAY' ? 'SPECIAL_DAY' : 'NONE');
+    // Determine occasion and work status
+    const occasion: OccasionType = primaryEvent?.occasion || 'NONE';
     let workStatus: WorkStatus;
-    if (holiday?.workStatus) {
-      workStatus = holiday.workStatus;
-    } else if (holiday?.type === 'MAKEUP_WORKING_DAY') {
-      workStatus = 'MAKEUP_WORKING_DAY';
+    if (primaryEvent?.workStatus) {
+      workStatus = primaryEvent.workStatus;
     } else if (occasion === 'PUBLIC_HOLIDAY') {
       workStatus = 'REST_DAY';
     } else if (isWeekend) {
@@ -297,36 +296,29 @@ export class CalendarService {
 
     // Label formatting
     let label: string | undefined = undefined;
-    if (isPublicHoliday && holiday) {
-      label = `🇻🇳 ${holiday.name}`;
-    } else if (isSpecialDay && holiday) {
-      label = `⭐ ${holiday.name}`;
-    } else if (isMakeupWorkingDay && holiday) {
-      label = `💼 ${holiday.name}`;
+    if (isPublicHoliday && primaryEvent) {
+      label = `🇻🇳 ${primaryEvent.name}`;
+    } else if (isSpecialDay && primaryEvent) {
+      label = `⭐ ${primaryEvent.name}`;
+    } else if (isMakeupWorkingDay && primaryEvent) {
+      label = `💼 ${primaryEvent.name}`;
     }
 
-    // Lesson creation warning logic (Section 10 specifications):
-    // NORMAL: không warning
-    // WEEKEND: "Đây là ngày cuối tuần."
-    // PUBLIC_HOLIDAY: "Đây là ngày nghỉ lễ: {name}"
-    // WEEKEND + PUBLIC_HOLIDAY: "Đây là ngày cuối tuần và ngày nghỉ lễ: {name}"
-    // SPECIAL_DAY: "Ngày đặc biệt: {name}"
-    // MAKEUP_WORKING_DAY: "Đây là ngày làm bù theo lịch: {name}" (hoặc "Đây là ngày làm bù theo lịch.")
+    // Lesson creation warning logic (warning-only, non-blocking)
     let warningText: string | undefined = undefined;
     if (isMakeupWorkingDay) {
-      const cleanName = holiday?.name && !holiday.name.toLowerCase().startsWith('làm việc bù') && !holiday.name.toLowerCase().startsWith('làm bù')
-        ? holiday.name
+      const cleanName = primaryEvent?.name && !primaryEvent.name.toLowerCase().startsWith('làm việc bù') && !primaryEvent.name.toLowerCase().startsWith('làm bù')
+        ? primaryEvent.name
         : undefined;
       warningText = cleanName ? `Đây là ngày làm bù theo lịch: ${cleanName}` : 'Đây là ngày làm bù theo lịch.';
-    } else if (isHolidayWeekend && holiday) {
-      warningText = `Đây là ngày cuối tuần và ngày nghỉ lễ: ${holiday.name}`;
-    } else if (isPublicHoliday && holiday) {
-      warningText = `Đây là ngày nghỉ lễ: ${holiday.name}`;
-    } else if (isSpecialDay && holiday) {
-      // Must not be called "ngày nghỉ lễ"!
+    } else if (isHolidayWeekend && primaryEvent) {
+      warningText = `Đây là ngày cuối tuần và ngày nghỉ lễ: ${primaryEvent.name}`;
+    } else if (isPublicHoliday && primaryEvent) {
+      warningText = `Đây là ngày nghỉ lễ: ${primaryEvent.name}`;
+    } else if (isSpecialDay && primaryEvent) {
       warningText = isWeekend
-        ? `Đây là ngày cuối tuần. Ngày đặc biệt: ${holiday.name}`
-        : `Ngày đặc biệt: ${holiday.name}`;
+        ? `Đây là ngày cuối tuần. Ngày đặc biệt: ${primaryEvent.name}`
+        : `Ngày đặc biệt: ${primaryEvent.name}`;
     } else if (isWeekend) {
       warningText = 'Đây là ngày cuối tuần.';
     }
@@ -336,6 +328,9 @@ export class CalendarService {
       dayType,
       occasion,
       workStatus,
+      events,
+      primaryEvent,
+      holiday: primaryEvent,
       isNormal,
       isSaturday,
       isSunday,
@@ -346,7 +341,6 @@ export class CalendarService {
       isHoliday,
       isHolidayWeekend,
       isToday,
-      holiday,
       label,
       warningText,
     };

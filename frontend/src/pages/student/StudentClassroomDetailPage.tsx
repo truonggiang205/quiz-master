@@ -4,6 +4,7 @@ import { ClassroomService } from '../../services/classroom.service';
 import { Classroom } from '../../types/classroom';
 import { ArrowLeft, BookOpen, GraduationCap } from 'lucide-react';
 import { useUiStore } from '../../stores/ui.store';
+import { UserAvatar } from '../../components/common/UserAvatar';
 
 export const StudentClassroomDetailPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -61,7 +62,7 @@ export const StudentClassroomDetailPage: React.FC = () => {
           <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-100 dark:border-slate-800 p-5">
             <h3 className="text-lg font-bold text-slate-800 dark:text-white mb-4">Giáo viên phụ trách</h3>
             <div className="flex items-center gap-4 p-4 bg-teal-50 dark:bg-teal-900/20 rounded-xl border border-teal-100 dark:border-teal-900/30">
-              <img src={classroom.teacher?.avatar || `https://ui-avatars.com/api/?name=${classroom.teacher?.name}`} alt={classroom.teacher?.name} className="w-12 h-12 rounded-full" />
+              <UserAvatar user={classroom.teacher} size="lg" />
               <div>
                 <p className="font-bold text-slate-800 dark:text-slate-200">{classroom.teacher?.name}</p>
                 <p className="text-sm text-slate-500 dark:text-slate-400">{classroom.teacher?.email}</p>

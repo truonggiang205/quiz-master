@@ -85,6 +85,7 @@ export class ScheduleService {
     teacherId: string,
     query: {
       classId?: string;
+      studentId?: string;
       startDate?: string;
       endDate?: string;
       month?: string;
@@ -96,10 +97,22 @@ export class ScheduleService {
       .leftJoinAndSelect('lesson.class', 'class')
       .leftJoinAndSelect('lesson.participants', 'participants')
       .leftJoinAndSelect('participants.student', 'student')
+      .leftJoinAndSelect('lesson.learningLogs', 'learningLogs')
+      .leftJoinAndSelect('learningLogs.student', 'logStudent')
       .where('lesson.teacherId = :teacherId', { teacherId });
 
     if (query.classId) {
       qb.andWhere('lesson.classId = :classId', { classId: query.classId });
+    }
+
+    if (query.studentId) {
+      qb.andWhere(
+        '(participants.studentId = :studentId OR lesson.classId = :privateClassId)',
+        {
+          studentId: query.studentId,
+          privateClassId: `private-${query.studentId}`,
+        },
+      );
     }
 
     if (query.status) {

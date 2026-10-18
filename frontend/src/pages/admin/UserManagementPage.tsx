@@ -5,6 +5,7 @@ import { useUiStore } from '../../stores/ui.store';
 import { Badge } from '../../components/common/Badge';
 import { Search, Lock, Unlock, KeyRound } from 'lucide-react';
 import { formatUserName } from '../../utils/user.utils';
+import { UserAvatar } from '../../components/common/UserAvatar';
 
 export const UserManagementPage: React.FC = () => {
   const [users, setUsers] = useState<User[]>([]);
@@ -127,9 +128,12 @@ export const UserManagementPage: React.FC = () => {
                 users.map((u) => (
                   <tr key={u.id} className="hover:bg-slate-50 transition-colors">
                     <td className="px-6 py-4">
-                      <div className="flex flex-col">
-                        <span className="font-bold text-slate-900">{formatUserName(u)}</span>
-                        <span className="text-xs text-slate-500">{u.email}</span>
+                      <div className="flex items-center gap-3">
+                        <UserAvatar user={u} size="sm" />
+                        <div className="flex flex-col">
+                          <span className="font-bold text-slate-900">{formatUserName(u)}</span>
+                          <span className="text-xs text-slate-500">{u.email}</span>
+                        </div>
                       </div>
                     </td>
                     <td className="px-6 py-4">

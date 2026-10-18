@@ -1,5 +1,6 @@
 import React from 'react';
 import { Search } from 'lucide-react';
+import { UserAvatar } from '../common/UserAvatar';
 
 interface UnsubmittedStudent {
   id: string;
@@ -49,11 +50,7 @@ export const UnsubmittedTable: React.FC<UnsubmittedTableProps> = ({ students }) 
               <tr key={s.id} className="hover:bg-slate-50/60 dark:hover:bg-slate-700/30 transition-colors">
                 <td className="px-6 py-4">
                   <div className="flex items-center gap-3">
-                    <img
-                      src={s.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256'}
-                      alt={s.name}
-                      className="w-8 h-8 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
-                    />
+                    <UserAvatar user={s} size="sm" />
                     <div>
                       <div className="font-semibold text-slate-900 dark:text-white">
                         {s.name}

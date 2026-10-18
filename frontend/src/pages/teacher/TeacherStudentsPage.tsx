@@ -4,6 +4,7 @@ import { User } from '../../types/user';
 import { Mail, UserMinus, UserPlus, Search, GraduationCap } from 'lucide-react';
 import { useUiStore } from '../../stores/ui.store';
 import { Modal } from '../../components/common/Modal';
+import { UserAvatar } from '../../components/common/UserAvatar';
 
 export const TeacherStudentsPage: React.FC = () => {
   const [students, setStudents] = useState<User[]>([]);
@@ -111,7 +112,7 @@ export const TeacherStudentsPage: React.FC = () => {
             {students.map((student) => (
               <li key={student.id} className="p-4 flex items-center justify-between hover:bg-slate-50 dark:hover:bg-slate-800/50 transition-colors">
                 <div className="flex items-center gap-4">
-                  <img src={student.avatar || `https://ui-avatars.com/api/?name=${student.name}`} alt={student.name} className="w-10 h-10 rounded-full bg-slate-200" />
+                  <UserAvatar user={student} size="header" />
                   <div>
                     <p className="font-semibold text-slate-800 dark:text-slate-200">{student.name}</p>
                     <p className="text-sm text-slate-500 dark:text-slate-400">{student.email}</p>

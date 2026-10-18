@@ -27,6 +27,7 @@ import {
 import { TeachingService } from '../../services/teaching.service';
 import { ClassroomService } from '../../services/classroom.service';
 import { Modal } from '../../components/common/Modal';
+import { UserAvatar } from '../../components/common/UserAvatar';
 import { TimePicker24h } from '../../components/common/TimePicker24h';
 import { CalendarService } from '../../services/calendar.service';
 import type { Holiday } from '../../types/calendar';
@@ -244,6 +245,13 @@ export const TeacherSchedulePage: React.FC = () => {
       })
       .catch((err) => console.error('Failed to load classes', err));
   }, []);
+
+  // Sync formData.classId when selectedClassId filter changes
+  useEffect(() => {
+    if (selectedClassId && selectedClassId !== 'ALL') {
+      setFormData((prev) => ({ ...prev, classId: selectedClassId }));
+    }
+  }, [selectedClassId]);
 
   // Deterministic, 100% collision-free color mapping for each class / student:
   // 1. Gathers all unique class IDs.
@@ -537,6 +545,10 @@ export const TeacherSchedulePage: React.FC = () => {
       };
 
       await TeachingService.createLesson(payload);
+      if (formData.date) {
+        const [y, m, d] = formData.date.split('-').map(Number);
+        setCurrentDate(new Date(y, m - 1, d));
+      }
       setIsCreateModalOpen(false);
       fetchLessons();
     } catch (err: any) {
@@ -1503,9 +1515,12 @@ export const TeacherSchedulePage: React.FC = () => {
                 <div className="max-h-56 overflow-y-auto border border-slate-100 dark:border-slate-800 rounded-2xl divide-y divide-slate-100 dark:divide-slate-800">
                   {selectedLesson.participants?.map((p) => (
                     <div key={p.id} className="p-3 flex items-center justify-between">
-                      <div>
-                        <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{p.student?.name}</p>
-                        <p className="text-[11px] text-slate-400">{p.student?.email}</p>
+                      <div className="flex items-center gap-2.5">
+                        <UserAvatar user={p.student} size="sm" />
+                        <div>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{p.student?.name}</p>
+                          <p className="text-[11px] text-slate-400">{p.student?.email}</p>
+                        </div>
                       </div>
 
                       <div className="flex items-center gap-1.5">

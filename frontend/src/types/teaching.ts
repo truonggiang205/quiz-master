@@ -95,10 +95,12 @@ export interface LearningLog {
     id: string;
     name: string;
     email: string;
+    avatar?: string;
   };
   class?: {
     id: string;
     name: string;
+    subject?: string;
   };
   lesson?: {
     id: string;
@@ -106,6 +108,9 @@ export interface LearningLog {
     date: string;
     startTime: string;
     endTime: string;
+    feePerLesson?: number;
+    content?: string;
+    homework?: string;
   };
 }
 

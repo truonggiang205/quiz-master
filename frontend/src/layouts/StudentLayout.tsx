@@ -10,16 +10,18 @@ import { GlobalQuizTimer } from '../components/quiz/GlobalQuizTimer';
 export const StudentLayout: React.FC = () => {
   const location = useLocation();
   return (
-    <div className="min-h-[100dvh] bg-slate-50/50 dark:bg-slate-950 flex flex-col font-sans overflow-x-hidden w-full relative">
+    <div className="h-screen min-h-screen bg-slate-50/50 dark:bg-slate-950 flex flex-col font-sans w-full relative overflow-hidden">
       <Navbar showSidebarToggle={true} />
-      <div className="flex-1 flex max-w-7xl w-full mx-auto">
+      <div className="flex-1 flex w-full overflow-hidden relative">
         <Sidebar />
-        <main className="flex-1 p-4 md:p-8 overflow-y-auto min-w-0">
-          <AnimatePresence mode="wait" initial={false}>
-            <PageWrapper key={location.pathname}>
-              <Outlet />
-            </PageWrapper>
-          </AnimatePresence>
+        <main className="flex-1 p-4 md:p-8 overflow-y-auto min-w-0 h-full">
+          <div className="max-w-7xl mx-auto w-full">
+            <AnimatePresence mode="wait" initial={false}>
+              <PageWrapper key={location.pathname}>
+                <Outlet />
+              </PageWrapper>
+            </AnimatePresence>
+          </div>
         </main>
       </div>
       <GlobalQuizTimer />

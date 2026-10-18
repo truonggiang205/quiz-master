@@ -90,11 +90,12 @@ export const Sidebar: React.FC = () => {
 
       {/* Sidebar container */}
       <aside
-        className={`fixed md:sticky top-0 md:top-[calc(4rem+env(safe-area-inset-top))] left-0 z-[100] md:z-30 h-[100dvh] md:h-[calc(100dvh-4rem-env(safe-area-inset-top))] w-[80vw] max-w-[320px] md:w-64 bg-white/95 dark:bg-slate-900/95 backdrop-blur-2xl border-r border-white/50 dark:border-slate-800 rounded-r-[2rem] md:rounded-none transition-transform duration-300 ease-in-out flex flex-col justify-between p-5 md:p-4 pt-[max(2rem,env(safe-area-inset-top))] md:pt-4 pb-[max(2rem,env(safe-area-inset-bottom))] md:pb-4 shadow-[20px_0_40px_rgba(0,0,0,0.1)] md:shadow-[4px_0_24px_rgba(0,0,0,0.05)] ${
-          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0 md:w-20 lg:w-64'
+        className={`fixed md:relative top-0 left-0 z-[100] md:z-10 h-[100dvh] md:h-full w-[80vw] max-w-[320px] md:w-64 shrink-0 bg-white dark:bg-slate-900 border-r border-slate-200/80 dark:border-slate-800 transition-all duration-300 ease-in-out flex flex-col justify-between p-4 shadow-xl md:shadow-none ${
+          isSidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
         }`}
       >
-        <div>
+        {/* Navigation Scroll Area */}
+        <div className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 pr-1 -mr-1 space-y-1">
           {/* Mobile close button */}
           <div className="flex items-center justify-between md:hidden mb-4 pb-2 border-b border-slate-100 dark:border-slate-800">
             <span className="text-xs font-bold uppercase tracking-wider text-slate-400">
@@ -139,7 +140,7 @@ export const Sidebar: React.FC = () => {
                   {/* Icon with subtle scale on hover */}
                   <Icon className="relative z-10 w-5 h-5 flex-shrink-0 group-hover:scale-110 transition-transform duration-150" />
 
-                  <span className="relative z-10 truncate md:hidden lg:inline">{item.label}</span>
+                  <span className="relative z-10 truncate">{item.label}</span>
                 </NavLink>
               );
             })}
@@ -147,18 +148,20 @@ export const Sidebar: React.FC = () => {
         </div>
 
         {/* Bottom card preview */}
-        <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50/80 to-sky-50/80 dark:from-slate-800/80 dark:to-sky-950/30 border border-sky-100/60 dark:border-sky-900/40 md:hidden lg:block">
-          <div className="flex items-center gap-2 mb-1">
-            <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-            <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-              {isTeacher ? 'Chế độ Giáo Viên' : 'Chế độ Học Sinh'}
-            </span>
+        <div className="shrink-0 pt-3 mt-2 border-t border-slate-100 dark:border-slate-800">
+          <div className="p-3.5 rounded-2xl bg-gradient-to-br from-sky-50/80 to-sky-50/80 dark:from-slate-800/80 dark:to-sky-950/30 border border-sky-100/60 dark:border-sky-900/40">
+            <div className="flex items-center gap-2 mb-1">
+              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
+              <span className="text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                {isTeacher ? 'Chế độ Giáo Viên' : 'Chế độ Học Sinh'}
+              </span>
+            </div>
+            <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
+              {isTeacher
+                ? 'Tạo đề thi, theo dõi điểm số và xuất bản bài kiểm tra dễ dàng.'
+                : 'Tham gia làm bài thi trực tuyến với đồng hồ đếm ngược tự động.'}
+            </p>
           </div>
-          <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed">
-            {isTeacher
-              ? 'Tạo đề thi, theo dõi điểm số và xuất bản bài kiểm tra dễ dàng.'
-              : 'Tham gia làm bài thi trực tuyến với đồng hồ đếm ngược tự động.'}
-          </p>
         </div>
       </aside>
     </>

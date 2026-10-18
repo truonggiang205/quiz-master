@@ -123,15 +123,47 @@ export class ScoresService {
     return score;
   }
 
+  async ensureClass(teacherId: string, classId: string): Promise<ClassEntity | null> {
+    let classEntity = await this.classRepo.findOne({
+      where: { id: classId },
+      relations: { students: true },
+    });
+
+    if (!classEntity && classId.startsWith('private-')) {
+      const studentId = classId.replace('private-', '');
+      const student = await this.userRepo.findOne({ where: { id: studentId } });
+      if (student) {
+        const rawCode = `PV${studentId.replace(/\D/g, '').slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
+        classEntity = this.classRepo.create({
+          id: classId,
+          name: `Kèm 1-1: ${student.name}`,
+          subject: 'Gia sư cá nhân',
+          description: 'Lớp học riêng 1 kèm 1',
+          inviteCode: rawCode,
+          isPrivate: true,
+          teacherId,
+          students: [student],
+        });
+        await this.classRepo.save(classEntity);
+      }
+    } else if (classEntity && classId.startsWith('private-') && (!classEntity.students || classEntity.students.length === 0)) {
+      const studentId = classId.replace('private-', '');
+      const student = await this.userRepo.findOne({ where: { id: studentId } });
+      if (student) {
+        classEntity.students = [student];
+        await this.classRepo.save(classEntity);
+      }
+    }
+
+    return classEntity;
+  }
+
   async createScore(teacherId: string, dto: CreateScoreDto) {
     const maxScore = dto.maxScore ?? 10;
     this.validateScoreRange(dto.score, maxScore);
 
-    // Validate class ownership
-    const classEntity = await this.classRepo.findOne({
-      where: { id: dto.classId },
-      relations: { students: true },
-    });
+    // Validate class ownership (supporting both group & private 1-on-1 tutoring classes)
+    const classEntity = await this.ensureClass(teacherId, dto.classId);
 
     if (!classEntity) {
       throw new NotFoundException('Không tìm thấy lớp học');
@@ -200,10 +232,7 @@ export class ScoresService {
   }
 
   async getClassScoreMatrix(teacherId: string, classId: string): Promise<ScoreMatrixResponse> {
-    const classEntity = await this.classRepo.findOne({
-      where: { id: classId },
-      relations: { students: true },
-    });
+    const classEntity = await this.ensureClass(teacherId, classId);
 
     if (!classEntity) {
       throw new NotFoundException('Không tìm thấy lớp học');
@@ -337,10 +366,7 @@ export class ScoresService {
     classId: string,
     fileBuffer: Buffer,
   ): Promise<{ successCount: number; errors: string[] }> {
-    const classEntity = await this.classRepo.findOne({
-      where: { id: classId },
-      relations: { students: true },
-    });
+    const classEntity = await this.ensureClass(teacherId, classId);
 
     if (!classEntity) {
       throw new NotFoundException('Không tìm thấy lớp học');

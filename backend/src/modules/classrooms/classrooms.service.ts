@@ -270,9 +270,9 @@ export class ClassroomsService {
   }
 
   async getClassesForTeacher(teacherId: string) {
-    // 1. Get real group classrooms
+    // 1. Get real group classrooms (non-private)
     const groupClasses = await this.classRepo.find({
-      where: { teacherId },
+      where: { teacherId, isPrivate: false },
       order: { createdAt: 'DESC' },
       relations: { students: true },
     });
@@ -297,18 +297,32 @@ export class ClassroomsService {
     const privateClasses = await Promise.all(
       (teacher?.students ?? []).map(async (student) => {
         const classId = `private-${student.id}`;
+        let privateClass = await this.classRepo.findOne({
+          where: { id: classId },
+          relations: { students: true },
+        });
+
+        if (!privateClass) {
+          const rawCode = `PV${student.id.replace(/\D/g, '').slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
+          privateClass = this.classRepo.create({
+            id: classId,
+            name: `Kèm 1-1: ${student.name}`,
+            subject: 'Gia sư cá nhân',
+            description: 'Lớp học riêng 1 kèm 1',
+            inviteCode: rawCode,
+            teacherId,
+            isPrivate: true,
+            students: [student],
+          });
+          await this.classRepo.save(privateClass);
+        } else if (!privateClass.students || privateClass.students.length === 0) {
+          privateClass.students = [student];
+          await this.classRepo.save(privateClass);
+        }
+
         const stats = await this.calculateClassStats(classId, [student]);
         return {
-          id: classId,
-          name: `Kèm 1-1: ${student.name}`,
-          subject: 'Gia sư cá nhân',
-          description: 'Lớp học riêng 1 kèm 1',
-          inviteCode: '',
-          teacherId,
-          isPrivate: true,
-          students: [student],
-          createdAt: student.createdAt,
-          updatedAt: student.updatedAt,
+          ...privateClass,
           stats,
         };
       }),

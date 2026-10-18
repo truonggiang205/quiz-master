@@ -23,6 +23,7 @@ import {
   ChevronLeft,
   ChevronRight,
   ExternalLink,
+  DollarSign,
 } from 'lucide-react';
 import { ConfirmationModal } from '../../components/common/ConfirmationModal';
 import { quizService } from '../../services/quiz.service';
@@ -268,6 +269,20 @@ export const TeacherDashboard: React.FC = () => {
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-700/60 hover:bg-sky-700 text-white font-bold text-xs border border-white/20 transition-colors"
             >
               Quản lý đề thi
+            </Link>
+            <Link
+              to="/teacher/schedule"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs border border-white/20 transition-colors"
+            >
+              <Calendar className="w-4 h-4" />
+              Lịch dạy
+            </Link>
+            <Link
+              to="/teacher/tuition"
+              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-2xl bg-white/20 hover:bg-white/30 text-white font-bold text-xs border border-white/20 transition-colors"
+            >
+              <DollarSign className="w-4 h-4" />
+              Học phí
             </Link>
           </div>
         </div>

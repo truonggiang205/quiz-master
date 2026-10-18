@@ -18,6 +18,10 @@ import {
   Upload,
   Database,
   Bug,
+  Calendar,
+  DollarSign,
+  Award,
+  ClipboardList,
 } from 'lucide-react';
 
 export const Sidebar: React.FC = () => {
@@ -37,6 +41,10 @@ export const Sidebar: React.FC = () => {
 
   const teacherNavItems = [
     { label: 'Tổng Quan', path: '/teacher/dashboard', icon: Home },
+    { label: 'Lịch Dạy', path: '/teacher/schedule', icon: Calendar },
+    { label: 'Nhật Ký Học Tập', path: '/teacher/learning-logs', icon: ClipboardList },
+    { label: 'Học Phí', path: '/teacher/tuition', icon: DollarSign },
+    { label: 'Điểm Số', path: '/teacher/scores', icon: Award },
     { label: 'Học Sinh', path: '/teacher/students', icon: Users },
     { label: 'Khóa Học', path: '/teacher/classrooms', icon: BookOpen },
     { label: 'Kết quả ôn tập và kiểm tra', path: '/teacher/quizzes', icon: FileText },

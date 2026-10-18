@@ -27,7 +27,7 @@ test.describe('Teacher Module — Sidebar Navigation Refactor', () => {
     await expect(aside.locator('.bg-gradient-to-br')).toHaveCount(0);
   });
 
-  test('TC-SIDEBAR-002: Kiểm tra cấu trúc phân nhóm (Sections & Headers)', async ({ page }) => {
+  test('TC-SIDEBAR-002: Kiểm tra cấu trúc phân nhóm (Sections & Headers) và Footer Báo lỗi', async ({ page }) => {
     const aside = page.locator('aside');
 
     // Section headers
@@ -53,41 +53,45 @@ test.describe('Teacher Module — Sidebar Navigation Refactor', () => {
     await expect(aside.getByRole('link', { name: 'Ngân hàng đề' })).toBeVisible();
     await expect(aside.getByRole('link', { name: 'Phúc Khảo' })).toBeVisible();
 
-    // Footer items
+    // Footer items (Đã đổi label thành "Báo lỗi")
     await expect(aside.getByRole('link', { name: 'Hồ sơ cá nhân' })).toBeVisible();
-    await expect(aside.getByRole('link', { name: 'Báo Cáo Lỗi' })).toBeVisible();
+    await expect(aside.getByRole('link', { name: 'Báo lỗi' })).toBeVisible();
   });
 
-  test('TC-SIDEBAR-003: Gom nhóm Bài thi & Kiểm tra (Expandable / Collapsible)', async ({ page }) => {
+  test('TC-SIDEBAR-003: Gom nhóm Bài thi & Kiểm tra (Submenu 5 mục chức năng liên quan)', async ({ page }) => {
     const aside = page.locator('aside');
 
     // Group button "Bài thi & Kiểm tra"
     const quizGroupBtn = aside.locator('button', { hasText: 'Bài thi & Kiểm tra' });
     await expect(quizGroupBtn).toBeVisible();
 
-    // "Tạo bài thi mới" KHÔNG được là top-level link độc lập
-    // Ban đầu khi ở dashboard (/teacher/dashboard), nếu group chưa mở, click mở
-    if (!(await aside.getByRole('link', { name: 'Tạo bài thi mới' }).isVisible())) {
+    // Mở submenu
+    if (!(await aside.getByRole('link', { name: 'Tạo bài thi' }).isVisible())) {
       await quizGroupBtn.click();
     }
 
-    // Sau khi mở, 2 sub-items phải hiển thị
-    const quizListLink = aside.getByRole('link', { name: 'Danh sách bài thi' });
-    const createQuizLink = aside.getByRole('link', { name: 'Tạo bài thi mới' });
+    // Sau khi mở, đủ 5 sub-items chức năng liên quan
+    const quizLink = aside.getByRole('link', { name: 'Bài thi', exact: true });
+    const createQuizLink = aside.getByRole('link', { name: 'Tạo bài thi' });
+    const bankLink = aside.getByRole('link', { name: 'Ngân hàng đề' }).first();
+    const resultsLink = aside.getByRole('link', { name: 'Kết quả ôn tập' });
+    const appealLink = aside.getByRole('link', { name: 'Phúc khảo' }).first();
 
-    await expect(quizListLink).toBeVisible();
+    await expect(quizLink).toBeVisible();
     await expect(createQuizLink).toBeVisible();
+    await expect(bankLink).toBeVisible();
+    await expect(resultsLink).toBeVisible();
+    await expect(appealLink).toBeVisible();
 
     // Không còn chuỗi text truncate "Kết quả ôn tập và kiểm..."
     await expect(aside.locator('text=Kết quả ôn tập và kiểm...')).toHaveCount(0);
 
-    // Click "Danh sách bài thi" điều hướng về /teacher/quizzes
-    await quizListLink.click();
+    // Click "Bài thi" điều hướng về /teacher/quizzes
+    await quizLink.click();
     await expect(page).toHaveURL(/\/teacher\/quizzes/);
 
     // Group vẫn giữ trạng thái mở khi ở route /teacher/quizzes
-    await expect(aside.getByRole('link', { name: 'Danh sách bài thi' })).toBeVisible();
-    await expect(aside.getByRole('link', { name: 'Tạo bài thi mới' })).toBeVisible();
+    await expect(aside.getByRole('link', { name: 'Bài thi', exact: true })).toBeVisible();
   });
 
   test('TC-SIDEBAR-004: Điều hướng chính xác qua các menu và kiểm tra Active State', async ({ page }) => {
@@ -119,34 +123,42 @@ test.describe('Teacher Module — Sidebar Navigation Refactor', () => {
     await aside.getByRole('link', { name: 'Học Phí' }).click();
     await expect(page).toHaveURL(/\/teacher\/tuition/);
 
-    // 7. Ngân hàng đề
-    await aside.getByRole('link', { name: 'Ngân hàng đề' }).click();
-    await expect(page).toHaveURL(/\/teacher\/bank/);
-
-    // 8. Phúc Khảo
-    await aside.getByRole('link', { name: 'Phúc Khảo' }).click();
-    await expect(page).toHaveURL(/\/teacher\/appeals/);
+    // 7. Báo lỗi
+    await aside.getByRole('link', { name: 'Báo lỗi' }).click();
+    await expect(page).toHaveURL(/\/teacher\/report/);
   });
 
-  test('TC-SIDEBAR-005: Responsive Collapse & Tooltip khi thu gọn', async ({ page }) => {
+  test('TC-SIDEBAR-005: Responsive Collapse, Tooltip khi hover và Logo Header', async ({ page }) => {
     const toggleBtn = page.locator('#sidebar-toggle-btn');
     if (await toggleBtn.isVisible()) {
-      // Bấm nút thu gọn
+      // 1. Kiểm tra logo đang hiển thị ở expanded mode
+      const logoLink = page.locator('header a[href="/"]');
+      await expect(logoLink).toBeVisible();
+
+      // 2. Bấm nút thu gọn
       await toggleBtn.click();
       await page.waitForTimeout(300);
 
       const aside = page.locator('aside');
-      // Sidebar thu nhỏ còn w-20
+      // Sidebar thu nhỏ còn md:w-20
       await expect(aside).toHaveClass(/md:w-20/);
 
-      // Icon vẫn có title tooltip
-      const scheduleLink = aside.locator('a[title="Lịch Dạy"]');
-      await expect(scheduleLink).toBeVisible();
+      // Logo ở header được ẩn trong collapsed mode để không bị crop hay lệch
+      await expect(logoLink).toHaveClass(/hidden/);
 
-      // Bấm mở lại
+      // 3. Hover vào icon "Lịch Dạy" hiển thị floating tooltip bên phải
+      const scheduleIconLink = aside.locator('a[href="/teacher/schedule"]');
+      await scheduleIconLink.hover();
+
+      const tooltip = page.locator('div[role="tooltip"]');
+      await expect(tooltip).toBeVisible();
+      await expect(tooltip).toHaveText('Lịch Dạy');
+
+      // 4. Bấm mở lại sidebar
       await toggleBtn.click();
       await page.waitForTimeout(300);
       await expect(aside).toHaveClass(/md:w-64/);
+      await expect(logoLink).not.toHaveClass(/hidden/);
     }
   });
 });

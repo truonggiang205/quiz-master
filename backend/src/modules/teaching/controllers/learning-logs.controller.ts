@@ -77,13 +77,12 @@ export class LearningLogsController {
     @Query('studentId') studentId: string | undefined,
     @Res() res: Response,
   ) {
-    const buffer = await this.logsService.exportLogsToExcel(user.id, {
+    const { buffer, filename } = await this.logsService.exportLogsToExcel(user.id, {
       month,
       classId,
       studentId,
     });
 
-    const filename = `NhatKyHocTap_${month || 'All'}.xlsx`;
     res.setHeader(
       'Content-Type',
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',

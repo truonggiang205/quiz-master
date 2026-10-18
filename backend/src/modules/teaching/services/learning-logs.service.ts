@@ -16,7 +16,20 @@ import {
   BulkSaveLogsDto,
 } from '../dto/learning-log.dto.js';
 import * as xlsx from 'xlsx';
+import ExcelJS from 'exceljs';
 import crypto from 'crypto';
+import {
+  ExcelExportMetadata,
+  ExcelLogItem,
+  createReportHeader,
+  createStudentSummary,
+  createTableHeader,
+  styleDataRows,
+  createTableFooter,
+  createSummarySheet,
+  setupPrintSettings,
+  generateExportFilename,
+} from '../utils/learning-logs-excel.util.js';
 
 @Injectable()
 export class LearningLogsService {
@@ -174,28 +187,131 @@ export class LearningLogsService {
   async exportLogsToExcel(
     teacherId: string,
     query: { month?: string; classId?: string; studentId?: string },
-  ): Promise<Buffer> {
+  ): Promise<{ buffer: Buffer; filename: string }> {
     const logs = await this.getLogs(teacherId, query);
 
-    const rows = logs.map((l, index) => ({
-      STT: index + 1,
-      'Học sinh': l.student?.name || '',
-      Email: l.student?.email || '',
-      'Lớp học': l.class?.name || '',
-      'Ngày học': l.lesson?.date || '',
-      'Giờ học': l.lesson ? `${l.lesson.startTime} - ${l.lesson.endTime}` : '',
-      'Nội dung buổi học': l.content || '',
-      'BTVN giao về': l.homework || '',
-      'Ý thức học tập': l.attitude || '',
-      'Nhận xét của giáo viên': l.comment || '',
-      'Ghi chú thêm': l.note || '',
+    // Sort logs chronologically by date and start time ascending
+    logs.sort((a, b) => {
+      const cmpDate = (a.lesson?.date || '').localeCompare(b.lesson?.date || '');
+      if (cmpDate !== 0) return cmpDate;
+      return (a.lesson?.startTime || '').localeCompare(b.lesson?.startTime || '');
+    });
+
+    const teacher = await this.userRepo.findOne({ where: { id: teacherId } });
+    const student = query.studentId
+      ? await this.userRepo.findOne({ where: { id: query.studentId } })
+      : logs[0]?.student;
+    const classObj = query.classId
+      ? await this.classRepo.findOne({ where: { id: query.classId } })
+      : logs[0]?.class;
+
+    const totalFee = logs.reduce((acc, l) => acc + (l.lesson?.feePerLesson || 0), 0);
+    const uniqueStudentIds = new Set(logs.map((l) => l.studentId));
+    const isSingleStudent = !!query.studentId || uniqueStudentIds.size <= 1;
+
+    const metadata: ExcelExportMetadata = {
+      teacherName: teacher?.name || 'Giáo viên phụ trách',
+      studentName: student?.name || (logs[0]?.student?.name ?? 'Tất cả học sinh'),
+      studentEmail: student?.email || logs[0]?.student?.email,
+      className: classObj?.name || logs[0]?.class?.name || (isSingleStudent ? 'Kèm 1-1' : 'Tổng hợp các lớp'),
+      month: query.month,
+      totalFee,
+      isSingleStudent,
+    };
+
+    const logItems: ExcelLogItem[] = logs.map((l, index) => ({
+      index: index + 1,
+      studentName: l.student?.name || '',
+      studentEmail: l.student?.email || '',
+      className: l.class?.name || '',
+      date: l.lesson?.date || '',
+      startTime: l.lesson?.startTime || '',
+      endTime: l.lesson?.endTime || '',
+      fee: l.lesson?.feePerLesson || 0,
+      content: l.content || '',
+      homework: l.homework || '',
+      attitude: l.attitude || 'Tốt',
+      comment: l.comment || '',
+      note: l.note || '',
     }));
 
-    const worksheet = xlsx.utils.json_to_sheet(rows);
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'NhatKyHocTap');
+    const workbook = new ExcelJS.Workbook();
+    workbook.creator = 'QuizMaster';
+    workbook.lastModifiedBy = teacher?.name || 'QuizMaster';
+    workbook.created = new Date();
+    workbook.modified = new Date();
+    workbook.title = 'Nhật ký học tập';
+    workbook.subject = 'Báo cáo tiến trình học tập chuyên nghiệp';
+    workbook.company = 'QuizMaster Education';
 
-    return xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    // Sheet 1: Nhật ký học tập
+    const sheet1 = workbook.addWorksheet('Nhật ký học tập', {
+      views: [{ showGridLines: true }],
+    });
+
+    const lastColLetter = isSingleStudent ? 'H' : 'J';
+
+    createReportHeader(
+      sheet1,
+      'NHẬT KÝ HỌC TẬP',
+      'Theo dõi tiến trình học tập, bài tập và nhận xét qua từng buổi học',
+      lastColLetter,
+    );
+
+    createStudentSummary(sheet1, metadata, logs.length, lastColLetter);
+
+    const headers = isSingleStudent
+      ? [
+          { title: 'STT', width: 7, col: 1 },
+          { title: 'NGÀY', width: 14, col: 2 },
+          { title: 'THỜI GIAN', width: 18, col: 3 },
+          { title: 'NỘI DUNG HỌC TẬP', width: 44, col: 4 },
+          { title: 'BTVN', width: 15, col: 5 },
+          { title: 'Ý THỨC', width: 15, col: 6 },
+          { title: 'NHẬN XÉT', width: 44, col: 7 },
+          { title: 'GHI CHÚ', width: 32, col: 8 },
+        ]
+      : [
+          { title: 'STT', width: 7, col: 1 },
+          { title: 'HỌC SINH', width: 24, col: 2 },
+          { title: 'LỚP HỌC', width: 18, col: 3 },
+          { title: 'NGÀY', width: 14, col: 4 },
+          { title: 'THỜI GIAN', width: 18, col: 5 },
+          { title: 'NỘI DUNG HỌC TẬP', width: 42, col: 6 },
+          { title: 'BTVN', width: 15, col: 7 },
+          { title: 'Ý THỨC', width: 15, col: 8 },
+          { title: 'NHẬN XÉT', width: 42, col: 9 },
+          { title: 'GHI CHÚ', width: 30, col: 10 },
+        ];
+
+    createTableHeader(sheet1, headers, 9);
+
+    const lastRow = styleDataRows(sheet1, logItems, isSingleStudent, 10);
+
+    if (logs.length > 0) {
+      createTableFooter(sheet1, lastRow, isSingleStudent, logs.length, totalFee);
+    }
+
+    setupPrintSettings(
+      sheet1,
+      metadata.month ? ` — Tháng ${metadata.month}` : '',
+      lastColLetter,
+    );
+
+    // Sheet 2: Tổng quan (Executive Education Summary Dashboard)
+    createSummarySheet(workbook, metadata, logItems);
+
+    const filename = generateExportFilename(
+      metadata.isSingleStudent,
+      metadata.studentName,
+      metadata.month,
+    );
+
+    const arrayBuffer = await workbook.xlsx.writeBuffer();
+    return {
+      buffer: Buffer.from(arrayBuffer),
+      filename,
+    };
   }
 
   async importLogsFromExcel(
@@ -208,7 +324,25 @@ export class LearningLogsService {
       throw new BadRequestException('File Excel không có dữ liệu');
     }
 
-    const rawRows: any[] = xlsx.utils.sheet_to_json(workbook.Sheets[sheetName]);
+    const sheet = workbook.Sheets[sheetName];
+    // Auto-detect header row index (row 0 to 15)
+    let headerRowIdx = 0;
+    const rawData: any[][] = xlsx.utils.sheet_to_json(sheet, { header: 1 });
+    for (let r = 0; r < Math.min(rawData.length, 15); r++) {
+      const row = rawData[r];
+      if (Array.isArray(row)) {
+        const hasDate = row.some((cell: any) => typeof cell === 'string' && /ngày/i.test(cell));
+        const hasContentOrEmail = row.some(
+          (cell: any) => typeof cell === 'string' && (/email|học sinh|nội dung|btvn/i.test(cell)),
+        );
+        if (hasDate && hasContentOrEmail) {
+          headerRowIdx = r;
+          break;
+        }
+      }
+    }
+
+    const rawRows: any[] = xlsx.utils.sheet_to_json(sheet, { range: headerRowIdx });
     if (!rawRows || rawRows.length === 0) {
       throw new BadRequestException('Sheet đầu tiên của file Excel trống');
     }

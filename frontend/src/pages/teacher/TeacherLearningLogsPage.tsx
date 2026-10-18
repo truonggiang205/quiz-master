@@ -593,10 +593,38 @@ export const TeacherLearningLogsPage: React.FC = () => {
         classId: selectedClassId !== 'ALL' ? selectedClassId : undefined,
         studentId: activeStudent?.id || undefined,
       });
+
+      // Format clean, standardized filename according to education report standards
+      let fileName = 'NhatKyHocTap';
+      if (activeStudent?.name) {
+        const cleanName = activeStudent.name
+          .normalize('NFD')
+          .replace(/[\u0300-\u036f]/g, '')
+          .replace(/đ/g, 'd')
+          .replace(/Đ/g, 'D')
+          .replace(/[^a-zA-Z0-9_-]/g, '_')
+          .replace(/_+/g, '_')
+          .replace(/^_|_$/g, '');
+        if (cleanName) {
+          fileName += `_${cleanName}`;
+        }
+        if (selectedMonth) {
+          fileName += `_${selectedMonth}`;
+        }
+      } else if (selectedMonth && /^\d{4}-\d{2}$/.test(selectedMonth)) {
+        const [y, m] = selectedMonth.split('-');
+        fileName += `_Thang${m}_${y}`;
+      } else if (selectedMonth) {
+        fileName += `_${selectedMonth}`;
+      } else {
+        fileName += '_TatCa';
+      }
+      fileName += '.xlsx';
+
       const url = window.URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `NhatKyHocTap_${activeStudent?.name ? activeStudent.name.replace(/\s+/g, '_') : 'TatCa'}_${selectedMonth}.xlsx`;
+      a.download = fileName;
       document.body.appendChild(a);
       a.click();
       window.URL.revokeObjectURL(url);

@@ -67,6 +67,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
         onError={() => setHasError(true)}
         style={customStyle}
         className={`rounded-full object-cover shrink-0 select-none ${sizeClasses} ${ringClasses} ${className}`}
+        crossOrigin="anonymous"
         loading="lazy"
       />
     );

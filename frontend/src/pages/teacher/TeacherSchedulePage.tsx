@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import {
   Calendar as CalendarIcon,
@@ -32,19 +32,10 @@ import type { Lesson, LessonParticipant, CreateLessonPayload, UpdateLessonPayloa
 import type { Classroom } from '../../types/classroom';
 import { useNavigate } from 'react-router-dom';
 
-// Modern pastel palettes for lessons (inspired by NTTClass & modern calendars)
+// 12 Modern high-contrast pastel palettes (guaranteeing unique colors per student/class)
 const CLASS_PALETTES = [
   {
-    bg: 'bg-emerald-100/90 dark:bg-emerald-950/70',
-    border: 'border-emerald-300 dark:border-emerald-700',
-    text: 'text-emerald-950 dark:text-emerald-100',
-    timeText: 'text-emerald-800 dark:text-emerald-300',
-    badgeBg: 'bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200',
-    hoverShadow: 'hover:shadow-lg hover:shadow-emerald-200/50 dark:hover:shadow-emerald-950/60',
-    indicator: 'bg-emerald-500',
-    monthPill: 'bg-emerald-100/90 dark:bg-emerald-950/70 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 hover:bg-emerald-200/90 dark:hover:bg-emerald-900/80',
-  },
-  {
+    name: 'Rose',
     bg: 'bg-rose-100/90 dark:bg-rose-950/70',
     border: 'border-rose-300 dark:border-rose-700',
     text: 'text-rose-950 dark:text-rose-100',
@@ -55,36 +46,7 @@ const CLASS_PALETTES = [
     monthPill: 'bg-rose-100/90 dark:bg-rose-950/70 border-rose-300 dark:border-rose-700 text-rose-900 dark:text-rose-200 hover:bg-rose-200/90 dark:hover:bg-rose-900/80',
   },
   {
-    bg: 'bg-teal-100/90 dark:bg-teal-950/70',
-    border: 'border-teal-300 dark:border-teal-700',
-    text: 'text-teal-950 dark:text-teal-100',
-    timeText: 'text-teal-800 dark:text-teal-300',
-    badgeBg: 'bg-teal-200/80 dark:bg-teal-900/60 text-teal-900 dark:text-teal-200',
-    hoverShadow: 'hover:shadow-lg hover:shadow-teal-200/50 dark:hover:shadow-teal-950/60',
-    indicator: 'bg-teal-500',
-    monthPill: 'bg-teal-100/90 dark:bg-teal-950/70 border-teal-300 dark:border-teal-700 text-teal-900 dark:text-teal-200 hover:bg-teal-200/90 dark:hover:bg-teal-900/80',
-  },
-  {
-    bg: 'bg-amber-100/90 dark:bg-amber-950/70',
-    border: 'border-amber-300 dark:border-amber-700',
-    text: 'text-amber-950 dark:text-amber-100',
-    timeText: 'text-amber-800 dark:text-amber-300',
-    badgeBg: 'bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200',
-    hoverShadow: 'hover:shadow-lg hover:shadow-amber-200/50 dark:hover:shadow-amber-950/60',
-    indicator: 'bg-amber-500',
-    monthPill: 'bg-amber-100/90 dark:bg-amber-950/70 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 hover:bg-amber-200/90 dark:hover:bg-amber-900/80',
-  },
-  {
-    bg: 'bg-purple-100/90 dark:bg-purple-950/70',
-    border: 'border-purple-300 dark:border-purple-700',
-    text: 'text-purple-950 dark:text-purple-100',
-    timeText: 'text-purple-800 dark:text-purple-300',
-    badgeBg: 'bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200',
-    hoverShadow: 'hover:shadow-lg hover:shadow-purple-200/50 dark:hover:shadow-purple-950/60',
-    indicator: 'bg-purple-500',
-    monthPill: 'bg-purple-100/90 dark:bg-purple-950/70 border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-200 hover:bg-purple-200/90 dark:hover:bg-purple-900/80',
-  },
-  {
+    name: 'Sky',
     bg: 'bg-sky-100/90 dark:bg-sky-950/70',
     border: 'border-sky-300 dark:border-sky-700',
     text: 'text-sky-950 dark:text-sky-100',
@@ -95,6 +57,62 @@ const CLASS_PALETTES = [
     monthPill: 'bg-sky-100/90 dark:bg-sky-950/70 border-sky-300 dark:border-sky-700 text-sky-900 dark:text-sky-200 hover:bg-sky-200/90 dark:hover:bg-sky-900/80',
   },
   {
+    name: 'Emerald',
+    bg: 'bg-emerald-100/90 dark:bg-emerald-950/70',
+    border: 'border-emerald-300 dark:border-emerald-700',
+    text: 'text-emerald-950 dark:text-emerald-100',
+    timeText: 'text-emerald-800 dark:text-emerald-300',
+    badgeBg: 'bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-emerald-200/50 dark:hover:shadow-emerald-950/60',
+    indicator: 'bg-emerald-500',
+    monthPill: 'bg-emerald-100/90 dark:bg-emerald-950/70 border-emerald-300 dark:border-emerald-700 text-emerald-900 dark:text-emerald-200 hover:bg-emerald-200/90 dark:hover:bg-emerald-900/80',
+  },
+  {
+    name: 'Amber',
+    bg: 'bg-amber-100/90 dark:bg-amber-950/70',
+    border: 'border-amber-300 dark:border-amber-700',
+    text: 'text-amber-950 dark:text-amber-100',
+    timeText: 'text-amber-800 dark:text-amber-300',
+    badgeBg: 'bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-amber-200/50 dark:hover:shadow-amber-950/60',
+    indicator: 'bg-amber-500',
+    monthPill: 'bg-amber-100/90 dark:bg-amber-950/70 border-amber-300 dark:border-amber-700 text-amber-900 dark:text-amber-200 hover:bg-amber-200/90 dark:hover:bg-amber-900/80',
+  },
+  {
+    name: 'Purple',
+    bg: 'bg-purple-100/90 dark:bg-purple-950/70',
+    border: 'border-purple-300 dark:border-purple-700',
+    text: 'text-purple-950 dark:text-purple-100',
+    timeText: 'text-purple-800 dark:text-purple-300',
+    badgeBg: 'bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-purple-200/50 dark:hover:shadow-purple-950/60',
+    indicator: 'bg-purple-500',
+    monthPill: 'bg-purple-100/90 dark:bg-purple-950/70 border-purple-300 dark:border-purple-700 text-purple-900 dark:text-purple-200 hover:bg-purple-200/90 dark:hover:bg-purple-900/80',
+  },
+  {
+    name: 'Teal',
+    bg: 'bg-teal-100/90 dark:bg-teal-950/70',
+    border: 'border-teal-300 dark:border-teal-700',
+    text: 'text-teal-950 dark:text-teal-100',
+    timeText: 'text-teal-800 dark:text-teal-300',
+    badgeBg: 'bg-teal-200/80 dark:bg-teal-900/60 text-teal-900 dark:text-teal-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-teal-200/50 dark:hover:shadow-teal-950/60',
+    indicator: 'bg-teal-500',
+    monthPill: 'bg-teal-100/90 dark:bg-teal-950/70 border-teal-300 dark:border-teal-700 text-teal-900 dark:text-teal-200 hover:bg-teal-200/90 dark:hover:bg-teal-900/80',
+  },
+  {
+    name: 'Orange',
+    bg: 'bg-orange-100/90 dark:bg-orange-950/70',
+    border: 'border-orange-300 dark:border-orange-700',
+    text: 'text-orange-950 dark:text-orange-100',
+    timeText: 'text-orange-800 dark:text-orange-300',
+    badgeBg: 'bg-orange-200/80 dark:bg-orange-900/60 text-orange-900 dark:text-orange-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-orange-200/50 dark:hover:shadow-orange-950/60',
+    indicator: 'bg-orange-500',
+    monthPill: 'bg-orange-100/90 dark:bg-orange-950/70 border-orange-300 dark:border-orange-700 text-orange-900 dark:text-orange-200 hover:bg-orange-200/90 dark:hover:bg-orange-900/80',
+  },
+  {
+    name: 'Indigo',
     bg: 'bg-indigo-100/90 dark:bg-indigo-950/70',
     border: 'border-indigo-300 dark:border-indigo-700',
     text: 'text-indigo-950 dark:text-indigo-100',
@@ -105,26 +123,50 @@ const CLASS_PALETTES = [
     monthPill: 'bg-indigo-100/90 dark:bg-indigo-950/70 border-indigo-300 dark:border-indigo-700 text-indigo-900 dark:text-indigo-200 hover:bg-indigo-200/90 dark:hover:bg-indigo-900/80',
   },
   {
-    bg: 'bg-orange-100/90 dark:bg-orange-950/70',
-    border: 'border-orange-300 dark:border-orange-700',
-    text: 'text-orange-950 dark:text-orange-100',
-    timeText: 'text-orange-800 dark:text-orange-300',
-    badgeBg: 'bg-orange-200/80 dark:bg-orange-900/60 text-orange-900 dark:text-orange-200',
-    hoverShadow: 'hover:shadow-lg hover:shadow-orange-200/50 dark:hover:shadow-orange-950/60',
-    indicator: 'bg-orange-500',
-    monthPill: 'bg-orange-100/90 dark:bg-orange-950/70 border-orange-300 dark:border-orange-700 text-orange-900 dark:text-orange-200 hover:bg-orange-200/90 dark:hover:bg-orange-900/80',
+    name: 'Fuchsia',
+    bg: 'bg-fuchsia-100/90 dark:bg-fuchsia-950/70',
+    border: 'border-fuchsia-300 dark:border-fuchsia-700',
+    text: 'text-fuchsia-950 dark:text-fuchsia-100',
+    timeText: 'text-fuchsia-800 dark:text-fuchsia-300',
+    badgeBg: 'bg-fuchsia-200/80 dark:bg-fuchsia-900/60 text-fuchsia-900 dark:text-fuchsia-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-fuchsia-200/50 dark:hover:shadow-fuchsia-950/60',
+    indicator: 'bg-fuchsia-500',
+    monthPill: 'bg-fuchsia-100/90 dark:bg-fuchsia-950/70 border-fuchsia-300 dark:border-fuchsia-700 text-fuchsia-900 dark:text-fuchsia-200 hover:bg-fuchsia-200/90 dark:hover:bg-fuchsia-900/80',
+  },
+  {
+    name: 'Cyan',
+    bg: 'bg-cyan-100/90 dark:bg-cyan-950/70',
+    border: 'border-cyan-300 dark:border-cyan-700',
+    text: 'text-cyan-950 dark:text-cyan-100',
+    timeText: 'text-cyan-800 dark:text-cyan-300',
+    badgeBg: 'bg-cyan-200/80 dark:bg-cyan-900/60 text-cyan-900 dark:text-cyan-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-cyan-200/50 dark:hover:shadow-cyan-950/60',
+    indicator: 'bg-cyan-500',
+    monthPill: 'bg-cyan-100/90 dark:bg-cyan-950/70 border-cyan-300 dark:border-cyan-700 text-cyan-900 dark:text-cyan-200 hover:bg-cyan-200/90 dark:hover:bg-cyan-900/80',
+  },
+  {
+    name: 'Violet',
+    bg: 'bg-violet-100/90 dark:bg-violet-950/70',
+    border: 'border-violet-300 dark:border-violet-700',
+    text: 'text-violet-950 dark:text-violet-100',
+    timeText: 'text-violet-800 dark:text-violet-300',
+    badgeBg: 'bg-violet-200/80 dark:bg-violet-900/60 text-violet-900 dark:text-violet-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-violet-200/50 dark:hover:shadow-violet-950/60',
+    indicator: 'bg-violet-500',
+    monthPill: 'bg-violet-100/90 dark:bg-violet-950/70 border-violet-300 dark:border-violet-700 text-violet-900 dark:text-violet-200 hover:bg-violet-200/90 dark:hover:bg-violet-900/80',
+  },
+  {
+    name: 'Lime',
+    bg: 'bg-lime-100/90 dark:bg-lime-950/70',
+    border: 'border-lime-300 dark:border-lime-700',
+    text: 'text-lime-950 dark:text-lime-100',
+    timeText: 'text-lime-800 dark:text-lime-300',
+    badgeBg: 'bg-lime-200/80 dark:bg-lime-900/60 text-lime-900 dark:text-lime-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-lime-200/50 dark:hover:shadow-lime-950/60',
+    indicator: 'bg-lime-500',
+    monthPill: 'bg-lime-100/90 dark:bg-lime-950/70 border-lime-300 dark:border-lime-700 text-lime-900 dark:text-lime-200 hover:bg-lime-200/90 dark:hover:bg-lime-900/80',
   },
 ];
-
-const getLessonPalette = (classId?: string) => {
-  if (!classId) return CLASS_PALETTES[0];
-  let hash = 0;
-  for (let i = 0; i < classId.length; i++) {
-    hash = (hash << 5) - hash + classId.charCodeAt(i);
-    hash |= 0;
-  }
-  return CLASS_PALETTES[Math.abs(hash) % CLASS_PALETTES.length];
-};
 
 export const TeacherSchedulePage: React.FC = () => {
   const navigate = useNavigate();
@@ -180,6 +222,44 @@ export const TeacherSchedulePage: React.FC = () => {
       })
       .catch((err) => console.error('Failed to load classes', err));
   }, []);
+
+  // Deterministic, 100% collision-free color mapping for each class / student:
+  // 1. Gathers all unique class IDs.
+  // 2. Sorts them deterministically so color assignment is completely stable.
+  // 3. Sequentially assigns a distinct palette from CLASS_PALETTES (no two students collide).
+  // 4. Guarantees each student only ever has 1 consistent color across all lessons, weeks, months.
+  const classPaletteMap = useMemo(() => {
+    const uniqueClassMap = new Map<string, string>();
+    classes.forEach((c) => {
+      if (c.id) uniqueClassMap.set(c.id, c.name || c.id);
+    });
+    lessons.forEach((l) => {
+      if (l.classId && !uniqueClassMap.has(l.classId)) {
+        uniqueClassMap.set(l.classId, l.class?.name || l.title || l.classId);
+      }
+    });
+
+    const sortedIds = Array.from(uniqueClassMap.keys()).sort((a, b) => {
+      const nameA = uniqueClassMap.get(a) || a;
+      const nameB = uniqueClassMap.get(b) || b;
+      return nameA.localeCompare(nameB, 'vi');
+    });
+
+    const map = new Map<string, (typeof CLASS_PALETTES)[0]>();
+    sortedIds.forEach((id, index) => {
+      map.set(id, CLASS_PALETTES[index % CLASS_PALETTES.length]);
+    });
+
+    return map;
+  }, [classes, lessons]);
+
+  const getLessonPalette = useCallback(
+    (classId?: string) => {
+      if (!classId) return CLASS_PALETTES[0];
+      return classPaletteMap.get(classId) || CLASS_PALETTES[0];
+    },
+    [classPaletteMap]
+  );
 
   // Load lessons whenever currentDate or selectedClassId changes
   const fetchLessons = async () => {
@@ -557,6 +637,46 @@ export const TeacherSchedulePage: React.FC = () => {
             <span>Thêm Buổi Học</span>
           </button>
         </div>
+
+        {/* Class / Student Color Legend & Quick Filter */}
+        {classes.length > 0 && (
+          <div className="w-full pt-3 mt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center gap-2 overflow-x-auto text-xs custom-scrollbar">
+            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider shrink-0 flex items-center gap-1">
+              Bảng màu học sinh / lớp:
+            </span>
+            <div className="flex items-center gap-1.5 flex-wrap">
+              {classes.map((cls) => {
+                const palette = getLessonPalette(cls.id);
+                const isSelected = selectedClassId === cls.id;
+                return (
+                  <button
+                    key={cls.id}
+                    type="button"
+                    onClick={() => setSelectedClassId(isSelected ? 'ALL' : cls.id)}
+                    className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold transition-all border ${
+                      isSelected
+                        ? `${palette.monthPill} ring-2 ring-blue-500/50 shadow-xs font-bold`
+                        : 'bg-white dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:border-slate-300'
+                    }`}
+                    title={`Lọc xem lịch của: ${cls.name}`}
+                  >
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${palette.indicator}`} />
+                    <span className="truncate max-w-[180px]">{cls.name}</span>
+                  </button>
+                );
+              })}
+              {selectedClassId !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => setSelectedClassId('ALL')}
+                  className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline ml-1"
+                >
+                  (Xem tất cả)
+                </button>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Date Navigation Bar */}

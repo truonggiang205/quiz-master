@@ -28,6 +28,8 @@ import { TeachingService } from '../../services/teaching.service';
 import { ClassroomService } from '../../services/classroom.service';
 import { Modal } from '../../components/common/Modal';
 import { TimePicker24h } from '../../components/common/TimePicker24h';
+import { CalendarService } from '../../services/calendar.service';
+import type { Holiday } from '../../types/calendar';
 import type { Lesson, LessonParticipant, CreateLessonPayload, UpdateLessonPayload } from '../../types/teaching';
 import type { Classroom } from '../../types/classroom';
 import { useNavigate } from 'react-router-dom';
@@ -210,6 +212,26 @@ export const TeacherSchedulePage: React.FC = () => {
   });
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
+
+  // Holidays state from shared CalendarService
+  const [holidays, setHolidays] = useState<Holiday[]>([]);
+
+  // Pre-computed O(1) lookup map (handles multi-day ranges)
+  const holidayMap = useMemo(() => {
+    return CalendarService.createHolidayMap(holidays);
+  }, [holidays]);
+
+  // Date classification for Create form (Weekend / Holiday / Special Day warnings)
+  const formDateCls = useMemo(() => {
+    return CalendarService.classifyDay(formData.date, holidayMap);
+  }, [formData.date, holidayMap]);
+
+  useEffect(() => {
+    const year = currentDate.getFullYear();
+    CalendarService.getHolidays({ year })
+      .then((data) => setHolidays(data))
+      .catch((err) => console.error('Failed to load holidays:', err));
+  }, [currentDate]);
 
   // Load teacher's classes
   useEffect(() => {
@@ -679,8 +701,8 @@ export const TeacherSchedulePage: React.FC = () => {
         )}
       </div>
 
-      {/* Date Navigation Bar */}
-      <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-slate-900 rounded-2xl px-6 py-4 shadow-sm border border-slate-200/80 dark:border-slate-800 gap-3">
+      {/* Date Navigation Bar & Legend */}
+      <div className="flex flex-col lg:flex-row items-center justify-between bg-white dark:bg-slate-900 rounded-2xl px-6 py-3.5 shadow-sm border border-slate-200/80 dark:border-slate-800 gap-3">
         <div className="flex items-center gap-2">
           <button
             onClick={handlePrev}
@@ -702,11 +724,43 @@ export const TeacherSchedulePage: React.FC = () => {
           >
             <ChevronRight className="w-5 h-5" />
           </button>
+          <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white capitalize ml-2">{periodLabel}</h2>
         </div>
 
-        <h2 className="text-lg font-bold text-slate-900 dark:text-white capitalize">{periodLabel}</h2>
+        {/* Calendar Legend */}
+        <div className="flex items-center gap-3 text-xs text-slate-500 dark:text-slate-400 flex-wrap">
+          <div className="flex items-center gap-1.5">
+            <span className="w-2.5 h-2.5 rounded-full bg-blue-600" />
+            <span className="font-medium text-slate-700 dark:text-slate-300">Hôm nay</span>
+          </div>
+          <span className="text-slate-200 dark:text-slate-700">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-slate-100 dark:bg-slate-800 border border-slate-300 dark:border-slate-600" />
+            <span>Thứ 7</span>
+          </div>
+          <span className="text-slate-200 dark:text-slate-700">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="w-3 h-3 rounded-xs bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800" />
+            <span className="text-blue-600 dark:text-blue-400 font-medium">Chủ nhật</span>
+          </div>
+          <span className="text-slate-200 dark:text-slate-700">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs">🇻🇳</span>
+            <span className="font-semibold text-rose-700 dark:text-rose-300">Ngày nghỉ lễ</span>
+          </div>
+          <span className="text-slate-200 dark:text-slate-700">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs">💼</span>
+            <span className="font-semibold text-sky-700 dark:text-sky-300">Ngày làm bù</span>
+          </div>
+          <span className="text-slate-200 dark:text-slate-700">|</span>
+          <div className="flex items-center gap-1.5">
+            <span className="text-xs">⭐</span>
+            <span className="font-medium text-indigo-600 dark:text-indigo-400">Ngày đặc biệt</span>
+          </div>
+        </div>
 
-        <div className="text-xs text-slate-500 dark:text-slate-400 hidden sm:block">
+        <div className="text-xs text-slate-500 dark:text-slate-400 hidden xl:block">
           Tổng số: <span className="font-semibold text-blue-600 dark:text-blue-400">{lessons.length}</span> buổi học
         </div>
       </div>
@@ -779,25 +833,83 @@ export const TeacherSchedulePage: React.FC = () => {
 
                 {/* 7 Day Headers */}
                 {weekDays.map((day) => {
-                  const isToday = day.dateStr === new Date().toISOString().substring(0, 10);
+                  const dayCls = CalendarService.classifyDay(day.dateStr, holidayMap);
+                  const isToday = dayCls.isToday;
                   const dayFee = dayFeeMap[day.dateStr] || 0;
+
+                  // Visual background for header
+                  let headerBg = 'bg-slate-50/70 dark:bg-slate-800/50';
+                  if (isToday) {
+                    headerBg = 'bg-blue-50/80 dark:bg-blue-950/40 ring-1 ring-inset ring-blue-500/40';
+                  } else if (dayCls.isMakeupWorkingDay) {
+                    headerBg = 'bg-sky-50/70 dark:bg-sky-950/30 border-b-2 border-b-sky-400 dark:border-b-sky-600';
+                  } else if (dayCls.isHolidayWeekend) {
+                    headerBg = 'bg-rose-50/80 dark:bg-rose-950/40 border-b-2 border-b-rose-400 dark:border-b-rose-600';
+                  } else if (dayCls.isPublicHoliday) {
+                    headerBg = 'bg-rose-50/70 dark:bg-rose-950/30 border-b-2 border-b-rose-400 dark:border-b-rose-600';
+                  } else if (dayCls.isSpecialDay) {
+                    headerBg = 'bg-indigo-50/40 dark:bg-indigo-950/20';
+                  } else if (dayCls.isSunday) {
+                    headerBg = 'bg-blue-50/40 dark:bg-blue-950/25';
+                  } else if (dayCls.isSaturday) {
+                    headerBg = 'bg-slate-100/60 dark:bg-slate-800/40';
+                  }
+
+                  let dayTitleColor = 'text-slate-700 dark:text-slate-300';
+                  if (isToday) {
+                    dayTitleColor = 'text-blue-600 dark:text-blue-400 font-bold';
+                  } else if (dayCls.isSunday) {
+                    dayTitleColor = 'text-blue-700 dark:text-blue-300 font-bold';
+                  } else if (dayCls.isSaturday) {
+                    dayTitleColor = 'text-slate-700 dark:text-slate-200 font-semibold';
+                  }
 
                   return (
                     <div
                       key={day.dateStr}
-                      className={`p-3 text-center border-r border-slate-100 dark:border-slate-800 last:border-r-0 transition-colors ${
-                        isToday ? 'bg-blue-50/60 dark:bg-blue-950/30' : ''
-                      }`}
+                      className={`p-3 text-center border-r border-slate-100 dark:border-slate-800 last:border-r-0 transition-colors ${headerBg}`}
                     >
-                      <div className="flex items-center justify-center gap-1.5">
-                        <span className={`text-xs font-bold uppercase tracking-wider ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                      <div className="flex items-center justify-center gap-1.5 flex-wrap">
+                        <span className={`text-xs uppercase tracking-wider ${dayTitleColor}`}>
                           {day.dayName} · {day.date.getDate()}/{day.date.getMonth() + 1}
                         </span>
                         {isToday && (
                           <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
                         )}
                       </div>
-                      <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+
+                      {/* Holiday / Special Day / Makeup Working Day indicator in header */}
+                      {dayCls.holiday && (
+                        <div className="mt-1 flex items-center justify-center">
+                          {dayCls.isSpecialDay ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-indigo-800 dark:text-indigo-200 bg-indigo-100/80 dark:bg-indigo-900/50 px-1.5 py-0.5 rounded-md truncate max-w-[120px] shadow-2xs border border-indigo-200/80 dark:border-indigo-800/80"
+                              title={dayCls.holiday.name}
+                            >
+                              <span className="text-[10px] leading-none">⭐</span>
+                              <span className="truncate">{dayCls.holiday.name}</span>
+                            </span>
+                          ) : dayCls.isMakeupWorkingDay ? (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-sky-800 dark:text-sky-200 bg-sky-100/90 dark:bg-sky-900/60 px-1.5 py-0.5 rounded-md truncate max-w-[120px] shadow-2xs border border-sky-200/80 dark:border-sky-800/80"
+                              title={dayCls.holiday.name}
+                            >
+                              <span className="text-[10px] leading-none">💼</span>
+                              <span className="truncate">{dayCls.holiday.name}</span>
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1 text-[10px] font-semibold text-rose-800 dark:text-rose-200 bg-rose-100/90 dark:bg-rose-900/60 px-1.5 py-0.5 rounded-md truncate max-w-[120px] shadow-2xs border border-rose-200/80 dark:border-rose-800/80"
+                              title={dayCls.holiday.name}
+                            >
+                              <span className="text-[11px] leading-none">🇻🇳</span>
+                              <span className="truncate">{dayCls.holiday.name}</span>
+                            </span>
+                          )}
+                        </div>
+                      )}
+
+                      <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-1">
                         {dayFee > 0 ? (
                           <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
                             {dayFee.toLocaleString()} đ
@@ -840,15 +952,30 @@ export const TeacherSchedulePage: React.FC = () => {
 
                 {/* 7 Day Columns */}
                 {weekDays.map((day) => {
-                  const isToday = day.dateStr === new Date().toISOString().substring(0, 10);
+                  const dayCls = CalendarService.classifyDay(day.dateStr, holidayMap);
+                  const isToday = dayCls.isToday;
                   const dayLessons = lessons.filter((l) => l.date === day.dateStr);
+
+                  // Column body background tint
+                  let colBg = '';
+                  if (isToday) {
+                    colBg = 'bg-blue-50/[0.08] dark:bg-blue-950/[0.08]';
+                  } else if (dayCls.isMakeupWorkingDay) {
+                    colBg = 'bg-sky-50/15 dark:bg-sky-950/10';
+                  } else if (dayCls.isHolidayWeekend) {
+                    colBg = 'bg-rose-50/20 dark:bg-rose-950/15';
+                  } else if (dayCls.isPublicHoliday) {
+                    colBg = 'bg-rose-50/15 dark:bg-rose-950/10';
+                  } else if (dayCls.isSunday) {
+                    colBg = 'bg-blue-50/20 dark:bg-blue-950/15';
+                  } else if (dayCls.isSaturday) {
+                    colBg = 'bg-slate-50/50 dark:bg-slate-900/25';
+                  }
 
                   return (
                     <div
                       key={day.dateStr}
-                      className={`relative border-r border-slate-100 dark:border-slate-800 last:border-r-0 ${
-                        isToday ? 'bg-blue-50/[0.08] dark:bg-blue-950/[0.08]' : ''
-                      }`}
+                      className={`relative border-r border-slate-100 dark:border-slate-800 last:border-r-0 ${colBg}`}
                     >
                       {/* Horizontal Grid lines for each hour */}
                       {hours.map((hour) => (
@@ -957,50 +1084,95 @@ export const TeacherSchedulePage: React.FC = () => {
       ) : (
         /* MONTH VIEW */
         <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden">
-          <div className="grid grid-cols-7 border-b border-slate-100 dark:border-slate-800 text-center text-xs font-bold uppercase tracking-wider text-slate-400 py-3 bg-slate-50/50 dark:bg-slate-800/40">
-            <div>Thứ 2</div>
-            <div>Thứ 3</div>
-            <div>Thứ 4</div>
-            <div>Thứ 5</div>
-            <div>Thứ 6</div>
-            <div>Thứ 7</div>
-            <div>Chủ Nhật</div>
+          <div className="grid grid-cols-7 border-b border-slate-100 dark:border-slate-800 text-center text-xs font-bold uppercase tracking-wider py-3 bg-slate-50/50 dark:bg-slate-800/40">
+            <div className="text-slate-400">Thứ 2</div>
+            <div className="text-slate-400">Thứ 3</div>
+            <div className="text-slate-400">Thứ 4</div>
+            <div className="text-slate-400">Thứ 5</div>
+            <div className="text-slate-400">Thứ 6</div>
+            <div className="text-slate-500 dark:text-slate-400 bg-slate-100/50 dark:bg-slate-800/60 rounded-lg mx-1 py-0.5">Thứ 7</div>
+            <div className="text-blue-600 dark:text-blue-400 bg-blue-50/50 dark:bg-blue-950/40 rounded-lg mx-1 py-0.5">Chủ Nhật</div>
           </div>
 
           <div className="grid grid-cols-7 divide-x divide-y divide-slate-100 dark:divide-slate-800">
             {monthMatrix.map((cell, idx) => {
               const cellLessons = lessons.filter((l) => l.date === cell.dateStr);
-              const isToday = cell.dateStr === new Date().toISOString().substring(0, 10);
+              const cellCls = CalendarService.classifyDay(cell.dateStr, holidayMap);
+              const isToday = cellCls.isToday;
+
+              // Cell background tint
+              let cellBg = cell.isCurrentMonth
+                ? 'bg-white dark:bg-slate-900'
+                : 'bg-slate-50/40 dark:bg-slate-950/40 text-slate-300 dark:text-slate-600';
+
+              if (cell.isCurrentMonth) {
+                if (cellCls.isMakeupWorkingDay) {
+                  cellBg = 'bg-sky-50/20 dark:bg-sky-950/15';
+                } else if (cellCls.isHolidayWeekend) {
+                  cellBg = 'bg-rose-50/30 dark:bg-rose-950/25';
+                } else if (cellCls.isPublicHoliday) {
+                  cellBg = 'bg-rose-50/25 dark:bg-rose-950/20';
+                } else if (cellCls.isSunday) {
+                  cellBg = 'bg-blue-50/20 dark:bg-blue-950/15';
+                } else if (cellCls.isSaturday) {
+                  cellBg = 'bg-slate-50/60 dark:bg-slate-800/25';
+                }
+              }
+
+              let dateTextColor = cell.isCurrentMonth
+                ? 'text-slate-700 dark:text-slate-300'
+                : 'text-slate-400 dark:text-slate-600';
+              if (isToday) {
+                dateTextColor = 'bg-blue-600 text-white';
+              } else if (cell.isCurrentMonth && cellCls.isSunday) {
+                dateTextColor = 'text-blue-600 dark:text-blue-400 font-bold';
+              } else if (cell.isCurrentMonth && cellCls.isSaturday) {
+                dateTextColor = 'text-slate-700 dark:text-slate-200 font-bold';
+              }
 
               return (
                 <div
                   key={idx}
-                  className={`min-h-[110px] p-2 flex flex-col justify-between transition-colors ${
-                    cell.isCurrentMonth
-                      ? 'bg-white dark:bg-slate-900'
-                      : 'bg-slate-50/40 dark:bg-slate-950/40 text-slate-300 dark:text-slate-600'
-                  } ${isToday ? 'ring-2 ring-inset ring-blue-500' : ''}`}
+                  className={`min-h-[110px] p-2 flex flex-col justify-between transition-colors ${cellBg} ${
+                    isToday ? 'ring-2 ring-inset ring-blue-500' : ''
+                  }`}
                 >
-                  <div className="flex items-center justify-between">
-                    <span
-                      className={`text-xs font-bold rounded-full w-6 h-6 flex items-center justify-center ${
-                        isToday
-                          ? 'bg-blue-600 text-white'
-                          : cell.isCurrentMonth
-                          ? 'text-slate-700 dark:text-slate-300'
-                          : 'text-slate-400 dark:text-slate-600'
-                      }`}
-                    >
-                      {cell.date.getDate()}
-                    </span>
-                    {cellLessons.length > 0 && (
-                      <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
-                        {cellLessons.length}
+                  <div>
+                    <div className="flex items-center justify-between">
+                      <span
+                        className={`text-xs rounded-full w-6 h-6 flex items-center justify-center font-bold ${dateTextColor}`}
+                      >
+                        {cell.date.getDate()}
                       </span>
+                      {cellLessons.length > 0 && (
+                        <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded-full">
+                          {cellLessons.length}
+                        </span>
+                      )}
+                    </div>
+
+                    {/* Holiday / Special Day / Makeup Working Day badge in Month View */}
+                    {cellCls.holiday && (
+                      <div
+                        className={`mt-1 flex items-center gap-1 text-[10px] font-semibold px-1.5 py-0.5 rounded-md truncate max-w-full shadow-2xs border ${
+                          cellCls.isSpecialDay
+                            ? 'text-indigo-800 dark:text-indigo-200 bg-indigo-100/80 dark:bg-indigo-900/50 border-indigo-200/80 dark:border-indigo-800/80'
+                            : cellCls.isMakeupWorkingDay
+                            ? 'text-sky-800 dark:text-sky-200 bg-sky-100/90 dark:bg-sky-900/60 border-sky-200/80 dark:border-sky-800/80'
+                            : 'text-rose-800 dark:text-rose-200 bg-rose-100/90 dark:bg-rose-900/60 border-rose-200/80 dark:border-rose-800/80'
+                        }`}
+                        title={cellCls.holiday.name}
+                      >
+                        <span className="shrink-0 text-[11px] leading-none">
+                          {cellCls.isSpecialDay ? '⭐' : cellCls.isMakeupWorkingDay ? '💼' : '🇻🇳'}
+                        </span>
+                        <span className="truncate">{cellCls.holiday.name}</span>
+                      </div>
                     )}
                   </div>
 
-                  <div className="space-y-1 my-1 overflow-y-auto max-h-[72px] pr-0.5 custom-scrollbar">
+                  {/* Lessons list */}
+                  <div className="space-y-1 my-1 overflow-y-auto max-h-[64px] pr-0.5 custom-scrollbar">
                     {cellLessons.map((l) => {
                       const palette = getLessonPalette(l.classId);
                       return (
@@ -1131,6 +1303,45 @@ export const TeacherSchedulePage: React.FC = () => {
                     />
                   </div>
                 </div>
+
+                {/* Special Day / Holiday / Weekend / Makeup Warning Banner */}
+                {formDateCls.warningText && (
+                  <div
+                    className={`p-3 rounded-xl text-xs flex items-start gap-2.5 shadow-2xs border ${
+                      formDateCls.isMakeupWorkingDay
+                        ? 'bg-sky-50 dark:bg-sky-950/40 border-sky-200 dark:border-sky-800/60 text-sky-800 dark:text-sky-200'
+                        : formDateCls.isPublicHoliday
+                        ? 'bg-rose-50 dark:bg-rose-950/40 border-rose-200 dark:border-rose-800/60 text-rose-800 dark:text-rose-200'
+                        : formDateCls.isSpecialDay && !formDateCls.isHoliday
+                        ? 'bg-indigo-50/80 dark:bg-indigo-950/40 border-indigo-200/80 dark:border-indigo-800/60 text-indigo-900 dark:text-indigo-200'
+                        : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/60 text-amber-800 dark:text-amber-200'
+                    }`}
+                  >
+                    <AlertCircle
+                      className={`w-4 h-4 shrink-0 mt-0.5 ${
+                        formDateCls.isMakeupWorkingDay
+                          ? 'text-sky-600 dark:text-sky-400'
+                          : formDateCls.isPublicHoliday
+                          ? 'text-rose-600 dark:text-rose-400'
+                          : formDateCls.isSpecialDay && !formDateCls.isHoliday
+                          ? 'text-indigo-600 dark:text-indigo-400'
+                          : 'text-amber-600 dark:text-amber-400'
+                      }`}
+                    />
+                    <div className="space-y-0.5">
+                      <p className="font-semibold">{formDateCls.warningText}</p>
+                      <p className="text-[11px] opacity-80">
+                        {formDateCls.isMakeupWorkingDay
+                          ? 'Lịch làm việc bù chính thức - Buổi học vẫn diễn ra bình thường.'
+                          : formDateCls.isPublicHoliday
+                          ? 'Thông báo ngày nghỉ lễ - Bạn vẫn có toàn quyền tạo buổi học bình thường nếu có nhu cầu dạy.'
+                          : formDateCls.isSpecialDay && !formDateCls.isHoliday
+                          ? 'Thông tin ngày kỷ niệm - Buổi học vẫn diễn ra bình thường theo lịch.'
+                          : 'Thông báo ngày cuối tuần - Bạn vẫn có toàn quyền tạo buổi học bình thường.'}
+                      </p>
+                    </div>
+                  </div>
+                )}
 
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">

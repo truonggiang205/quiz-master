@@ -1,17 +1,12 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
-import { motion, AnimatePresence } from 'framer-motion';
 import {
   FileText,
   Plus,
-  Filter,
   Download,
   Upload,
   Search,
   Calendar,
-  User,
-  BookOpen,
   Edit2,
-  CheckCircle2,
   AlertCircle,
   X,
   FileSpreadsheet,
@@ -22,10 +17,11 @@ import {
   ChevronUp,
   Settings2,
   Clock,
-  CreditCard,
-  Eye,
-  Check,
-  Copy,
+  Sparkles,
+  BookOpen,
+  MessageSquare,
+  StickyNote,
+  CheckSquare,
 } from 'lucide-react';
 import html2canvas from 'html2canvas';
 import { TeachingService } from '../../services/teaching.service';
@@ -55,13 +51,13 @@ interface ColumnPreferences {
 }
 
 const CLASS_ACCENT_COLORS = [
-  '#F4B8C8', // pastel pink
-  '#93C5FD', // blue
-  '#A7F3D0', // emerald
-  '#DDD6FE', // violet
-  '#FDE68A', // amber
-  '#BAE6FD', // sky
-  '#FBCFE8', // rose
+  '#6366F1', // indigo
+  '#3B82F6', // blue
+  '#10B981', // emerald
+  '#8B5CF6', // purple
+  '#F59E0B', // amber
+  '#EC4899', // pink
+  '#06B6D4', // cyan
 ];
 
 export const TeacherLearningLogsPage: React.FC = () => {
@@ -122,6 +118,22 @@ export const TeacherLearningLogsPage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState<string | null>(null);
 
+  // Responsive layout state (breakpoint at lg: 1024px)
+  const [isMobile, setIsMobile] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      return window.innerWidth < 1024;
+    }
+    return false;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobile(window.innerWidth < 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Excel Import State
   const [importFile, setImportFile] = useState<File | null>(null);
   const [importing, setImporting] = useState(false);
@@ -147,7 +159,6 @@ export const TeacherLearningLogsPage: React.FC = () => {
     ClassroomService.getTeacherClasses()
       .then((data) => {
         setClasses(data);
-        // Expand all classes by default
         const initExpanded: Record<string, boolean> = {};
         data.forEach((c) => {
           initExpanded[c.id] = true;
@@ -290,7 +301,6 @@ export const TeacherLearningLogsPage: React.FC = () => {
         const matchesEmail = student.email?.toLowerCase().includes(query);
         const matchesSubject = student.subject?.toLowerCase().includes(query);
         const matchesClass = student.className.toLowerCase().includes(query);
-        // Also check if any log of this student contains query
         const matchesLog = logs.some(
           (l) =>
             l.studentId === student.id &&
@@ -312,7 +322,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
         map.set(student.classId, {
           classId: student.classId,
           className: student.className,
-          accentColor: student.accentColor || '#93C5FD',
+          accentColor: student.accentColor || '#6366F1',
           students: [],
         });
       }
@@ -509,12 +519,11 @@ export const TeacherLearningLogsPage: React.FC = () => {
         studentId: activeStudent?.id || sessionOrLog.log?.studentId || '',
         content: existingLog?.content || sessionOrLog.content || '',
         homework: existingLog?.homework || sessionOrLog.homework || '',
-        attitude: existingLog?.attitude || sessionOrLog.attitude !== '-' ? sessionOrLog.attitude : 'Tốt',
+        attitude: existingLog?.attitude || (sessionOrLog.attitude !== '-' ? sessionOrLog.attitude : 'Tốt'),
         comment: existingLog?.comment || sessionOrLog.comment || '',
         note: existingLog?.note || sessionOrLog.note || '',
       });
     } else if (sessionOrLog && sessionOrLog.id) {
-      // standard LearningLog object
       setSelectedLog(sessionOrLog);
       setEditFormData({
         lessonId: sessionOrLog.lessonId,
@@ -683,10 +692,10 @@ export const TeacherLearningLogsPage: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. MASTER-DETAIL TWO-COLUMN LAYOUT */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+      {/* 2. MASTER-DETAIL TWO-COLUMN LAYOUT (Strict minmax(0, 1fr) prevents container overflow) */}
+      <div className="grid grid-cols-1 lg:grid-cols-[300px_minmax(0,1fr)] gap-6 items-start">
         {/* LEFT COLUMN: ROSTER ACCORDION PANEL */}
-        <aside className="lg:col-span-4 xl:col-span-3.5 bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
+        <aside className="w-full bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm space-y-4">
           {/* Search box (Placeholder matches Playwright test) */}
           <div className="relative">
             <Search className="w-4 h-4 text-slate-400 absolute left-3 top-2.5" />
@@ -727,7 +736,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
           </div>
 
           {/* Class Groups Accordion List */}
-          <div className="space-y-3 pt-1 max-h-[620px] overflow-y-auto pr-1">
+          <div className="space-y-2.5 pt-1 max-h-[620px] overflow-y-auto pr-1">
             {classGroups.length === 0 ? (
               <div className="text-center py-8 text-xs text-slate-400">
                 Không tìm thấy học sinh nào.
@@ -753,7 +762,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
                     >
                       <div className="flex items-center gap-2 min-w-0">
                         <span
-                          className="w-2.5 h-2.5 rounded-full shrink-0 shadow-sm"
+                          className="w-2.5 h-2.5 rounded-full shrink-0 shadow-xs"
                           style={{ backgroundColor: group.accentColor }}
                         />
                         <span className="text-xs font-bold text-slate-800 dark:text-slate-200 truncate">
@@ -784,7 +793,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
                               onClick={() => setActiveStudentId(student.id)}
                               className={`w-full flex items-center gap-2.5 px-2.5 py-2 rounded-xl text-left transition-all relative ${
                                 isActive
-                                  ? 'bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/60 shadow-sm'
+                                  ? 'bg-indigo-50/90 dark:bg-indigo-950/60 border border-indigo-200/80 dark:border-indigo-800/60 shadow-xs'
                                   : 'hover:bg-slate-100/80 dark:hover:bg-slate-800/50 border border-transparent'
                               }`}
                             >
@@ -792,10 +801,10 @@ export const TeacherLearningLogsPage: React.FC = () => {
                                 <div className="absolute left-0 top-1.5 bottom-1.5 w-1 bg-indigo-600 rounded-r" />
                               )}
                               <div
-                                className={`w-8 h-8 rounded-full text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-sm ${
+                                className={`w-8 h-8 rounded-full text-white font-extrabold text-xs flex items-center justify-center shrink-0 shadow-xs ${
                                   isActive
-                                    ? 'bg-gradient-to-br from-indigo-600 to-purple-600'
-                                    : 'bg-gradient-to-br from-slate-400 to-slate-600 dark:from-slate-600 dark:to-slate-700'
+                                    ? 'bg-indigo-600'
+                                    : 'bg-slate-400 dark:bg-slate-600'
                                 }`}
                               >
                                 {getInitials(student.name)}
@@ -827,9 +836,9 @@ export const TeacherLearningLogsPage: React.FC = () => {
         </aside>
 
         {/* RIGHT COLUMN: MAIN JOURNAL CARD */}
-        <main className="lg:col-span-8 xl:col-span-8.5 space-y-4">
-          {/* Top Selection Toolbar (Horizontal student strip & action buttons) */}
-          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-sm">
+        <main className="w-full min-w-0 space-y-4">
+          {/* Top Selection Toolbar: Navigation strip & structured functional actions */}
+          <div className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-2.5 flex flex-col md:flex-row md:items-center justify-between gap-3 shadow-xs">
             {/* Horizontal student tabs with prev/next navigation */}
             <div className="flex items-center gap-1.5 min-w-0 flex-1">
               <button
@@ -851,7 +860,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
                       onClick={() => setActiveStudentId(s.id)}
                       className={`flex items-center gap-1.5 px-2.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 ${
                         isActive
-                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-sm'
+                          ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900 shadow-xs'
                           : 'bg-slate-100/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200/80 dark:hover:bg-slate-700'
                       }`}
                     >
@@ -874,8 +883,8 @@ export const TeacherLearningLogsPage: React.FC = () => {
               </button>
             </div>
 
-            {/* Action Buttons */}
-            <div className="flex items-center gap-2 self-end md:self-auto shrink-0">
+            {/* Action Buttons with clear hierarchy */}
+            <div className="flex items-center gap-2 self-end md:self-auto shrink-0 flex-wrap">
               {/* Column Visibility Picker Dropdown */}
               <div className="relative" ref={columnPickerRef}>
                 <button
@@ -922,29 +931,29 @@ export const TeacherLearningLogsPage: React.FC = () => {
                 )}
               </div>
 
-              {/* Export Image Button */}
+              {/* Tertiary: Export Image */}
               <button
                 type="button"
                 onClick={handleGenerateImage}
                 disabled={isExportingImage || !activeStudent}
-                className="px-3.5 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white text-xs font-semibold flex items-center gap-1.5 shadow-sm transition-colors disabled:opacity-50"
+                className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors disabled:opacity-50"
                 title="Xuất ảnh nhật ký để gửi phụ huynh"
               >
-                <ImageIcon className="w-3.5 h-3.5" />
+                <ImageIcon className="w-3.5 h-3.5 text-slate-500" />
                 <span>{isExportingImage ? 'Đang xuất...' : 'Xuất ảnh'}</span>
               </button>
 
-              {/* Export Excel Button */}
+              {/* Secondary: Export Excel */}
               <button
                 type="button"
                 onClick={handleExportExcel}
                 className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
-                <Download className="w-3.5 h-3.5 text-emerald-500" />
+                <Download className="w-3.5 h-3.5 text-emerald-600" />
                 <span>Xuất Excel</span>
               </button>
 
-              {/* Import Excel Button */}
+              {/* Secondary: Import Excel */}
               <button
                 type="button"
                 onClick={() => {
@@ -954,11 +963,11 @@ export const TeacherLearningLogsPage: React.FC = () => {
                 }}
                 className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 text-xs font-semibold flex items-center gap-1.5 transition-colors"
               >
-                <Upload className="w-3.5 h-3.5 text-blue-500" />
+                <Upload className="w-3.5 h-3.5 text-indigo-600" />
                 <span>Nhập Excel</span>
               </button>
 
-              {/* Ghi nhật ký Button */}
+              {/* Primary Action: Ghi nhật ký */}
               <button
                 type="button"
                 onClick={() => handleOpenEdit()}
@@ -970,37 +979,39 @@ export const TeacherLearningLogsPage: React.FC = () => {
             </div>
           </div>
 
-          {/* MAIN CAPTURE CARD (Contains Navy Banner + Log Table) */}
+          {/* MAIN CAPTURE CARD (Modern Education Dashboard / Soft Editorial UI) */}
           <div
             id="logExportCapture"
             ref={captureRef}
-            className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden"
+            className="w-full bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-sm overflow-hidden"
           >
-            {/* Navy Blue Gradient Banner */}
-            <div className="bg-gradient-to-r from-slate-950 via-slate-900 to-indigo-950 text-white px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-indigo-950/40">
-              <div className="flex flex-wrap items-center gap-2">
-                <span className="font-extrabold uppercase tracking-wide text-sm sm:text-base text-white">
-                  {activeStudent ? `${activeStudent.name} ${activeStudent.subject || 'TOÁN'} ${activeStudent.className}` : 'NHẬT KÝ HỌC TẬP'}
-                </span>
-                <span className="text-indigo-400/60 font-light mx-1">|</span>
-                <span className="font-bold uppercase tracking-wider text-xs sm:text-sm text-indigo-300">
-                  {formattedMonthLabel.toUpperCase()}
-                </span>
+            {/* Clean Light-Tone Card Header with Clear Hierarchy */}
+            <div className="bg-slate-50/80 dark:bg-slate-800/50 border-b border-slate-200/80 dark:border-slate-800 px-5 py-4 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div>
+                <h2 className="text-base sm:text-lg font-bold text-slate-900 dark:text-white uppercase tracking-tight">
+                  {activeStudent ? activeStudent.name : 'NHẬT KÝ HỌC TẬP'}
+                </h2>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                  {activeStudent ? `${activeStudent.subject || 'Tổng hợp'} • ${activeStudent.className}` : 'Theo dõi tiến trình bài tập và nhận xét'}
+                </p>
               </div>
 
-              <div className="flex items-center gap-2 shrink-0">
-                <span className="px-2.5 py-1 rounded-lg bg-white/10 text-white text-xs font-bold border border-white/10">
+              <div className="flex items-center gap-2 flex-wrap shrink-0">
+                <span className="px-3 py-1 rounded-full bg-indigo-50 dark:bg-indigo-950/60 text-indigo-700 dark:text-indigo-300 text-xs font-semibold border border-indigo-200 dark:border-indigo-800">
                   {studentSessions.length} Buổi học
                 </span>
                 {columns.fee && totalFeeInMonth > 0 && (
-                  <span className="px-2.5 py-1 rounded-lg bg-emerald-500/20 text-emerald-300 text-xs font-bold border border-emerald-500/30">
+                  <span className="px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-semibold border border-emerald-200 dark:border-emerald-800">
                     {formatCurrency(totalFeeInMonth)}
                   </span>
                 )}
+                <span className="px-3 py-1 rounded-full bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-semibold border border-slate-200 dark:border-slate-700">
+                  {formattedMonthLabel.toUpperCase()}
+                </span>
               </div>
             </div>
 
-            {/* LEARNING LOGS TABLE */}
+            {/* EMPTY STATE */}
             {displayedSessions.length === 0 ? (
               <div className="p-12 text-center">
                 <div className="w-14 h-14 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-500 rounded-2xl flex items-center justify-center mx-auto mb-3">
@@ -1024,166 +1035,320 @@ export const TeacherLearningLogsPage: React.FC = () => {
                 </div>
               </div>
             ) : (
-              <div className="overflow-x-auto">
-                <table id="studentLogsTable" className="w-full text-left border-collapse text-xs">
-                  <thead>
-                    <tr className="bg-slate-50/90 dark:bg-slate-800/60 text-[11px] font-extrabold text-slate-600 dark:text-slate-300 tracking-wider uppercase border-b border-slate-200/80 dark:border-slate-800">
-                      <th className="py-3 px-3.5 w-28">STT</th>
-                      <th className="py-3 px-3 w-20">NGÀY</th>
-                      {columns.content && <th className="py-3 px-4 min-w-[200px]">NỘI DUNG</th>}
-                      {columns.homework && <th className="py-3 px-3 w-24 text-center">BTVN</th>}
-                      {columns.attitude && <th className="py-3 px-3 w-24 text-center">Ý THỨC</th>}
-                      {columns.comment && <th className="py-3 px-4 min-w-[220px]">NHẬN XÉT</th>}
-                      {columns.note && <th className="py-3 px-3 w-24">GHI CHÚ</th>}
-                      <th className="py-3 px-3 w-16 text-center log-export-hide">SỬA</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
-                    {displayedSessions.map((session) => {
-                      const dayName = getDayOfWeekName(session.date);
-                      const dayMonth = formatDayMonth(session.date);
-
-                      // Homework badge style
-                      const hwText = session.homework.trim();
-                      const isPercentage = /^\d+%$/.test(hwText);
-                      const percentVal = isPercentage ? parseInt(hwText, 10) : null;
-
-                      return (
-                        <tr
-                          key={session.lessonId || session.index}
-                          className="hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
-                        >
-                          {/* STT / Buổi học */}
-                          <td className="py-3 px-3.5 align-top">
-                            <div className="font-bold text-slate-900 dark:text-slate-100 text-xs">
-                              Buổi {session.index}
+              <>
+                {/* DESKTOP TABLE: table-fixed + 100% total column distribution guarantees NO horizontal scrollbar */}
+                {!isMobile ? (
+                  <div className="w-full">
+                    <table
+                      id="studentLogsTable"
+                      className="w-full table-fixed text-left border-collapse text-xs"
+                    >
+                    <thead>
+                      <tr className="bg-slate-50/70 dark:bg-slate-800/40 text-[11px] font-semibold text-slate-600 dark:text-slate-300 uppercase tracking-wider border-b border-slate-200 dark:border-slate-700">
+                        <th className="py-3 px-3.5 w-[8%]">
+                          <div className="flex items-center gap-1">
+                            <Clock className="w-3.5 h-3.5 text-slate-400" />
+                            <span>STT</span>
+                          </div>
+                        </th>
+                        <th className="py-3 px-3 w-[9%]">
+                          <div className="flex items-center gap-1">
+                            <Calendar className="w-3.5 h-3.5 text-slate-400" />
+                            <span>NGÀY</span>
+                          </div>
+                        </th>
+                        {columns.content && (
+                          <th className="py-3 px-3.5 w-[23%]">
+                            <div className="flex items-center gap-1">
+                              <BookOpen className="w-3.5 h-3.5 text-indigo-500" />
+                              <span>NỘI DUNG</span>
                             </div>
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                              {session.startTime} - {session.endTime}
+                          </th>
+                        )}
+                        {columns.homework && (
+                          <th className="py-3 px-3 w-[16%]">
+                            <div className="flex items-center gap-1">
+                              <CheckSquare className="w-3.5 h-3.5 text-blue-500" />
+                              <span>BTVN</span>
                             </div>
-                            {columns.fee && (
-                              <div className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
-                                {formatCurrency(session.fee)}
+                          </th>
+                        )}
+                        {columns.attitude && (
+                          <th className="py-3 px-3 w-[10%] text-center">
+                            <div className="flex items-center justify-center gap-1">
+                              <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                              <span>Ý THỨC</span>
+                            </div>
+                          </th>
+                        )}
+                        {columns.comment && (
+                          <th className="py-3 px-3.5 w-[20%]">
+                            <div className="flex items-center gap-1">
+                              <MessageSquare className="w-3.5 h-3.5 text-emerald-500" />
+                              <span>NHẬN XÉT</span>
+                            </div>
+                          </th>
+                        )}
+                        {columns.note && (
+                          <th className="py-3 px-3 w-[10%]">
+                            <div className="flex items-center gap-1">
+                              <StickyNote className="w-3.5 h-3.5 text-slate-400" />
+                              <span>GHI CHÚ</span>
+                            </div>
+                          </th>
+                        )}
+                        <th className="py-3 px-2 w-[4%] text-center log-export-hide">
+                          <span>SỬA</span>
+                        </th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
+                      {displayedSessions.map((session) => {
+                        const dayName = getDayOfWeekName(session.date);
+                        const dayMonth = formatDayMonth(session.date);
+
+                        // Homework badge analysis
+                        const hwText = (session.homework || '').trim();
+                        const isPercentage = /^\d+%$/.test(hwText);
+                        const percentVal = isPercentage ? parseInt(hwText, 10) : null;
+
+                        return (
+                          <tr
+                            key={session.lessonId || session.index}
+                            className="hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
+                          >
+                            {/* 1. STT / Buổi học (Mini information block) */}
+                            <td className="py-3.5 px-3.5 align-top">
+                              <div className="font-bold text-slate-900 dark:text-slate-100 text-xs">
+                                Buổi {session.index}
                               </div>
-                            )}
-                          </td>
-
-                          {/* NGÀY */}
-                          <td className="py-3 px-3 align-top">
-                            <div className="font-bold text-slate-800 dark:text-slate-200">
-                              {dayName}
-                            </div>
-                            <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                              {dayMonth}
-                            </div>
-                          </td>
-
-                          {/* NỘI DUNG */}
-                          {columns.content && (
-                            <td className="py-3 px-4 align-top text-slate-700 dark:text-slate-300 leading-relaxed">
-                              {session.content ? (
-                                <div className="whitespace-pre-line">{session.content}</div>
-                              ) : (
-                                <span className="text-slate-400 italic">Chưa ghi</span>
-                              )}
-                              {session.homework && (
-                                <div className="mt-2 pt-1.5 border-t border-slate-100 dark:border-slate-800 text-[11px]">
-                                  <strong className="text-indigo-600 dark:text-indigo-400 font-bold">
-                                    BTVN:{' '}
-                                  </strong>
-                                  <span className="text-slate-600 dark:text-slate-400 whitespace-pre-line">
-                                    {session.homework}
-                                  </span>
+                              <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5 whitespace-nowrap">
+                                {session.startTime} - {session.endTime}
+                              </div>
+                              {columns.fee && (
+                                <div className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 mt-1 whitespace-nowrap">
+                                  {formatCurrency(session.fee)}
                                 </div>
                               )}
                             </td>
-                          )}
 
-                          {/* BTVN (Completion Rate) */}
-                          {columns.homework && (
-                            <td className="py-3 px-3 align-top text-center">
-                              {session.homework ? (
-                                isPercentage ? (
+                            {/* 2. NGÀY (Dễ scan) */}
+                            <td className="py-3.5 px-3 align-top">
+                              <div className="font-bold text-slate-800 dark:text-slate-200 text-xs">
+                                {dayMonth}
+                              </div>
+                              <div className="text-[11px] font-medium text-slate-500 dark:text-slate-400 mt-0.5">
+                                {dayName}
+                              </div>
+                            </td>
+
+                            {/* 3. NỘI DUNG (Wrap tự nhiên, không nowrap, không ellipsis) */}
+                            {columns.content && (
+                              <td className="py-3.5 px-3.5 align-top text-slate-800 dark:text-slate-200 leading-relaxed text-xs break-words overflow-wrap-anywhere">
+                                {session.content ? (
+                                  <div className="whitespace-pre-line">{session.content}</div>
+                                ) : (
+                                  <span className="text-slate-400 italic">Chưa ghi nội dung</span>
+                                )}
+                              </td>
+                            )}
+
+                            {/* 4. BTVN (Wrap tự nhiên, percentage badge hoặc text bài tập) */}
+                            {columns.homework && (
+                              <td className="py-3.5 px-3 align-top leading-relaxed text-xs break-words overflow-wrap-anywhere">
+                                {session.homework ? (
+                                  isPercentage ? (
+                                    <span
+                                      className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                                        (percentVal ?? 0) >= 80
+                                          ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                                          : (percentVal ?? 0) >= 50
+                                          ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                          : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                      }`}
+                                    >
+                                      {session.homework}
+                                    </span>
+                                  ) : (
+                                    <div className="text-slate-700 dark:text-slate-300 whitespace-pre-line">
+                                      {session.homework}
+                                    </div>
+                                  )
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                            )}
+
+                            {/* 5. Ý THỨC (Soft badge tinh tế) */}
+                            {columns.attitude && (
+                              <td className="py-3.5 px-3 align-top text-center">
+                                {session.attitude && session.attitude !== '-' ? (
                                   <span
-                                    className={`inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
-                                      (percentVal ?? 0) >= 80
-                                        ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
-                                        : (percentVal ?? 0) >= 50
-                                        ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
-                                        : 'bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border-amber-300 dark:border-amber-700'
+                                    className={`inline-block px-2.5 py-0.5 rounded-full text-xs font-semibold border ${
+                                      session.attitude === 'Tốt'
+                                        ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                                        : session.attitude === 'Khá'
+                                        ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                        : session.attitude === 'Trung bình'
+                                        ? 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                                        : 'bg-rose-50 dark:bg-rose-950/50 text-rose-700 dark:text-rose-300 border-rose-200 dark:border-rose-800'
                                     }`}
                                   >
-                                    {session.homework}
+                                    {session.attitude}
                                   </span>
                                 ) : (
-                                  <span className="inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                                    {session.homework.length > 8
-                                      ? session.homework.slice(0, 8) + '...'
-                                      : session.homework}
-                                  </span>
-                                )
-                              ) : (
-                                <span className="text-slate-300 dark:text-slate-600 font-semibold">-</span>
-                              )}
-                            </td>
-                          )}
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                            )}
 
-                          {/* Ý THỨC */}
-                          {columns.attitude && (
-                            <td className="py-3 px-3 align-top text-center">
-                              {session.attitude && session.attitude !== '-' ? (
+                            {/* 6. NHẬN XÉT (Được ưu tiên readability, tự động xuống dòng) */}
+                            {columns.comment && (
+                              <td className="py-3.5 px-3.5 align-top text-slate-700 dark:text-slate-300 leading-relaxed text-xs break-words overflow-wrap-anywhere">
+                                {session.comment ? (
+                                  <div className="whitespace-pre-line">{session.comment}</div>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                            )}
+
+                            {/* 7. GHI CHÚ (Wrap, hiển thị '—' khi trống) */}
+                            {columns.note && (
+                              <td className="py-3.5 px-3 align-top text-slate-500 dark:text-slate-400 text-xs break-words overflow-wrap-anywhere">
+                                {session.note ? (
+                                  <div className="whitespace-pre-line">{session.note}</div>
+                                ) : (
+                                  <span className="text-slate-400">—</span>
+                                )}
+                              </td>
+                            )}
+
+                            {/* 8. SỬA / THAO TÁC */}
+                            <td className="py-3.5 px-2 align-top text-center log-export-hide">
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(session)}
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-slate-800 rounded-lg transition-colors inline-flex items-center justify-center"
+                                title="Sửa nhật ký buổi học"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
+
+                ) : (
+                  /* MOBILE CARD VIEW: Stacked Row / Card layout for perfect readability on mobile */
+                  <div className="p-4 space-y-4">
+                    {displayedSessions.map((session) => {
+                      const dayName = getDayOfWeekName(session.date);
+                      const dayMonth = formatDayMonth(session.date);
+                      return (
+                        <div
+                          key={session.lessonId || session.index}
+                          className="bg-slate-50/70 dark:bg-slate-800/40 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-4 space-y-3"
+                        >
+                          {/* Mobile Card Header */}
+                          <div className="flex items-center justify-between pb-2.5 border-b border-slate-200/80 dark:border-slate-800">
+                            <div>
+                              <span className="font-bold text-slate-900 dark:text-white text-xs">
+                                Buổi {session.index}
+                              </span>
+                              <span className="text-slate-400 mx-1.5">•</span>
+                              <span className="text-xs text-slate-600 dark:text-slate-300 font-medium">
+                                {dayMonth} ({dayName})
+                              </span>
+                              <span className="text-slate-400 mx-1.5">•</span>
+                              <span className="text-[11px] text-slate-500 dark:text-slate-400">
+                                {session.startTime} - {session.endTime}
+                              </span>
+                            </div>
+
+                            <div className="flex items-center gap-2">
+                              {session.attitude && session.attitude !== '-' && (
                                 <span
-                                  className={`inline-block px-2.5 py-1 rounded-lg text-[11px] font-bold border ${
+                                  className={`px-2 py-0.5 rounded-full text-[11px] font-semibold border ${
                                     session.attitude === 'Tốt'
-                                      ? 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300 dark:border-emerald-700'
+                                      ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                                       : session.attitude === 'Khá'
-                                      ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300 dark:border-blue-700'
-                                      : 'bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 border-rose-300 dark:border-rose-700'
+                                      ? 'bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800'
+                                      : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
                                   }`}
                                 >
                                   {session.attitude}
                                 </span>
-                              ) : (
-                                <span className="text-slate-300 dark:text-slate-600 font-semibold">-</span>
                               )}
-                            </td>
+                              <button
+                                type="button"
+                                onClick={() => handleOpenEdit(session)}
+                                className="p-1.5 text-slate-400 hover:text-indigo-600 rounded-lg hover:bg-slate-200/60 dark:hover:bg-slate-700"
+                                title="Sửa nhật ký"
+                              >
+                                <Edit2 className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+
+                          {/* Mobile Card Body */}
+                          {session.content && (
+                            <div className="space-y-1">
+                              <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <BookOpen className="w-3 h-3 text-indigo-500" />
+                                <span>Nội dung bài học</span>
+                              </div>
+                              <p className="text-xs text-slate-800 dark:text-slate-200 whitespace-pre-line leading-relaxed">
+                                {session.content}
+                              </p>
+                            </div>
                           )}
 
-                          {/* NHẬN XÉT */}
-                          {columns.comment && (
-                            <td className="py-3 px-4 align-top text-slate-700 dark:text-slate-300 leading-relaxed">
-                              {session.comment ? (
-                                <div className="whitespace-pre-line">{session.comment}</div>
-                              ) : (
-                                <span className="text-slate-300 dark:text-slate-600 italic">-</span>
-                              )}
-                            </td>
+                          {session.homework && (
+                            <div className="space-y-1">
+                              <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <CheckSquare className="w-3 h-3 text-blue-500" />
+                                <span>BTVN</span>
+                              </div>
+                              <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                                {session.homework}
+                              </p>
+                            </div>
                           )}
 
-                          {/* GHI CHÚ */}
-                          {columns.note && (
-                            <td className="py-3 px-3 align-top text-slate-500 dark:text-slate-400 text-[11px]">
-                              {session.note || '-'}
-                            </td>
+                          {session.comment && (
+                            <div className="space-y-1">
+                              <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <MessageSquare className="w-3 h-3 text-emerald-500" />
+                                <span>Nhận xét</span>
+                              </div>
+                              <p className="text-xs text-slate-700 dark:text-slate-300 whitespace-pre-line leading-relaxed">
+                                {session.comment}
+                              </p>
+                            </div>
                           )}
 
-                          {/* SỬA / THAO TÁC */}
-                          <td className="py-3 px-3 align-top text-center log-export-hide">
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(session)}
-                              className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 hover:bg-indigo-50 dark:hover:bg-indigo-950/50 rounded-lg transition-colors"
-                              title="Sửa nhật ký buổi học"
-                            >
-                              <Edit2 className="w-3.5 h-3.5" />
-                            </button>
-                          </td>
-                        </tr>
+                          {session.note && (
+                            <div className="space-y-1">
+                              <div className="text-[11px] font-semibold text-slate-500 dark:text-slate-400 flex items-center gap-1">
+                                <StickyNote className="w-3 h-3 text-slate-400" />
+                                <span>Ghi chú</span>
+                              </div>
+                              <p className="text-xs text-slate-500 dark:text-slate-400 whitespace-pre-line">
+                                {session.note}
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       );
                     })}
-                  </tbody>
-                </table>
-              </div>
+                  </div>
+                )}
+              </>
             )}
           </div>
         </main>
@@ -1277,7 +1442,6 @@ export const TeacherLearningLogsPage: React.FC = () => {
         )}
 
         <div className="space-y-3.5">
-          {/* If creating new, show Lesson & Student selectors */}
           {!selectedLog && (
             <>
               <div>
@@ -1325,11 +1489,11 @@ export const TeacherLearningLogsPage: React.FC = () => {
               Nội dung bài học
             </label>
             <textarea
-              rows={2}
+              rows={3}
               value={editFormData.content}
               onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
               placeholder="VD: Ôn tập Toán: giải hệ phương trình bậc nhất hai ẩn..."
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none leading-relaxed"
             />
           </div>
 
@@ -1342,11 +1506,11 @@ export const TeacherLearningLogsPage: React.FC = () => {
               value={editFormData.homework}
               onChange={(e) => setEditFormData({ ...editFormData, homework: e.target.value })}
               placeholder="VD: 80% (hoặc ghi chi tiết: Bài 1 đến 5 trang 20)"
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none leading-relaxed"
             />
             {/* Quick completion tags */}
-            <div className="flex items-center gap-1.5 mt-1.5">
-              <span className="text-[10px] text-slate-400 font-medium">Tỷ lệ:</span>
+            <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
+              <span className="text-[10px] text-slate-400 font-medium">Gợi ý tỷ lệ:</span>
               {['100%', '90%', '80%', '70%', '50%'].map((rate) => (
                 <button
                   key={rate}
@@ -1381,11 +1545,11 @@ export const TeacherLearningLogsPage: React.FC = () => {
               Nhận xét của giáo viên
             </label>
             <textarea
-              rows={2}
+              rows={3}
               value={editFormData.comment}
               onChange={(e) => setEditFormData({ ...editFormData, comment: e.target.value })}
               placeholder="VD: Em nắm vững phương pháp, cần xem lại các lỗi tính toán căn bản."
-              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none leading-relaxed"
             />
           </div>
 

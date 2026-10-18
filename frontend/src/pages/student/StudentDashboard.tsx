@@ -4,6 +4,7 @@ import { dashboardService } from '../../services/dashboard.service';
 import { StatCard } from '../../components/common/StatCard';
 import { QuizCard } from '../../components/student/QuizCard';
 import { useAuthStore } from '../../stores/auth.store';
+import { CalendarService } from '../../services/calendar.service';
 import {
   FileQuestion,
   CheckCircle2,
@@ -90,14 +91,30 @@ export const StudentDashboard: React.FC = () => {
     analyticsRef.current?.scrollIntoView({ behavior: 'smooth' });
   };
 
+  const todayCls = React.useMemo(() => {
+    return CalendarService.classifyDay(new Date());
+  }, []);
+
   return (
     <div className="space-y-8">
       {/* Student Welcome Hero Banner */}
       <div className="relative p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-sky-500 via-purple-500 to-sky-400 text-white shadow-lg shadow-sky-200/50 dark:shadow-none overflow-hidden">
         <div className="relative z-10 max-w-xl">
-          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider mb-3 backdrop-blur-xs">
-            <Sparkles className="w-3.5 h-3.5" />
-            Học tập chủ động
+          <div className="flex items-center gap-2 flex-wrap mb-3">
+            <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-bold uppercase tracking-wider backdrop-blur-xs">
+              <Sparkles className="w-3.5 h-3.5" />
+              Học tập chủ động
+            </div>
+            {todayCls.label && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/25 text-white text-xs font-bold backdrop-blur-xs shadow-2xs">
+                <span>{todayCls.label}</span>
+              </div>
+            )}
+            {todayCls.isWeekend && !todayCls.label && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/20 text-white text-xs font-semibold backdrop-blur-xs">
+                <span>Cuối tuần vui vẻ 🎉</span>
+              </div>
+            )}
           </div>
           <h1 className="text-2xl sm:text-3xl font-black tracking-tight leading-snug">
             Chào mừng, {user?.name || 'Học Sinh'}! 🎓

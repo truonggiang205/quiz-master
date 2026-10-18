@@ -1,9 +1,28 @@
 import { Injectable, BadRequestException } from '@nestjs/common';
-import { HolidayDto, HolidayType, HolidaySource, QueryHolidaysDto } from '../dto/holiday.dto.js';
+import {
+  HolidayDto,
+  HolidayType,
+  HolidaySource,
+  OccasionType,
+  DayType,
+  WorkStatus,
+  HolidayScope,
+  QueryHolidaysDto,
+} from '../dto/holiday.dto.js';
 import {
   getTetNguyenDanSolarDate,
   getGioToHungVuongSolarDate,
 } from '../utils/vietnam-lunar.util.js';
+
+export function getVietnamDayType(dateStr: string): DayType {
+  const [y, m, d] = dateStr.substring(0, 10).split('-').map(Number);
+  // Construct date at UTC noon to avoid timezone shift in UTC+7
+  const date = new Date(Date.UTC(y, m - 1, d, 5, 0, 0));
+  const day = date.getUTCDay(); // 0 = Sunday, 6 = Saturday
+  if (day === 0) return 'SUNDAY';
+  if (day === 6) return 'SATURDAY';
+  return 'WEEKDAY';
+}
 
 interface FixedHolidayDef {
   id: string;
@@ -11,7 +30,9 @@ interface FixedHolidayDef {
   month: number; // 1-12
   day: number; // 1-31
   durationDays?: number;
-  type: HolidayType;
+  occasion: OccasionType;
+  workStatus: WorkStatus;
+  scope?: HolidayScope;
   description: string;
   isOfficialSchedule: boolean;
 }
@@ -19,26 +40,34 @@ interface FixedHolidayDef {
 interface OfficialHolidayScheduleDef {
   id: string;
   name: string;
+  year: number;
   date: string; // YYYY-MM-DD
   endDate?: string; // YYYY-MM-DD
-  type: HolidayType;
+  occasion: OccasionType;
+  workStatus: WorkStatus;
+  scope?: HolidayScope;
   description: string;
+  restDates?: string[];
+  makeupWorkingDates?: string[];
 }
 
 @Injectable()
 export class HolidaysService {
   // 1. Fixed solar events (Public Holidays & Special Observance Days)
+  // According to Article 112 Vietnam Labor Code
   private readonly fixedHolidays: FixedHolidayDef[] = [
-    // PUBLIC HOLIDAYS (Theo Điều 112 Bộ luật Lao động Việt Nam)
+    // PUBLIC HOLIDAYS (Nghỉ lễ cố định theo quy định pháp luật)
     {
       id: 'tet-duong-lich',
       name: 'Tết Dương Lịch',
       month: 1,
       day: 1,
       durationDays: 1,
-      type: 'PUBLIC_HOLIDAY',
+      occasion: 'PUBLIC_HOLIDAY',
+      workStatus: 'REST_DAY',
+      scope: 'GENERAL',
       isOfficialSchedule: true,
-      description: 'Nghỉ Tết Dương Lịch đầu năm mới',
+      description: 'Nghỉ Tết Dương Lịch đầu năm mới (Điều 112 Bộ luật Lao động)',
     },
     {
       id: 'giai-phong-mien-nam',
@@ -46,7 +75,9 @@ export class HolidaysService {
       month: 4,
       day: 30,
       durationDays: 1,
-      type: 'PUBLIC_HOLIDAY',
+      occasion: 'PUBLIC_HOLIDAY',
+      workStatus: 'REST_DAY',
+      scope: 'GENERAL',
       isOfficialSchedule: true,
       description: 'Kỷ niệm Ngày Giải phóng miền Nam, Thống nhất đất nước 30/4',
     },
@@ -56,7 +87,9 @@ export class HolidaysService {
       month: 5,
       day: 1,
       durationDays: 1,
-      type: 'PUBLIC_HOLIDAY',
+      occasion: 'PUBLIC_HOLIDAY',
+      workStatus: 'REST_DAY',
+      scope: 'GENERAL',
       isOfficialSchedule: true,
       description: 'Ngày Quốc tế Lao động 1/5',
     },
@@ -65,22 +98,26 @@ export class HolidaysService {
       name: 'Quốc Khánh',
       month: 9,
       day: 2,
-      durationDays: 2, // 2 ngày theo Bộ luật Lao động (02/09 - 03/09)
-      type: 'PUBLIC_HOLIDAY',
+      durationDays: 1, // Mandatory statutory date; contiguous day determined annually by Government decree
+      occasion: 'PUBLIC_HOLIDAY',
+      workStatus: 'REST_DAY',
+      scope: 'GENERAL',
       isOfficialSchedule: true,
-      description: 'Kỷ niệm Quốc khánh Nước CHXHCN Việt Nam (nghỉ 2 ngày: 02/09 - 03/09)',
+      description: 'Kỷ niệm Quốc khánh Nước CHXHCN Việt Nam (ngày 02/09 bắt buộc; ngày nghỉ liền kề theo phương án từng năm)',
     },
 
-    // SPECIAL DAYS (Ngày kỷ niệm truyền thống - KHÔNG phải ngày nghỉ lễ chính thức)
+    // SPECIAL OBSERVANCE DAYS (Ngày kỷ niệm truyền thống - KHÔNG phải ngày nghỉ lễ)
     {
       id: 'quoc-te-phu-nu',
       name: 'Quốc Tế Phụ Nữ',
       month: 3,
       day: 8,
       durationDays: 1,
-      type: 'SPECIAL_DAY',
+      occasion: 'SPECIAL_DAY',
+      workStatus: 'WORKING_DAY',
+      scope: 'GENERAL',
       isOfficialSchedule: false,
-      description: 'Ngày Quốc tế Phụ nữ 8/3',
+      description: 'Ngày Quốc tế Phụ nữ 8/3 (ngày kỷ niệm, đi làm bình thường)',
     },
     {
       id: 'quoc-te-thieu-nhi',
@@ -88,9 +125,11 @@ export class HolidaysService {
       month: 6,
       day: 1,
       durationDays: 1,
-      type: 'SPECIAL_DAY',
+      occasion: 'SPECIAL_DAY',
+      workStatus: 'WORKING_DAY',
+      scope: 'GENERAL',
       isOfficialSchedule: false,
-      description: 'Ngày Quốc tế Thiếu nhi 1/6',
+      description: 'Ngày Quốc tế Thiếu nhi 1/6 (ngày kỷ niệm, đi làm bình thường)',
     },
     {
       id: 'phu-nu-viet-nam',
@@ -98,9 +137,11 @@ export class HolidaysService {
       month: 10,
       day: 20,
       durationDays: 1,
-      type: 'SPECIAL_DAY',
+      occasion: 'SPECIAL_DAY',
+      workStatus: 'WORKING_DAY',
+      scope: 'GENERAL',
       isOfficialSchedule: false,
-      description: 'Ngày Phụ nữ Việt Nam 20/10',
+      description: 'Ngày Phụ nữ Việt Nam 20/10 (ngày kỷ niệm, đi làm bình thường)',
     },
     {
       id: 'nha-giao-viet-nam',
@@ -108,7 +149,9 @@ export class HolidaysService {
       month: 11,
       day: 20,
       durationDays: 1,
-      type: 'SPECIAL_DAY',
+      occasion: 'SPECIAL_DAY',
+      workStatus: 'WORKING_DAY',
+      scope: 'GENERAL',
       isOfficialSchedule: false,
       description: 'Ngày Nhà giáo Việt Nam 20/11 - Tôn vinh thầy cô giáo',
     },
@@ -118,112 +161,138 @@ export class HolidaysService {
       month: 12,
       day: 25,
       durationDays: 1,
-      type: 'SPECIAL_DAY',
+      occasion: 'SPECIAL_DAY',
+      workStatus: 'WORKING_DAY',
+      scope: 'GENERAL',
       isOfficialSchedule: false,
-      description: 'Lễ Giáng sinh (Noel)',
+      description: 'Lễ Giáng sinh Noel (ngày kỷ niệm, đi làm bình thường)',
     },
   ];
 
-  // 2. Official Government Holiday Schedules (Đã được Chính phủ / Bộ LĐTBXH phê duyệt)
+  // 2. Official Government Holiday Schedules (Đã được Chính phủ / Bộ LĐ-TB&XH ban hành văn bản chính thức)
+  // Only years with authentic officially approved decrees are listed here (e.g. 2024, 2025).
+  // Future unannounced years (2026+) fall back to statutory fixed rules & astronomical calculation.
   private readonly officialSchedules: OfficialHolidayScheduleDef[] = [
     // --- Năm 2024 ---
     {
       id: 'tet-nguyen-dan-2024',
       name: 'Tết Nguyên Đán (Giáp Thìn)',
+      year: 2024,
       date: '2024-02-08',
       endDate: '2024-02-14',
-      type: 'PUBLIC_HOLIDAY',
+      occasion: 'PUBLIC_HOLIDAY',
+      workStatus: 'REST_DAY',
+      scope: 'GENERAL',
       description: 'Kỳ nghỉ Tết Nguyên Đán Giáp Thìn 2024 (29 Tết đến mùng 5 Tết)',
     },
     {
       id: 'gio-to-hung-vuong-2024',
       name: 'Giỗ Tổ Hùng Vương',
+      year: 2024,
       date: '2024-04-18',
-      type: 'PUBLIC_HOLIDAY',
-      description: 'Giỗ Tổ Hùng Vương mùng 10 tháng 3 Âm lịch',
+      occasion: 'PUBLIC_HOLIDAY',
+      workStatus: 'REST_DAY',
+      scope: 'GENERAL',
+      description: 'Giỗ Tổ Hùng Vương mùng 10 tháng 3 Âm lịch theo lịch chính thức 2024',
+    },
+    {
+      id: 'nghi-hoan-doi-30-4-2024',
+      name: 'Nghỉ hoán đổi (30/4 - 1/5)',
+      year: 2024,
+      date: '2024-04-29',
+      occasion: 'NONE',
+      workStatus: 'REST_DAY',
+      scope: 'GOVERNMENT',
+      description: 'Nghỉ hoán đổi thứ Hai 29/04/2024 theo Thông báo 1570/TB-BLĐTBXH',
+    },
+    {
+      id: 'lam-bu-30-4-2024',
+      name: 'Làm việc bù (Hoán đổi 30/4 - 1/5)',
+      year: 2024,
+      date: '2024-05-04',
+      occasion: 'NONE',
+      workStatus: 'MAKEUP_WORKING_DAY',
+      scope: 'GOVERNMENT',
+      description: 'Làm việc bù thứ Bảy ngày 04/05/2024 cho ngày nghỉ hoán đổi 29/04/2024 theo Thông báo 1570/TB-BLĐTBXH',
+    },
+    {
+      id: 'quoc-khanh-lien-ke-2024',
+      name: 'Nghỉ Quốc Khánh (liền kề sau)',
+      year: 2024,
+      date: '2024-09-03',
+      occasion: 'PUBLIC_HOLIDAY',
+      workStatus: 'REST_DAY',
+      scope: 'GENERAL',
+      description: 'Nghỉ liền kề sau Quốc khánh 03/09/2024 theo phương án năm 2024',
     },
 
     // --- Năm 2025 ---
     {
       id: 'tet-nguyen-dan-2025',
       name: 'Tết Nguyên Đán (Ất Tỵ)',
+      year: 2025,
       date: '2025-01-25',
       endDate: '2025-02-02',
-      type: 'PUBLIC_HOLIDAY',
-      description: 'Kỳ nghỉ Tết Nguyên Đán Ất Tỵ 2025 (26 Tết đến mùng 5 Tết)',
+      occasion: 'PUBLIC_HOLIDAY',
+      workStatus: 'REST_DAY',
+      scope: 'GENERAL',
+      description: 'Kỳ nghỉ Tết Nguyên Đán Ất Tỵ 2025 (26 Tết đến mùng 5 Tết) theo Thông báo số 8880/TB-BLĐTBXH',
     },
     {
       id: 'gio-to-hung-vuong-2025',
       name: 'Giỗ Tổ Hùng Vương',
+      year: 2025,
       date: '2025-04-07',
-      type: 'PUBLIC_HOLIDAY',
-      description: 'Giỗ Tổ Hùng Vương mùng 10 tháng 3 Âm lịch',
-    },
-
-    // --- Năm 2026 ---
-    {
-      id: 'tet-nguyen-dan-2026',
-      name: 'Tết Nguyên Đán (Bính Ngọ)',
-      date: '2026-02-15',
-      endDate: '2026-02-22',
-      type: 'PUBLIC_HOLIDAY',
-      description: 'Kỳ nghỉ Tết Nguyên Đán Bính Ngọ 2026 (28 Tết đến mùng 6 Tết)',
+      occasion: 'PUBLIC_HOLIDAY',
+      workStatus: 'REST_DAY',
+      scope: 'GENERAL',
+      description: 'Giỗ Tổ Hùng Vương 10/3 Âm lịch rơi vào thứ Hai ngày 07/04/2025 theo Thông báo số 8880/TB-BLĐTBXH',
     },
     {
-      id: 'gio-to-hung-vuong-2026',
-      name: 'Giỗ Tổ Hùng Vương',
-      date: '2026-04-26',
-      type: 'PUBLIC_HOLIDAY',
-      description: 'Giỗ Tổ Hùng Vương mùng 10 tháng 3 Âm lịch',
-    },
-
-    // --- Năm 2027 ---
-    {
-      id: 'tet-nguyen-dan-2027',
-      name: 'Tết Nguyên Đán (Đinh Mùi)',
-      date: '2027-02-05',
-      endDate: '2027-02-12',
-      type: 'PUBLIC_HOLIDAY',
-      description: 'Kỳ nghỉ Tết Nguyên Đán Đinh Mùi 2027',
+      id: 'lam-bu-30-4-2025',
+      name: 'Làm việc bù (Hoán đổi 30/4 - 1/5)',
+      year: 2025,
+      date: '2025-04-26',
+      occasion: 'NONE',
+      workStatus: 'MAKEUP_WORKING_DAY',
+      scope: 'GOVERNMENT',
+      description: 'Làm việc bù thứ Bảy ngày 26/04/2025 cho ngày nghỉ hoán đổi thứ Sáu 02/05/2025 theo Thông báo số 8880/TB-BLĐTBXH',
     },
     {
-      id: 'gio-to-hung-vuong-2027',
-      name: 'Giỗ Tổ Hùng Vương',
-      date: '2027-04-16',
-      type: 'PUBLIC_HOLIDAY',
-      description: 'Giỗ Tổ Hùng Vương mùng 10 tháng 3 Âm lịch',
-    },
-
-    // --- Năm 2028 ---
-    {
-      id: 'tet-nguyen-dan-2028',
-      name: 'Tết Nguyên Đán (Mậu Thân)',
-      date: '2028-01-25',
-      endDate: '2028-02-01',
-      type: 'PUBLIC_HOLIDAY',
-      description: 'Kỳ nghỉ Tết Nguyên Đán Mậu Thân 2028',
+      id: 'nghi-hoan-doi-30-4-2025',
+      name: 'Nghỉ hoán đổi (30/4 - 1/5)',
+      year: 2025,
+      date: '2025-05-02',
+      occasion: 'NONE',
+      workStatus: 'REST_DAY',
+      scope: 'GOVERNMENT',
+      description: 'Nghỉ hoán đổi thứ Sáu ngày 02/05/2025 để nghỉ liên tiếp 5 ngày theo Thông báo số 8880/TB-BLĐTBXH',
     },
     {
-      id: 'gio-to-hung-vuong-2028',
-      name: 'Giỗ Tổ Hùng Vương',
-      date: '2028-04-04',
-      type: 'PUBLIC_HOLIDAY',
-      description: 'Giỗ Tổ Hùng Vương mùng 10 tháng 3 Âm lịch',
+      id: 'quoc-khanh-lien-ke-2025',
+      name: 'Nghỉ Quốc Khánh (liền kề trước)',
+      year: 2025,
+      date: '2025-09-01',
+      occasion: 'PUBLIC_HOLIDAY',
+      workStatus: 'REST_DAY',
+      scope: 'GENERAL',
+      description: 'Nghỉ liền kề trước Quốc khánh thứ Hai ngày 01/09/2025 theo Thông báo số 8880/TB-BLĐTBXH',
     },
   ];
 
   /**
    * Holiday Resolver for a given year:
-   * 1. Generates Fixed Solar events.
-   * 2. Checks Official Government Schedule (2024-2028).
-   * 3. If unconfigured future year, runs astronomical Lunar calculations (Meeus UTC+7).
+   * 1. Generates Fixed Solar statutory holidays & special days.
+   * 2. Checks Official Government Schedule (only if officially enacted for that year).
+   * 3. If year lacks official schedule, runs astronomical Lunar calculations (Meeus UTC+7) for Tet & Giỗ Tổ.
+   *    Note: Giỗ Tổ Hùng Vương is strictly PUBLIC_HOLIDAY (Article 112 Labor Code).
    * 4. Resolves priorities: OFFICIAL > FIXED > LUNAR_CALCULATED.
-   * 5. Deduplicates by date and returns normalized DTOs.
+   * 5. Populates occasion, dayType, workStatus, scope, and deduplicates.
    */
   resolveHolidaysForYear(year: number): HolidayDto[] {
     const holidays: HolidayDto[] = [];
 
-    // Step 1: Fixed solar holidays
+    // Step 1: Fixed solar holidays & special days
     for (const f of this.fixedHolidays) {
       const mm = String(f.month).padStart(2, '0');
       const dd = String(f.day).padStart(2, '0');
@@ -237,68 +306,93 @@ export class HolidaysService {
         endDateStr = `${d.getFullYear()}-${endMm}-${endDd}`;
       }
 
+      const dayType = getVietnamDayType(startDateStr);
       holidays.push({
         id: `${f.id}-${year}`,
         name: f.name,
         date: startDateStr,
         endDate: endDateStr,
-        type: f.type,
+        occasion: f.occasion,
+        dayType,
+        workStatus: f.workStatus,
+        scope: f.scope || 'GENERAL',
         source: 'FIXED' as HolidaySource,
         isOfficialSchedule: f.isOfficialSchedule,
+        year,
         description: f.description,
+        type: this.mapLegacyType(f.occasion, f.workStatus),
         isRecurring: true,
         isActive: true,
       });
     }
 
-    // Step 2: Check if this year has official schedules
-    const yearPrefix = `${year}-`;
-    const officialForYear = this.officialSchedules.filter(
-      (h) => h.date.startsWith(yearPrefix) || (h.endDate && h.endDate.startsWith(yearPrefix)),
-    );
+    // Step 2: Check if this specific year actually has official schedules enacted
+    const officialForYear = this.officialSchedules.filter((h) => h.year === year);
 
     if (officialForYear.length > 0) {
-      // Official Government Schedule takes priority
+      // Official Government Schedule takes precedence
       for (const off of officialForYear) {
+        const dayType = getVietnamDayType(off.date);
         holidays.push({
           id: off.id,
           name: off.name,
           date: off.date,
           endDate: off.endDate,
-          type: off.type,
+          occasion: off.occasion,
+          dayType,
+          workStatus: off.workStatus,
+          scope: off.scope || 'GENERAL',
           source: 'OFFICIAL' as HolidaySource,
           isOfficialSchedule: true,
+          year,
           description: off.description,
+          restDates: off.restDates,
+          makeupWorkingDates: off.makeupWorkingDates,
+          type: this.mapLegacyType(off.occasion, off.workStatus),
           isRecurring: false,
           isActive: true,
         });
       }
     } else {
-      // Step 3: Future / unconfigured year -> Run astronomical Lunar calculation
+      // Step 3: Year lacks official government decree -> Run astronomical Lunar calculations
+      // (Using astronomical Meeus algorithm in UTC+7 / Asia/Ho_Chi_Minh)
       try {
         const tetDate = getTetNguyenDanSolarDate(year);
         const hungVuongDate = getGioToHungVuongSolarDate(year);
 
+        // Tết Nguyên Đán: Statutory Public Holiday (Điều 112)
         holidays.push({
           id: `tet-nguyen-dan-lunar-${year}`,
           name: 'Tết Nguyên Đán',
           date: tetDate,
-          type: 'LUNAR_HOLIDAY' as HolidayType,
+          occasion: 'PUBLIC_HOLIDAY',
+          dayType: getVietnamDayType(tetDate),
+          workStatus: 'REST_DAY',
+          scope: 'GENERAL',
           source: 'LUNAR_CALCULATED' as HolidaySource,
           isOfficialSchedule: false,
-          description: `Mùng 1 Tết Âm Lịch (tính theo thuật toán thiên văn UTC+7, chưa có công văn nghỉ chính thức)`,
+          year,
+          description: 'Mùng 1 Tết Âm Lịch (tính theo thuật toán thiên văn UTC+7, chưa có công văn nghỉ chính thức)',
+          type: 'PUBLIC_HOLIDAY',
           isRecurring: false,
           isActive: true,
         });
 
+        // Giỗ Tổ Hùng Vương: Statutory Public Holiday (Điều 112)
+        // CRITICAL: Giỗ Tổ is strictly PUBLIC_HOLIDAY (not merely LUNAR_HOLIDAY)
         holidays.push({
           id: `gio-to-hung-vuong-lunar-${year}`,
           name: 'Giỗ Tổ Hùng Vương',
           date: hungVuongDate,
-          type: 'LUNAR_HOLIDAY' as HolidayType,
+          occasion: 'PUBLIC_HOLIDAY',
+          dayType: getVietnamDayType(hungVuongDate),
+          workStatus: 'REST_DAY',
+          scope: 'GENERAL',
           source: 'LUNAR_CALCULATED' as HolidaySource,
           isOfficialSchedule: false,
-          description: `Giỗ Tổ Hùng Vương 10/3 Âm lịch (tính theo thuật toán thiên văn UTC+7, chưa có công văn nghỉ chính thức)`,
+          year,
+          description: 'Giỗ Tổ Hùng Vương 10/3 Âm lịch (tính theo thuật toán thiên văn UTC+7, chưa có công văn nghỉ chính thức)',
+          type: 'PUBLIC_HOLIDAY',
           isRecurring: false,
           isActive: true,
         });
@@ -309,6 +403,16 @@ export class HolidaysService {
 
     // Step 4: Deduplicate and sort chronologically
     return this.deduplicateHolidays(holidays);
+  }
+
+  /**
+   * Map modern 3-axis attributes to backward compatible legacy `type`.
+   */
+  private mapLegacyType(occasion: OccasionType, workStatus: WorkStatus): HolidayType {
+    if (workStatus === 'MAKEUP_WORKING_DAY') return 'MAKEUP_WORKING_DAY';
+    if (occasion === 'PUBLIC_HOLIDAY') return 'PUBLIC_HOLIDAY';
+    if (occasion === 'SPECIAL_DAY') return 'SPECIAL_DAY';
+    return 'PUBLIC_HOLIDAY';
   }
 
   /**
@@ -323,9 +427,9 @@ export class HolidaysService {
       else if (h.source === 'FIXED') weight += 50;
       else if (h.source === 'LUNAR_CALCULATED') weight += 20;
 
-      if (h.type === 'PUBLIC_HOLIDAY') weight += 10;
-      else if (h.type === 'LUNAR_HOLIDAY') weight += 5;
-      else if (h.type === 'SPECIAL_DAY') weight += 1;
+      if (h.occasion === 'PUBLIC_HOLIDAY') weight += 10;
+      else if (h.workStatus === 'MAKEUP_WORKING_DAY') weight += 8;
+      else if (h.occasion === 'SPECIAL_DAY') weight += 2;
 
       return weight;
     };
@@ -342,7 +446,6 @@ export class HolidaysService {
       if (!uniqueMap.has(h.date)) {
         uniqueMap.set(h.date, h);
       } else {
-        // Same date: keep higher priority, merge description if relevant
         const existing = uniqueMap.get(h.date)!;
         if (priorityWeight(h) > priorityWeight(existing)) {
           uniqueMap.set(h.date, h);
@@ -368,7 +471,7 @@ export class HolidaysService {
     if (query.from && query.to && query.from > query.to) {
       throw new BadRequestException('Tham số "from" không được lớn hơn "to"');
     }
-    if (query.year && (query.year < 1900 || query.year > 2100)) {
+    if (query.year !== undefined && (query.year < 1900 || query.year > 2100)) {
       throw new BadRequestException('Năm truy vấn phải nằm trong khoảng 1900 đến 2100');
     }
 
@@ -430,7 +533,15 @@ export class HolidaysService {
    */
   isPublicHoliday(dateStr: string): boolean {
     const h = this.getHolidayForDate(dateStr);
-    return h?.type === 'PUBLIC_HOLIDAY';
+    return h?.occasion === 'PUBLIC_HOLIDAY';
+  }
+
+  /**
+   * Check if date is a Makeup Working Day (làm bù theo lịch).
+   */
+  isMakeupWorkingDay(dateStr: string): boolean {
+    const h = this.getHolidayForDate(dateStr);
+    return h?.workStatus === 'MAKEUP_WORKING_DAY';
   }
 
   /**

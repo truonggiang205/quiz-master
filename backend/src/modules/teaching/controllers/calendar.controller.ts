@@ -1,4 +1,4 @@
-import { Controller, Get, Query } from '@nestjs/common';
+import { Controller, Get, Query, BadRequestException } from '@nestjs/common';
 import { ApiTags, ApiOperation, ApiQuery } from '@nestjs/swagger';
 import { HolidaysService } from '../services/holidays.service.js';
 import { createSuccessResponse } from '../../../common/dto/api-response.dto.js';
@@ -20,10 +20,17 @@ export class CalendarController {
     @Query('to') to?: string,
     @Query('year') year?: string,
   ) {
+    let parsedYear: number | undefined = undefined;
+    if (year !== undefined && year !== '') {
+      parsedYear = parseInt(year, 10);
+      if (isNaN(parsedYear)) {
+        throw new BadRequestException('Tham số "year" không hợp lệ. Phải là số nguyên');
+      }
+    }
     const data = this.holidaysService.getHolidays({
       from,
       to,
-      year: year ? parseInt(year, 10) : undefined,
+      year: parsedYear,
     });
     return createSuccessResponse(data, 'Lấy danh sách ngày lễ thành công');
   }

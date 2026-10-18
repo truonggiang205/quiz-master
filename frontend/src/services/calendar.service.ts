@@ -1,13 +1,16 @@
 import { apiClient } from './api';
-import { Holiday, DayClassification } from '../types/calendar';
+import { Holiday, DayClassification, DayType, OccasionType, WorkStatus } from '../types/calendar';
 
-// Instant offline fallback holidays for Vietnam (calibrated with official/special distinction)
+// Instant offline fallback holidays for Vietnam (calibrated with 3-axis domain model)
 const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
   {
     id: 'tet-duong-lich',
     name: 'Tết Dương Lịch',
     date: '2026-01-01',
-    type: 'PUBLIC_HOLIDAY',
+    occasion: 'PUBLIC_HOLIDAY',
+    dayType: 'WEEKDAY',
+    workStatus: 'REST_DAY',
+    scope: 'GENERAL',
     source: 'FIXED',
     isOfficialSchedule: true,
     description: 'Nghỉ Tết Dương Lịch',
@@ -15,18 +18,23 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
   {
     id: 'tet-nguyen-dan-2026',
     name: 'Tết Nguyên Đán (Bính Ngọ)',
-    date: '2026-02-15',
-    endDate: '2026-02-22',
-    type: 'PUBLIC_HOLIDAY',
-    source: 'OFFICIAL',
-    isOfficialSchedule: true,
-    description: 'Kỳ nghỉ Tết Nguyên Đán Bính Ngọ 2026 (28 Tết đến mùng 6 Tết)',
+    date: '2026-02-17',
+    occasion: 'PUBLIC_HOLIDAY',
+    dayType: 'WEEKDAY',
+    workStatus: 'REST_DAY',
+    scope: 'GENERAL',
+    source: 'LUNAR_CALCULATED',
+    isOfficialSchedule: false,
+    description: 'Mùng 1 Tết Âm Lịch (tính theo thuật toán thiên văn UTC+7, chưa có công văn nghỉ chính thức)',
   },
   {
     id: 'quoc-te-phu-nu',
     name: 'Quốc Tế Phụ Nữ',
     date: '2026-03-08',
-    type: 'SPECIAL_DAY',
+    occasion: 'SPECIAL_DAY',
+    dayType: 'SUNDAY',
+    workStatus: 'WORKING_DAY',
+    scope: 'GENERAL',
     source: 'FIXED',
     isOfficialSchedule: false,
     description: 'Ngày Quốc tế Phụ nữ 8/3',
@@ -35,16 +43,22 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
     id: 'gio-to-hung-vuong-2026',
     name: 'Giỗ Tổ Hùng Vương',
     date: '2026-04-26',
-    type: 'PUBLIC_HOLIDAY',
-    source: 'OFFICIAL',
-    isOfficialSchedule: true,
-    description: 'Giỗ Tổ Hùng Vương 10/3 Âm lịch',
+    occasion: 'PUBLIC_HOLIDAY',
+    dayType: 'SUNDAY',
+    workStatus: 'REST_DAY',
+    scope: 'GENERAL',
+    source: 'LUNAR_CALCULATED',
+    isOfficialSchedule: false,
+    description: 'Giỗ Tổ Hùng Vương 10/3 Âm lịch (tính theo thuật toán thiên văn UTC+7, chưa có công văn nghỉ chính thức)',
   },
   {
     id: 'giai-phong-mien-nam',
     name: 'Giải Phóng Miền Nam',
     date: '2026-04-30',
-    type: 'PUBLIC_HOLIDAY',
+    occasion: 'PUBLIC_HOLIDAY',
+    dayType: 'WEEKDAY',
+    workStatus: 'REST_DAY',
+    scope: 'GENERAL',
     source: 'FIXED',
     isOfficialSchedule: true,
     description: 'Ngày Giải phóng miền Nam 30/4',
@@ -53,7 +67,10 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
     id: 'quoc-te-lao-dong',
     name: 'Quốc Tế Lao Động',
     date: '2026-05-01',
-    type: 'PUBLIC_HOLIDAY',
+    occasion: 'PUBLIC_HOLIDAY',
+    dayType: 'WEEKDAY',
+    workStatus: 'REST_DAY',
+    scope: 'GENERAL',
     source: 'FIXED',
     isOfficialSchedule: true,
     description: 'Ngày Quốc tế Lao động 1/5',
@@ -62,7 +79,10 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
     id: 'quoc-te-thieu-nhi',
     name: 'Quốc Tế Thiếu Nhi',
     date: '2026-06-01',
-    type: 'SPECIAL_DAY',
+    occasion: 'SPECIAL_DAY',
+    dayType: 'WEEKDAY',
+    workStatus: 'WORKING_DAY',
+    scope: 'GENERAL',
     source: 'FIXED',
     isOfficialSchedule: false,
     description: 'Ngày Quốc tế Thiếu nhi 1/6',
@@ -71,17 +91,22 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
     id: 'quoc-khanh',
     name: 'Quốc Khánh',
     date: '2026-09-02',
-    endDate: '2026-09-03',
-    type: 'PUBLIC_HOLIDAY',
+    occasion: 'PUBLIC_HOLIDAY',
+    dayType: 'WEEKDAY',
+    workStatus: 'REST_DAY',
+    scope: 'GENERAL',
     source: 'FIXED',
     isOfficialSchedule: true,
-    description: 'Kỷ niệm Quốc khánh 2/9',
+    description: 'Kỷ niệm Quốc khánh 02/09',
   },
   {
     id: 'phu-nu-viet-nam',
     name: 'Phụ Nữ Việt Nam',
     date: '2026-10-20',
-    type: 'SPECIAL_DAY',
+    occasion: 'SPECIAL_DAY',
+    dayType: 'WEEKDAY',
+    workStatus: 'WORKING_DAY',
+    scope: 'GENERAL',
     source: 'FIXED',
     isOfficialSchedule: false,
     description: 'Ngày Phụ nữ Việt Nam 20/10',
@@ -90,7 +115,10 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
     id: 'nha-giao-viet-nam',
     name: 'Nhà Giáo Việt Nam',
     date: '2026-11-20',
-    type: 'SPECIAL_DAY',
+    occasion: 'SPECIAL_DAY',
+    dayType: 'WEEKDAY',
+    workStatus: 'WORKING_DAY',
+    scope: 'GENERAL',
     source: 'FIXED',
     isOfficialSchedule: false,
     description: 'Ngày Nhà giáo Việt Nam 20/11',
@@ -99,7 +127,10 @@ const FALLBACK_VIETNAM_HOLIDAYS: Holiday[] = [
     id: 'giang-sinh',
     name: 'Lễ Giáng Sinh',
     date: '2026-12-25',
-    type: 'SPECIAL_DAY',
+    occasion: 'SPECIAL_DAY',
+    dayType: 'WEEKDAY',
+    workStatus: 'WORKING_DAY',
+    scope: 'GENERAL',
     source: 'FIXED',
     isOfficialSchedule: false,
     description: 'Lễ Giáng sinh (Noel)',
@@ -111,6 +142,7 @@ export class CalendarService {
 
   /**
    * Fetch holidays from Backend API with memory caching and fallback.
+   * Cache key: calendar-holidays:${year}_${from}_${to}
    */
   static async getHolidays(params: { from?: string; to?: string; year?: number } = {}): Promise<Holiday[]> {
     const cacheKey = `calendar-holidays:${params.year || ''}_${params.from || ''}_${params.to || ''}`;
@@ -142,13 +174,13 @@ export class CalendarService {
     const y = input.getFullYear();
     const m = String(input.getMonth() + 1).padStart(2, '0');
     const d = String(input.getDate()).padStart(2, '0');
-    return `${y}-${m}-${dd(d)}`;
+    return `${y}-${m}-${d}`;
   }
 
   /**
-   * Check if date is Saturday or Sunday.
+   * Check if date is Saturday or Sunday and return DayType.
    */
-  static isWeekend(input: Date | string): { isWeekend: boolean; isSaturday: boolean; isSunday: boolean } {
+  static getDayType(input: Date | string): { dayType: DayType; isWeekend: boolean; isSaturday: boolean; isSunday: boolean } {
     let dateObj: Date;
     if (typeof input === 'string') {
       const [y, m, d] = input.substring(0, 10).split('-').map(Number);
@@ -159,11 +191,20 @@ export class CalendarService {
     const dayOfWeek = dateObj.getDay(); // 0 = Sunday, 6 = Saturday
     const isSaturday = dayOfWeek === 6;
     const isSunday = dayOfWeek === 0;
+    const dayType: DayType = isSunday ? 'SUNDAY' : isSaturday ? 'SATURDAY' : 'WEEKDAY';
     return {
+      dayType,
       isWeekend: isSaturday || isSunday,
       isSaturday,
       isSunday,
     };
+  }
+
+  /**
+   * Backward compatible isWeekend check.
+   */
+  static isWeekend(input: Date | string): { isWeekend: boolean; isSaturday: boolean; isSunday: boolean } {
+    return this.getDayType(input);
   }
 
   /**
@@ -218,66 +259,90 @@ export class CalendarService {
   }
 
   /**
-   * Full comprehensive classification of any given date.
-   * Accurately distinguishes PUBLIC_HOLIDAY, LUNAR_HOLIDAY, SPECIAL_DAY, and WEEKEND.
+   * Full comprehensive classification of any given date according to 3 axes:
+   * A. OCCASION: 'PUBLIC_HOLIDAY' | 'SPECIAL_DAY' | 'NONE'
+   * B. DAY TYPE: 'WEEKDAY' | 'SATURDAY' | 'SUNDAY'
+   * C. WORK STATUS: 'WORKING_DAY' | 'REST_DAY' | 'MAKEUP_WORKING_DAY'
    */
   static classifyDay(input: Date | string, source: Holiday[] | Map<string, Holiday> = []): DayClassification {
     const dateStr = this.toDateStr(input);
     const todayStr = this.toDateStr(new Date());
     const isToday = dateStr === todayStr;
 
-    const { isWeekend, isSaturday, isSunday } = this.isWeekend(input);
+    const { dayType, isWeekend, isSaturday, isSunday } = this.getDayType(input);
     const holiday = this.getHoliday(input, source);
 
-    const isPublicHoliday = holiday?.type === 'PUBLIC_HOLIDAY';
-    const isLunarHoliday = holiday?.type === 'LUNAR_HOLIDAY';
-    const isSpecialDay = holiday?.type === 'SPECIAL_DAY';
+    // Determine 3 axes
+    const occasion: OccasionType = holiday?.occasion || (holiday?.type === 'PUBLIC_HOLIDAY' ? 'PUBLIC_HOLIDAY' : holiday?.type === 'SPECIAL_DAY' ? 'SPECIAL_DAY' : 'NONE');
+    let workStatus: WorkStatus;
+    if (holiday?.workStatus) {
+      workStatus = holiday.workStatus;
+    } else if (holiday?.type === 'MAKEUP_WORKING_DAY') {
+      workStatus = 'MAKEUP_WORKING_DAY';
+    } else if (occasion === 'PUBLIC_HOLIDAY') {
+      workStatus = 'REST_DAY';
+    } else if (isWeekend) {
+      workStatus = 'REST_DAY';
+    } else {
+      workStatus = 'WORKING_DAY';
+    }
 
-    // Any holiday that counts as a day off or calculated holiday
-    const isHoliday = isPublicHoliday || isLunarHoliday;
-    const isHolidayWeekend = isHoliday && isWeekend;
-    const isNormal = !isWeekend && !isHoliday && !isSpecialDay;
+    const isPublicHoliday = occasion === 'PUBLIC_HOLIDAY';
+    const isSpecialDay = occasion === 'SPECIAL_DAY';
+    const isMakeupWorkingDay = workStatus === 'MAKEUP_WORKING_DAY';
+
+    const isHoliday = isPublicHoliday;
+    const isHolidayWeekend = isPublicHoliday && isWeekend;
+    const isNormal = !isWeekend && occasion === 'NONE' && workStatus === 'WORKING_DAY';
 
     // Label formatting
     let label: string | undefined = undefined;
     if (isPublicHoliday && holiday) {
       label = `🇻🇳 ${holiday.name}`;
-    } else if (isLunarHoliday && holiday) {
-      label = `🌙 ${holiday.name}`;
     } else if (isSpecialDay && holiday) {
       label = `⭐ ${holiday.name}`;
+    } else if (isMakeupWorkingDay && holiday) {
+      label = `💼 ${holiday.name}`;
     }
 
-    // Lesson creation warning logic (Section 20)
+    // Lesson creation warning logic (Section 10 specifications):
+    // NORMAL: không warning
+    // WEEKEND: "Đây là ngày cuối tuần."
+    // PUBLIC_HOLIDAY: "Đây là ngày nghỉ lễ: {name}"
+    // WEEKEND + PUBLIC_HOLIDAY: "Đây là ngày cuối tuần và ngày nghỉ lễ: {name}"
+    // SPECIAL_DAY: "Ngày đặc biệt: {name}"
+    // MAKEUP_WORKING_DAY: "Đây là ngày làm bù theo lịch: {name}" (hoặc "Đây là ngày làm bù theo lịch.")
     let warningText: string | undefined = undefined;
-    if (isHolidayWeekend && holiday) {
-      if (isPublicHoliday) {
-        warningText = `Đây là ngày cuối tuần và ngày nghỉ lễ: ${holiday.name}.`;
-      } else {
-        warningText = `Đây là ngày cuối tuần và ngày lễ theo lịch âm: ${holiday.name}.`;
-      }
+    if (isMakeupWorkingDay) {
+      const cleanName = holiday?.name && !holiday.name.toLowerCase().startsWith('làm việc bù') && !holiday.name.toLowerCase().startsWith('làm bù')
+        ? holiday.name
+        : undefined;
+      warningText = cleanName ? `Đây là ngày làm bù theo lịch: ${cleanName}` : 'Đây là ngày làm bù theo lịch.';
+    } else if (isHolidayWeekend && holiday) {
+      warningText = `Đây là ngày cuối tuần và ngày nghỉ lễ: ${holiday.name}`;
     } else if (isPublicHoliday && holiday) {
-      warningText = `Đây là ngày nghỉ lễ: ${holiday.name}.`;
-    } else if (isLunarHoliday && holiday) {
-      warningText = `Đây là ngày lễ theo lịch âm: ${holiday.name}.`;
-    } else if (isWeekend && isSpecialDay && holiday) {
-      warningText = `Đây là ngày cuối tuần. Ngày đặc biệt: ${holiday.name}.`;
+      warningText = `Đây là ngày nghỉ lễ: ${holiday.name}`;
     } else if (isSpecialDay && holiday) {
-      // SECTION 8 & 20: MUST NOT be called "ngày nghỉ lễ"!
-      warningText = `Ngày đặc biệt: ${holiday.name}.`;
+      // Must not be called "ngày nghỉ lễ"!
+      warningText = isWeekend
+        ? `Đây là ngày cuối tuần. Ngày đặc biệt: ${holiday.name}`
+        : `Ngày đặc biệt: ${holiday.name}`;
     } else if (isWeekend) {
       warningText = 'Đây là ngày cuối tuần.';
     }
 
     return {
       dateStr,
+      dayType,
+      occasion,
+      workStatus,
       isNormal,
       isSaturday,
       isSunday,
       isWeekend,
       isPublicHoliday,
-      isLunarHoliday,
       isSpecialDay,
+      isMakeupWorkingDay,
       isHoliday,
       isHolidayWeekend,
       isToday,
@@ -286,8 +351,4 @@ export class CalendarService {
       warningText,
     };
   }
-}
-
-function dd(d: string): string {
-  return d;
 }

@@ -27,31 +27,31 @@ export interface ExcelLogItem {
 }
 
 /**
- * Soft Education Palette according to prompt specifications
+ * Modern Education Professional Palette
  */
 export const EXCEL_PALETTE = {
-  primary: '3B6FEF', // Education Blue
-  primaryDark: '1E40AF', // Dark blue border/headers
-  primaryLight: 'EEF4FF', // Soft light blue tint
-  primarySoft: 'F5F8FF', // Light blue-gray for metadata box
-  textDark: '1E293B', // Slate 800 - dark navy/slate
-  textMuted: '64748B', // Slate 500 - secondary label
-  textPlaceholder: '94A3B8', // Slate 400
-  border: 'E2E8F0', // Slate 200 - subtle grid border
-  borderMedium: 'CBD5E1', // Slate 300
+  primary: '3769E8', // Primary Education Blue
+  primaryDark: '172554', // Dark Navy
+  primaryLight: 'EEF4FF', // Soft Blue
+  primarySoft: 'F7F9FC', // Very Light Blue / Soft background
+  textDark: '1E293B', // Text Slate 800
+  textMuted: '64748B', // Secondary Text Slate 500
+  textPlaceholder: '94A3B8', // Neutral Slate 400
+  border: 'D9E2F2', // Neutral Border
+  borderMedium: 'CBD5E1', // Border Medium
   white: 'FFFFFF',
-  zebraBg: 'F8FAFC', // Slate 50 subtle row background
+  zebraBg: 'F7F9FC', // Very Light Blue subtle row background
   // Semantic Attitude & BTVN Colors
-  successBg: 'ECFDF5', // Soft emerald tint
-  successText: '15803D', // Emerald 700
+  successBg: 'EAF8F1', // Soft Green
+  successText: '16845B', // Text Green
   successBorder: 'A7F3D0',
-  infoBg: 'EFF6FF', // Soft blue tint
+  infoBg: 'EEF4FF', // Soft Blue
   infoText: '2563EB', // Blue 600
   infoBorder: 'BFDBFE',
-  warningBg: 'FFFBEB', // Soft amber tint
-  warningText: 'B45309', // Amber 700
+  warningBg: 'FFF7E6', // Soft Orange
+  warningText: 'D97706', // Amber / Orange text
   warningBorder: 'FDE68A',
-  dangerBg: 'FFF1F2', // Soft rose tint
+  dangerBg: 'FFF1F2', // Soft Rose tint
   dangerText: 'BE123C', // Rose 700
   dangerBorder: 'FECDD3',
 };
@@ -93,7 +93,7 @@ export function calculateRowHeight(
   content: string,
   comment: string,
   note: string,
-  contentColWidth = 44,
+  contentColWidth = 42,
   commentColWidth = 44,
   noteColWidth = 32,
 ): number {
@@ -121,6 +121,51 @@ export function calculateRowHeight(
 }
 
 /**
+ * Strips Vietnamese accents and sanitizes characters for clean, safe filenames
+ */
+export function sanitizeFilenamePart(str: string): string {
+  if (!str) return '';
+  return str
+    .normalize('NFD')
+    .replace(/[\u0300-\u036f]/g, '')
+    .replace(/đ/g, 'd')
+    .replace(/Đ/g, 'D')
+    .replace(/[^a-zA-Z0-9_-]/g, '_')
+    .replace(/_+/g, '_')
+    .replace(/^_|_$/g, '');
+}
+
+/**
+ * Generates standardized professional filename according to specification
+ * - Single student: NhatKyHocTap_Ha_Truong_Giang_2026-10.xlsx
+ * - Multiple students: NhatKyHocTap_Thang10_2026.xlsx
+ */
+export function generateExportFilename(
+  isSingleStudent: boolean,
+  studentName?: string,
+  month?: string,
+): string {
+  let filename = 'NhatKyHocTap';
+  if (isSingleStudent && studentName) {
+    const sanitizedStudent = sanitizeFilenamePart(studentName);
+    if (sanitizedStudent) {
+      filename += `_${sanitizedStudent}`;
+    }
+    if (month) {
+      filename += `_${month}`;
+    }
+  } else if (month && /^\d{4}-\d{2}$/.test(month)) {
+    const [y, m] = month.split('-');
+    filename += `_Thang${m}_${y}`;
+  } else if (month) {
+    filename += `_${month}`;
+  } else {
+    filename += '_TatCa';
+  }
+  return `${filename}.xlsx`;
+}
+
+/**
  * Creates the Report Title & Subtitle banner
  */
 export function createReportHeader(
@@ -138,7 +183,7 @@ export function createReportHeader(
   titleCell.value = title;
   titleCell.font = {
     name: 'Calibri',
-    size: 20,
+    size: 22,
     bold: true,
     color: { argb: 'FF' + EXCEL_PALETTE.primary },
   };
@@ -151,7 +196,7 @@ export function createReportHeader(
   subCell.value = subtitle;
   subCell.font = {
     name: 'Calibri',
-    size: 10,
+    size: 10.5,
     italic: true,
     color: { argb: 'FF' + EXCEL_PALETTE.textMuted },
   };
@@ -159,11 +204,11 @@ export function createReportHeader(
   sheet.getRow(3).height = 20;
 
   // Row 4: Spacer
-  sheet.getRow(4).height = 12;
+  sheet.getRow(4).height = 10;
 }
 
 /**
- * Creates Student & Report Metadata summary card
+ * Creates Student & Report Metadata summary card with Soft Blue labels and crisp White values
  */
 export function createStudentSummary(
   sheet: ExcelJS.Worksheet,
@@ -208,37 +253,37 @@ export function createStudentSummary(
   rowsConfig.forEach(({ row, lbl1, val1, lbl2, val2, val2Highlight }) => {
     sheet.getRow(row).height = 24;
 
-    // Col A:B for Label 1
+    // Col A:B for Label 1 (Soft Blue background)
     sheet.mergeCells(`A${row}:B${row}`);
     const l1 = sheet.getCell(`A${row}`);
     l1.value = lbl1;
-    l1.font = { name: 'Calibri', size: 9, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.textMuted } };
-    l1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.primarySoft } };
+    l1.font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.primaryDark } };
+    l1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.primaryLight } };
     l1.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     applyThinBorders(l1);
     applyThinBorders(sheet.getCell(`B${row}`));
 
-    // Col C:D for Value 1
+    // Col C:D for Value 1 (Clean White background)
     sheet.mergeCells(`C${row}:D${row}`);
     const v1 = sheet.getCell(`C${row}`);
     v1.value = val1;
     v1.font = { name: 'Calibri', size: 11, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.textDark } };
-    v1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.primarySoft } };
-    v1.alignment = { horizontal: 'left', vertical: 'middle' };
+    v1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.white } };
+    v1.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     applyThinBorders(v1);
     applyThinBorders(sheet.getCell(`D${row}`));
 
-    // Col E:F for Label 2
+    // Col E:F for Label 2 (Soft Blue background)
     sheet.mergeCells(`E${row}:F${row}`);
     const l2 = sheet.getCell(`E${row}`);
     l2.value = lbl2;
-    l2.font = { name: 'Calibri', size: 9, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.textMuted } };
-    l2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.primarySoft } };
+    l2.font = { name: 'Calibri', size: 9.5, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.primaryDark } };
+    l2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.primaryLight } };
     l2.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     applyThinBorders(l2);
     applyThinBorders(sheet.getCell(`F${row}`));
 
-    // Col G:lastColLetter for Value 2
+    // Col G:lastColLetter for Value 2 (Clean White background)
     sheet.mergeCells(`G${row}:${lastColLetter}${row}`);
     const v2 = sheet.getCell(`G${row}`);
     v2.value = val2;
@@ -246,18 +291,99 @@ export function createStudentSummary(
       name: 'Calibri',
       size: 11,
       bold: true,
-      color: { argb: 'FF' + (val2Highlight ? EXCEL_PALETTE.primary : EXCEL_PALETTE.textDark) },
+      color: { argb: 'FF' + (val2Highlight ? EXCEL_PALETTE.successText : EXCEL_PALETTE.textDark) },
     };
-    v2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.primarySoft } };
-    v2.alignment = { horizontal: 'left', vertical: 'middle' };
+    v2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.white } };
+    v2.alignment = { horizontal: 'left', vertical: 'middle', indent: 1 };
     applyThinBorders(v2);
     for (let c = 7; c <= sheet.columnCount; c++) {
       applyThinBorders(sheet.getRow(row).getCell(c));
     }
   });
 
-  // Row 8: Spacing before table
-  sheet.getRow(8).height = 14;
+  // Row 8: Spacing
+  sheet.getRow(8).height = 10;
+}
+
+/**
+ * Creates compact 1-line Summary KPI Strip directly on Sheet 1 before the table
+ * e.g.: 2 BUỔI HỌC | 100% BTVN | TỐT | 200.000 ₫
+ */
+export function createSummaryKpiStrip(
+  sheet: ExcelJS.Worksheet,
+  logs: ExcelLogItem[],
+  totalFee = 0,
+  lastColLetter: string,
+  rowNum = 9,
+) {
+  const totalSessions = logs.length;
+  let totalHw = 0;
+  let countHw = 0;
+  let countTot = 0;
+  let countKha = 0;
+  let countTB = 0;
+
+  logs.forEach((l) => {
+    const hwStr = (l.homework || '').trim();
+    if (/^\d+%$/.test(hwStr)) {
+      totalHw += parseInt(hwStr, 10);
+      countHw++;
+    }
+    const att = (l.attitude || '').trim();
+    if (att === 'Tốt') countTot++;
+    else if (att === 'Khá') countKha++;
+    else if (att) countTB++;
+  });
+
+  const avgHw = countHw > 0 ? Math.round(totalHw / countHw) : 100;
+  const dominantAttitude = countTot >= countKha && countTot >= countTB ? 'TỐT' : countKha >= countTB ? 'KHÁ' : 'TRUNG BÌNH';
+
+  sheet.getRow(rowNum).height = 26;
+
+  // 1. BUỔI HỌC (Col A:B)
+  sheet.mergeCells(`A${rowNum}:B${rowNum}`);
+  const kpi1 = sheet.getCell(`A${rowNum}`);
+  kpi1.value = `${totalSessions} BUỔI HỌC`;
+  kpi1.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.primary } };
+  kpi1.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.primaryLight } };
+  kpi1.alignment = { horizontal: 'center', vertical: 'middle' };
+  applyThinBorders(kpi1);
+  applyThinBorders(sheet.getCell(`B${rowNum}`));
+
+  // 2. BTVN TB (Col C:D)
+  sheet.mergeCells(`C${rowNum}:D${rowNum}`);
+  const kpi2 = sheet.getCell(`C${rowNum}`);
+  kpi2.value = `${avgHw}% BTVN TB`;
+  kpi2.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.successText } };
+  kpi2.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.successBg } };
+  kpi2.alignment = { horizontal: 'center', vertical: 'middle' };
+  applyThinBorders(kpi2);
+  applyThinBorders(sheet.getCell(`D${rowNum}`));
+
+  // 3. Ý THỨC (Col E:F)
+  sheet.mergeCells(`E${rowNum}:F${rowNum}`);
+  const kpi3 = sheet.getCell(`E${rowNum}`);
+  kpi3.value = `Ý THỨC: ${dominantAttitude}`;
+  kpi3.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.primary } };
+  kpi3.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.primaryLight } };
+  kpi3.alignment = { horizontal: 'center', vertical: 'middle' };
+  applyThinBorders(kpi3);
+  applyThinBorders(sheet.getCell(`F${rowNum}`));
+
+  // 4. HỌC PHÍ (Col G:lastColLetter)
+  sheet.mergeCells(`G${rowNum}:${lastColLetter}${rowNum}`);
+  const kpi4 = sheet.getCell(`G${rowNum}`);
+  kpi4.value = `HỌC PHÍ: ${formatCurrencyVN(totalFee)}`;
+  kpi4.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.warningText } };
+  kpi4.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.warningBg } };
+  kpi4.alignment = { horizontal: 'center', vertical: 'middle' };
+  applyThinBorders(kpi4);
+  for (let c = 7; c <= sheet.columnCount; c++) {
+    applyThinBorders(sheet.getRow(rowNum).getCell(c));
+  }
+
+  // Row 10: Spacing before table
+  sheet.getRow(rowNum + 1).height = 12;
 }
 
 /**
@@ -266,7 +392,7 @@ export function createStudentSummary(
 export function createTableHeader(
   sheet: ExcelJS.Worksheet,
   headers: { title: string; width: number; col: number }[],
-  headerRowNum = 9,
+  headerRowNum = 11,
 ) {
   const headerRow = sheet.getRow(headerRowNum);
   headerRow.height = 32;
@@ -294,7 +420,7 @@ export function styleDataRows(
   sheet: ExcelJS.Worksheet,
   logs: ExcelLogItem[],
   isSingleStudent: boolean,
-  startRowNum = 10,
+  startRowNum = 12,
 ): number {
   let currentRowNum = startRowNum;
 
@@ -423,13 +549,9 @@ export function styleDataRows(
       attBg = EXCEL_PALETTE.infoBg;
       attText = EXCEL_PALETTE.infoText;
       attBold = true;
-    } else if (attStr === 'Trung bình') {
+    } else if (attStr === 'Trung bình' || attStr === 'Cần cải thiện') {
       attBg = EXCEL_PALETTE.warningBg;
       attText = EXCEL_PALETTE.warningText;
-      attBold = true;
-    } else if (attStr === 'Cần cải thiện') {
-      attBg = EXCEL_PALETTE.dangerBg;
-      attText = EXCEL_PALETTE.dangerText;
       attBold = true;
     } else if (!attStr || attStr === '-') {
       attText = EXCEL_PALETTE.textPlaceholder;
@@ -471,7 +593,7 @@ export function styleDataRows(
 }
 
 /**
- * Creates table footer summary row
+ * Creates table footer summary row with Soft Blue background and double underline
  */
 export function createTableFooter(
   sheet: ExcelJS.Worksheet,
@@ -486,10 +608,10 @@ export function createTableFooter(
   const totalCols = isSingleStudent ? 8 : 10;
   for (let c = 1; c <= totalCols; c++) {
     const cell = footerRow.getCell(c);
-    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF1F5F9' } };
+    cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + EXCEL_PALETTE.primaryLight } };
     cell.border = {
-      top: { style: 'thin', color: { argb: 'FF' + EXCEL_PALETTE.borderMedium } },
-      bottom: { style: 'double', color: { argb: 'FF' + EXCEL_PALETTE.textMuted } },
+      top: { style: 'thin', color: { argb: 'FF' + EXCEL_PALETTE.border } },
+      bottom: { style: 'double', color: { argb: 'FF' + EXCEL_PALETTE.primaryDark } },
       left: { style: 'thin', color: { argb: 'FF' + EXCEL_PALETTE.border } },
       right: { style: 'thin', color: { argb: 'FF' + EXCEL_PALETTE.border } },
     };
@@ -500,7 +622,7 @@ export function createTableFooter(
   sheet.mergeCells(`A${lastDataRow + 1}:${labelEndCol}${lastDataRow + 1}`);
   const lblCell = footerRow.getCell(1);
   lblCell.value = 'TỔNG CỘNG TIẾN ĐỘ';
-  lblCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.textDark } };
+  lblCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.primaryDark } };
   lblCell.alignment = { horizontal: 'center', vertical: 'middle' };
 
   // Content cell
@@ -517,6 +639,46 @@ export function createTableFooter(
     feeCell.font = { name: 'Calibri', size: 10, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.successText } };
     feeCell.alignment = { horizontal: 'center', vertical: 'middle' };
   }
+}
+
+/**
+ * Configure professional Page Setup & Print Options for Sheet 1
+ */
+export function setupPrintSettings(
+  sheet: ExcelJS.Worksheet,
+  monthSubtitle: string,
+  lastColLetter: string,
+  headerRowNum = 11,
+) {
+  // Freeze rows up to headerRowNum so table header stays visible when scrolling
+  sheet.views = [{ state: 'frozen', xSplit: 0, ySplit: headerRowNum, activeCell: `A${headerRowNum + 1}` }];
+
+  // AutoFilter on the table header row
+  sheet.autoFilter = { from: `A${headerRowNum}`, to: `${lastColLetter}${headerRowNum}` };
+
+  // Page Setup for A4 Landscape
+  sheet.pageSetup = {
+    orientation: 'landscape',
+    paperSize: 9, // A4
+    fitToPage: true,
+    fitToWidth: 1,
+    fitToHeight: 0,
+    margins: {
+      left: 0.35,
+      right: 0.35,
+      top: 0.5,
+      bottom: 0.5,
+      header: 0.3,
+      footer: 0.3,
+    },
+    printTitlesRow: `${headerRowNum}:${headerRowNum}`, // Repeat table header on every printed page
+    horizontalCentered: true,
+  };
+
+  sheet.headerFooter = {
+    oddHeader: `&L&BQuizMaster&B — Nhật ký học tập&R${monthSubtitle}`,
+    oddFooter: '&CTrang &P / &N&RXuất ngày: &D',
+  };
 }
 
 /**
@@ -567,28 +729,23 @@ export function createSummarySheet(
   summarySheet.mergeCells('A2:H2');
   const tCell = summarySheet.getCell('A2');
   tCell.value = 'TỔNG QUAN TIẾN TRÌNH HỌC TẬP';
-  tCell.font = { name: 'Calibri', size: 20, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.primary } };
+  tCell.font = { name: 'Calibri', size: 22, bold: true, color: { argb: 'FF' + EXCEL_PALETTE.primary } };
   tCell.alignment = { horizontal: 'center', vertical: 'middle' };
   summarySheet.getRow(2).height = 36;
 
   summarySheet.mergeCells('A3:H3');
   const sCell = summarySheet.getCell('A3');
   sCell.value = 'Báo cáo thống kê chuyên cần, hoàn thành bài tập về nhà và ý thức rèn luyện';
-  sCell.font = { name: 'Calibri', size: 10, italic: true, color: { argb: 'FF' + EXCEL_PALETTE.textMuted } };
+  sCell.font = { name: 'Calibri', size: 10.5, italic: true, color: { argb: 'FF' + EXCEL_PALETTE.textMuted } };
   sCell.alignment = { horizontal: 'center', vertical: 'middle' };
   summarySheet.getRow(3).height = 20;
 
   summarySheet.getRow(4).height = 14;
 
   // Set column widths for summary sheet
-  summarySheet.getColumn(1).width = 16;
-  summarySheet.getColumn(2).width = 16;
-  summarySheet.getColumn(3).width = 16;
-  summarySheet.getColumn(4).width = 16;
-  summarySheet.getColumn(5).width = 16;
-  summarySheet.getColumn(6).width = 16;
-  summarySheet.getColumn(7).width = 16;
-  summarySheet.getColumn(8).width = 16;
+  for (let c = 1; c <= 8; c++) {
+    summarySheet.getColumn(c).width = 16;
+  }
 
   // 2. KPI Metric Cards (Rows 5-8)
   const renderKpiCard = (
@@ -819,88 +976,3 @@ export function createSummarySheet(
     oddFooter: '&CTrang &P / &N&RXuất ngày: &D',
   };
 }
-
-/**
- * Configure professional Page Setup & Print Options for Sheet 1
- */
-export function setupPrintSettings(
-  sheet: ExcelJS.Worksheet,
-  monthSubtitle: string,
-  lastColLetter: string,
-) {
-  // Freeze rows 1-9 so table header stays visible when scrolling
-  sheet.views = [{ state: 'frozen', xSplit: 0, ySplit: 9, activeCell: 'A10' }];
-
-  // AutoFilter on the table header row
-  sheet.autoFilter = { from: 'A9', to: `${lastColLetter}9` };
-
-  // Page Setup for A4 Landscape
-  sheet.pageSetup = {
-    orientation: 'landscape',
-    paperSize: 9, // A4
-    fitToPage: true,
-    fitToWidth: 1,
-    fitToHeight: 0,
-    margins: {
-      left: 0.4,
-      right: 0.4,
-      top: 0.6,
-      bottom: 0.6,
-      header: 0.3,
-      footer: 0.3,
-    },
-    printTitlesRow: '9:9', // Repeat table header on every printed page
-    horizontalCentered: true,
-  };
-
-  sheet.headerFooter = {
-    oddHeader: `&L&BQuizMaster&B — Nhật ký học tập&R${monthSubtitle}`,
-    oddFooter: '&CTrang &P / &N&RXuất ngày: &D',
-  };
-}
-
-/**
- * Strips Vietnamese accents and sanitizes characters for clean, safe filenames
- */
-export function sanitizeFilenamePart(str: string): string {
-  if (!str) return '';
-  return str
-    .normalize('NFD')
-    .replace(/[\u0300-\u036f]/g, '')
-    .replace(/đ/g, 'd')
-    .replace(/Đ/g, 'D')
-    .replace(/[^a-zA-Z0-9_-]/g, '_')
-    .replace(/_+/g, '_')
-    .replace(/^_|_$/g, '');
-}
-
-/**
- * Generates standardized professional filename according to specification
- * - Single student: NhatKyHocTap_Ha_Truong_Giang_2026-10.xlsx
- * - Multiple students: NhatKyHocTap_Thang10_2026.xlsx
- */
-export function generateExportFilename(
-  isSingleStudent: boolean,
-  studentName?: string,
-  month?: string,
-): string {
-  let filename = 'NhatKyHocTap';
-  if (isSingleStudent && studentName) {
-    const sanitizedStudent = sanitizeFilenamePart(studentName);
-    if (sanitizedStudent) {
-      filename += `_${sanitizedStudent}`;
-    }
-    if (month) {
-      filename += `_${month}`;
-    }
-  } else if (month && /^\d{4}-\d{2}$/.test(month)) {
-    const [y, m] = month.split('-');
-    filename += `_Thang${m}_${y}`;
-  } else if (month) {
-    filename += `_${month}`;
-  } else {
-    filename += '_TatCa';
-  }
-  return `${filename}.xlsx`;
-}
-

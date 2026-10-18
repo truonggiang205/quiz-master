@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import ExcelJS from 'exceljs';
+import fs from 'fs';
+import path from 'path';
 import {
   formatDateVN,
   formatTimeRange,
@@ -9,6 +11,7 @@ import {
   generateExportFilename,
   createReportHeader,
   createStudentSummary,
+  createSummaryKpiStrip,
   createTableHeader,
   styleDataRows,
   createTableFooter,
@@ -69,7 +72,8 @@ describe('Learning Logs Professional Excel Export', () => {
       expect(hShort).toBeLessThanOrEqual(50);
 
       // Long multiline text
-      const longText = 'Nội dung rất dài học sinh cần ôn tập kỹ kiến thức chương hàm số lượng giác và giải quyết các bài toán vận dụng cao liên quan đến tiệm cận.';
+      const longText =
+        'Nội dung rất dài học sinh cần ôn tập kỹ kiến thức chương hàm số lượng giác và giải quyết các bài toán vận dụng cao liên quan đến tiệm cận.';
       const hLong = calculateRowHeight(longText, longText, 'Ghi chú dài...');
       expect(hLong).toBeGreaterThan(hShort);
       expect(hLong).toBeLessThanOrEqual(160);
@@ -77,15 +81,15 @@ describe('Learning Logs Professional Excel Export', () => {
   });
 
   describe('Workbook Generation & Layout Structure', () => {
-    it('should generate a 2-sheet Professional Education Report with correct layout and styling', async () => {
+    it('should generate a 2-sheet Professional Education Report with correct layout, KPI strip, and styling', async () => {
       const workbook = new ExcelJS.Workbook();
       workbook.title = 'Nhật ký học tập';
 
       const metadata: ExcelExportMetadata = {
-        teacherName: 'Thầy Nguyễn Văn A',
+        teacherName: 'Trần Thị Phương Anh',
         studentName: 'Hà Trường Giang',
         studentEmail: 'giang@example.com',
-        className: 'Kèm 1-1',
+        className: 'Kèm 1-1: Hà Trường Giang',
         month: '2026-10',
         totalFee: 400000,
         isSingleStudent: true,
@@ -96,7 +100,7 @@ describe('Learning Logs Professional Excel Export', () => {
           index: 1,
           studentName: 'Hà Trường Giang',
           studentEmail: 'giang@example.com',
-          className: 'Kèm 1-1',
+          className: 'Kèm 1-1: Hà Trường Giang',
           date: '2026-10-17',
           startTime: '08:00',
           endTime: '09:30',
@@ -111,7 +115,7 @@ describe('Learning Logs Professional Excel Export', () => {
           index: 2,
           studentName: 'Hà Trường Giang',
           studentEmail: 'giang@example.com',
-          className: 'Kèm 1-1',
+          className: 'Kèm 1-1: Hà Trường Giang',
           date: '2026-10-24',
           startTime: '13:00',
           endTime: '14:30',
@@ -138,21 +142,23 @@ describe('Learning Logs Professional Excel Export', () => {
 
       createStudentSummary(sheet1, metadata, mockLogs.length, 'H');
 
+      createSummaryKpiStrip(sheet1, mockLogs, metadata.totalFee, 'H', 9);
+
       const headers = [
-        { title: 'STT', width: 7, col: 1 },
-        { title: 'NGÀY', width: 14, col: 2 },
+        { title: 'STT', width: 8, col: 1 },
+        { title: 'NGÀY', width: 15, col: 2 },
         { title: 'THỜI GIAN', width: 18, col: 3 },
-        { title: 'NỘI DUNG HỌC TẬP', width: 44, col: 4 },
-        { title: 'BTVN', width: 15, col: 5 },
+        { title: 'NỘI DUNG HỌC TẬP', width: 42, col: 4 },
+        { title: 'BTVN', width: 14, col: 5 },
         { title: 'Ý THỨC', width: 15, col: 6 },
         { title: 'NHẬN XÉT', width: 44, col: 7 },
         { title: 'GHI CHÚ', width: 32, col: 8 },
       ];
 
-      createTableHeader(sheet1, headers, 9);
-      const lastRow = styleDataRows(sheet1, mockLogs, true, 10);
+      createTableHeader(sheet1, headers, 11);
+      const lastRow = styleDataRows(sheet1, mockLogs, true, 12);
       createTableFooter(sheet1, lastRow, true, mockLogs.length, metadata.totalFee);
-      setupPrintSettings(sheet1, ' — Tháng 10/2026', 'H');
+      setupPrintSettings(sheet1, ' — Tháng 10/2026', 'H', 11);
 
       // Sheet 2: Tổng quan
       createSummarySheet(workbook, metadata, mockLogs);
@@ -164,28 +170,39 @@ describe('Learning Logs Professional Excel Export', () => {
 
       // Title & Subtitle check
       expect(sheet1.getCell('A2').value).toBe('NHẬT KÝ HỌC TẬP');
-      expect(sheet1.getCell('A2').font?.size).toBe(20);
+      expect(sheet1.getCell('A2').font?.size).toBe(22);
       expect(sheet1.getCell('A2').font?.color?.argb).toBe('FF' + EXCEL_PALETTE.primary);
       expect(sheet1.getCell('A3').value).toContain('Theo dõi tiến trình');
 
-      // Table Header check
-      expect(sheet1.getCell('A9').value).toBe('STT');
-      expect(sheet1.getCell('B9').value).toBe('NGÀY');
-      expect(sheet1.getCell('D9').value).toBe('NỘI DUNG HỌC TẬP');
-      expect(sheet1.getCell('A9').fill).toBeDefined();
+      // Student summary labels & values check
+      expect(sheet1.getCell('A5').value).toBe('HỌC SINH');
+      expect(sheet1.getCell('C5').value).toBe('Hà Trường Giang');
+      expect(sheet1.getCell('A5').fill).toBeDefined();
 
-      // Row data checks
-      const row10 = sheet1.getRow(10);
-      expect(row10.getCell(1).value).toBe(1);
-      expect(row10.getCell(2).value).toBe('17/10/2026');
-      expect(row10.getCell(5).value).toBe('100%');
-      expect(row10.getCell(6).value).toBe('Tốt');
-      expect(row10.getCell(4).alignment?.wrapText).toBe(true);
-      expect(row10.getCell(7).alignment?.wrapText).toBe(true);
+      // Summary KPI strip check (Row 9)
+      expect(sheet1.getCell('A9').value).toBe('2 BUỔI HỌC');
+      expect(sheet1.getCell('C9').value).toContain('90% BTVN TB');
+      expect(sheet1.getCell('E9').value).toBe('Ý THỨC: TỐT');
 
-      // Freeze view check
-      expect(sheet1.views[0].state).toBe('frozen');
-      expect(sheet1.views[0].ySplit).toBe(9);
+      // Table Header check (Row 11)
+      expect(sheet1.getCell('A11').value).toBe('STT');
+      expect(sheet1.getCell('B11').value).toBe('NGÀY');
+      expect(sheet1.getCell('D11').value).toBe('NỘI DUNG HỌC TẬP');
+      expect(sheet1.getCell('A11').fill).toBeDefined();
+
+      // Row data checks (Row 12+)
+      const row12 = sheet1.getRow(12);
+      expect(row12.getCell(1).value).toBe(1);
+      expect(row12.getCell(2).value).toBe('17/10/2026');
+      expect(row12.getCell(5).value).toBe('100%');
+      expect(row12.getCell(6).value).toBe('Tốt');
+      expect(row12.getCell(4).alignment?.wrapText).toBe(true);
+      expect(row12.getCell(7).alignment?.wrapText).toBe(true);
+
+      // Freeze view check (cast to WorksheetViewFrozen to avoid lint error)
+      const view0 = sheet1.views[0] as ExcelJS.WorksheetViewFrozen;
+      expect(view0.state).toBe('frozen');
+      expect(view0.ySplit).toBe(11);
 
       // AutoFilter check
       expect(sheet1.autoFilter).toBeDefined();
@@ -193,7 +210,7 @@ describe('Learning Logs Professional Excel Export', () => {
       // Print setup check
       expect(sheet1.pageSetup.orientation).toBe('landscape');
       expect(sheet1.pageSetup.paperSize).toBe(9); // A4
-      expect(sheet1.pageSetup.printTitlesRow).toBe('9:9');
+      expect(sheet1.pageSetup.printTitlesRow).toBe('11:11');
 
       // Verify Sheet 2 (Tổng quan)
       const sheet2 = workbook.getWorksheet('Tổng quan')!;
@@ -216,6 +233,11 @@ describe('Learning Logs Professional Excel Export', () => {
       expect(testWb.worksheets).toHaveLength(2);
       expect(testWb.getWorksheet('Nhật ký học tập')).toBeDefined();
       expect(testWb.getWorksheet('Tổng quan')).toBeDefined();
+
+      // Save a sample demo file NhatKyHocTap_Demo_2026-10.xlsx for user inspection
+      const demoPath = path.resolve(__dirname, '../../../../NhatKyHocTap_Demo_2026-10.xlsx');
+      fs.writeFileSync(demoPath, Buffer.from(buffer));
+      expect(fs.existsSync(demoPath)).toBe(true);
     });
   });
 });

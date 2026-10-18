@@ -23,6 +23,7 @@ import {
   ExcelLogItem,
   createReportHeader,
   createStudentSummary,
+  createSummaryKpiStrip,
   createTableHeader,
   styleDataRows,
   createTableFooter,
@@ -260,33 +261,35 @@ export class LearningLogsService {
 
     createStudentSummary(sheet1, metadata, logs.length, lastColLetter);
 
+    createSummaryKpiStrip(sheet1, logItems, totalFee, lastColLetter, 9);
+
     const headers = isSingleStudent
       ? [
-          { title: 'STT', width: 7, col: 1 },
-          { title: 'NGÀY', width: 14, col: 2 },
+          { title: 'STT', width: 8, col: 1 },
+          { title: 'NGÀY', width: 15, col: 2 },
           { title: 'THỜI GIAN', width: 18, col: 3 },
-          { title: 'NỘI DUNG HỌC TẬP', width: 44, col: 4 },
-          { title: 'BTVN', width: 15, col: 5 },
+          { title: 'NỘI DUNG HỌC TẬP', width: 42, col: 4 },
+          { title: 'BTVN', width: 14, col: 5 },
           { title: 'Ý THỨC', width: 15, col: 6 },
           { title: 'NHẬN XÉT', width: 44, col: 7 },
           { title: 'GHI CHÚ', width: 32, col: 8 },
         ]
       : [
-          { title: 'STT', width: 7, col: 1 },
+          { title: 'STT', width: 8, col: 1 },
           { title: 'HỌC SINH', width: 24, col: 2 },
           { title: 'LỚP HỌC', width: 18, col: 3 },
           { title: 'NGÀY', width: 14, col: 4 },
           { title: 'THỜI GIAN', width: 18, col: 5 },
-          { title: 'NỘI DUNG HỌC TẬP', width: 42, col: 6 },
-          { title: 'BTVN', width: 15, col: 7 },
+          { title: 'NỘI DUNG HỌC TẬP', width: 40, col: 6 },
+          { title: 'BTVN', width: 14, col: 7 },
           { title: 'Ý THỨC', width: 15, col: 8 },
-          { title: 'NHẬN XÉT', width: 42, col: 9 },
+          { title: 'NHẬN XÉT', width: 40, col: 9 },
           { title: 'GHI CHÚ', width: 30, col: 10 },
         ];
 
-    createTableHeader(sheet1, headers, 9);
+    createTableHeader(sheet1, headers, 11);
 
-    const lastRow = styleDataRows(sheet1, logItems, isSingleStudent, 10);
+    const lastRow = styleDataRows(sheet1, logItems, isSingleStudent, 12);
 
     if (logs.length > 0) {
       createTableFooter(sheet1, lastRow, isSingleStudent, logs.length, totalFee);
@@ -296,6 +299,7 @@ export class LearningLogsService {
       sheet1,
       metadata.month ? ` — Tháng ${metadata.month}` : '',
       lastColLetter,
+      11,
     );
 
     // Sheet 2: Tổng quan (Executive Education Summary Dashboard)

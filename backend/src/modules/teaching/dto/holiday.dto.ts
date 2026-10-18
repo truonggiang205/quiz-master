@@ -1,12 +1,13 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 
-export type HolidayType = 'PUBLIC_HOLIDAY' | 'OBSERVANCE' | 'TRADITIONAL';
+export type HolidayType = 'PUBLIC_HOLIDAY' | 'LUNAR_HOLIDAY' | 'SPECIAL_DAY' | 'MAKEUP_WORKING_DAY';
+export type HolidaySource = 'OFFICIAL' | 'FIXED' | 'LUNAR_CALCULATED';
 
 export class HolidayDto {
   @ApiProperty({ description: 'ID định danh của ngày lễ' })
   id: string;
 
-  @ApiProperty({ description: 'Tên ngày lễ (VD: Tết Nguyên Đán, Quốc Khánh)' })
+  @ApiProperty({ description: 'Tên ngày lễ (VD: Tết Nguyên Đán, Quốc Khánh, Ngày Nhà giáo VN)' })
   name: string;
 
   @ApiProperty({ description: 'Ngày bắt đầu (YYYY-MM-DD)' })
@@ -16,10 +17,21 @@ export class HolidayDto {
   endDate?: string;
 
   @ApiProperty({
-    description: 'Phân loại ngày lễ',
-    enum: ['PUBLIC_HOLIDAY', 'OBSERVANCE', 'TRADITIONAL'],
+    description: 'Phân loại ngày',
+    enum: ['PUBLIC_HOLIDAY', 'LUNAR_HOLIDAY', 'SPECIAL_DAY', 'MAKEUP_WORKING_DAY'],
   })
   type: HolidayType;
+
+  @ApiProperty({
+    description: 'Nguồn dữ liệu của ngày lễ',
+    enum: ['OFFICIAL', 'FIXED', 'LUNAR_CALCULATED'],
+  })
+  source: HolidaySource;
+
+  @ApiProperty({
+    description: 'Xác định đây có phải lịch nghỉ chính thức của Chính phủ/Bộ luật Lao động hay không',
+  })
+  isOfficialSchedule: boolean;
 
   @ApiPropertyOptional({ description: 'Mô tả chi tiết' })
   description?: string;

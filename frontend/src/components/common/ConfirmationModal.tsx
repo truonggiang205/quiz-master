@@ -1,4 +1,5 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { AlertCircle, CheckCircle2, AlertTriangle, X } from 'lucide-react';
 
@@ -27,6 +28,15 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
   children,
   isLoading = false,
 }) => {
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') onClose();
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
+
   const variantIcons = {
     primary: <AlertCircle className="w-6 h-6 text-sky-500" />,
     warning: <AlertTriangle className="w-6 h-6 text-amber-500" />,
@@ -41,15 +51,17 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     success: 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shadow-emerald-200 dark:shadow-none',
   };
 
-  return (
+  if (typeof document === 'undefined') return null;
+
+  return createPortal(
     <AnimatePresence>
       {isOpen && (
-      <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
+      <div className="fixed inset-0 z-[1000] flex items-center justify-center p-4 bg-slate-900/40 backdrop-blur-sm">
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 10 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 10 }}
-          className="relative w-full max-w-md bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-2xl border border-slate-100 dark:border-slate-700/80 overflow-hidden"
+          className="relative w-full max-w-md max-h-[calc(100dvh-2rem)] flex flex-col bg-white dark:bg-slate-800 rounded-3xl p-6 shadow-2xl border border-slate-100 dark:border-slate-700/80 overflow-hidden"
         >
           <div className="flex items-start justify-between gap-4 mb-4">
             <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-700/60">
@@ -97,6 +109,7 @@ export const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         </motion.div>
       </div>
       )}
-    </AnimatePresence>
+    </AnimatePresence>,
+    document.body
   );
 };

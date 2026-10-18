@@ -18,6 +18,7 @@ import {
 } from 'lucide-react';
 import { TeachingService } from '../../services/teaching.service';
 import { ClassroomService } from '../../services/classroom.service';
+import { Modal } from '../../components/common/Modal';
 import type { LearningLog, Lesson, SaveLearningLogPayload } from '../../types/teaching';
 import type { Classroom } from '../../types/classroom';
 import { useSearchParams } from 'react-router-dom';
@@ -383,226 +384,206 @@ export const TeacherLearningLogsPage: React.FC = () => {
       )}
 
       {/* EDIT / CREATE LOG MODAL */}
-      <AnimatePresence>
-        {isEditModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 my-8 space-y-4"
+      <Modal
+        isOpen={isEditModalOpen}
+        onClose={() => setIsEditModalOpen(false)}
+        title={selectedLog ? 'Cập Nhật Nhật Ký Học Tập' : 'Ghi Nhật Ký Học Tập'}
+        icon={
+          <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 rounded-xl">
+            <FileText className="w-5 h-5" />
+          </div>
+        }
+        maxWidth="lg"
+        onSubmit={handleSaveLog}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsEditModalOpen(false)}
+              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">
-                  {selectedLog ? 'Cập Nhật Nhật Ký Học Tập' : 'Ghi Nhật Ký Học Tập'}
-                </h3>
-                <button
-                  onClick={() => setIsEditModalOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              {formError && (
-                <div className="p-3 bg-red-50 dark:bg-red-950/50 rounded-xl text-red-600 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{formError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleSaveLog} className="space-y-3.5">
-                {!selectedLog && (
-                  <>
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Buổi Học <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={editFormData.lessonId}
-                        onChange={(e) => setEditFormData({ ...editFormData, lessonId: e.target.value })}
-                        required
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                      >
-                        {lessons.map((l) => (
-                          <option key={l.id} value={l.id}>
-                            {l.date} - {l.title} ({l.class?.name})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-
-                    <div>
-                      <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                        Học Sinh <span className="text-red-500">*</span>
-                      </label>
-                      <select
-                        value={editFormData.studentId}
-                        onChange={(e) => setEditFormData({ ...editFormData, studentId: e.target.value })}
-                        required
-                        className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                      >
-                        {formLesson?.participants?.map((p) => (
-                          <option key={p.studentId} value={p.studentId}>
-                            {p.student?.name} ({p.student?.email})
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  </>
-                )}
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Nội dung bài học
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={editFormData.content}
-                    onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
-                    placeholder="VD: Ôn tập phương trình bậc hai, cách lập bảng biến thiên..."
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    BTVN giao về
-                  </label>
-                  <input
-                    type="text"
-                    value={editFormData.homework}
-                    onChange={(e) => setEditFormData({ ...editFormData, homework: e.target.value })}
-                    placeholder="VD: Bài 1 đến bài 10 trang 45 SGK"
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Ý thức học tập
-                  </label>
-                  <select
-                    value={editFormData.attitude}
-                    onChange={(e) => setEditFormData({ ...editFormData, attitude: e.target.value })}
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  >
-                    <option value="Tốt">Tốt</option>
-                    <option value="Khá">Khá</option>
-                    <option value="Trung bình">Trung bình</option>
-                    <option value="Cần cố gắng">Cần cố gắng</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
-                    Nhận xét của giáo viên
-                  </label>
-                  <textarea
-                    rows={2}
-                    value={editFormData.comment}
-                    onChange={(e) => setEditFormData({ ...editFormData, comment: e.target.value })}
-                    placeholder="VD: Nắm bài tốt, tính toán nhanh và chính xác."
-                    className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                  />
-                </div>
-
-                <div className="flex justify-end gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setIsEditModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100 dark:text-slate-400"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm disabled:opacity-50"
-                  >
-                    {submitting ? 'Đang lưu...' : 'Lưu Nhật Ký'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white shadow-sm disabled:opacity-50 transition-colors"
+            >
+              {submitting ? 'Đang lưu...' : 'Lưu Nhật Ký'}
+            </button>
+          </>
+        }
+      >
+        {formError && (
+          <div className="p-3 bg-red-50 dark:bg-red-950/50 rounded-xl text-red-600 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{formError}</span>
           </div>
         )}
-      </AnimatePresence>
+
+        <div className="space-y-3.5">
+          {!selectedLog && (
+            <>
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Buổi Học <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={editFormData.lessonId}
+                  onChange={(e) => setEditFormData({ ...editFormData, lessonId: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  {lessons.map((l) => (
+                    <option key={l.id} value={l.id}>
+                      {l.date} - {l.title} ({l.class?.name})
+                    </option>
+                  ))}
+                </select>
+              </div>
+
+              <div>
+                <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+                  Học Sinh <span className="text-red-500">*</span>
+                </label>
+                <select
+                  value={editFormData.studentId}
+                  onChange={(e) => setEditFormData({ ...editFormData, studentId: e.target.value })}
+                  required
+                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+                >
+                  {formLesson?.participants?.map((p) => (
+                    <option key={p.studentId} value={p.studentId}>
+                      {p.student?.name} ({p.student?.email})
+                    </option>
+                  ))}
+                </select>
+              </div>
+            </>
+          )}
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Nội dung bài học
+            </label>
+            <textarea
+              rows={2}
+              value={editFormData.content}
+              onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
+              placeholder="VD: Ôn tập phương trình bậc hai, cách lập bảng biến thiên..."
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              BTVN giao về
+            </label>
+            <input
+              type="text"
+              value={editFormData.homework}
+              onChange={(e) => setEditFormData({ ...editFormData, homework: e.target.value })}
+              placeholder="VD: Bài 1 đến bài 10 trang 45 SGK"
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Ý thức học tập
+            </label>
+            <select
+              value={editFormData.attitude}
+              onChange={(e) => setEditFormData({ ...editFormData, attitude: e.target.value })}
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            >
+              <option value="Tốt">Tốt</option>
+              <option value="Khá">Khá</option>
+              <option value="Trung bình">Trung bình</option>
+              <option value="Cần cố gắng">Cần cố gắng</option>
+            </select>
+          </div>
+
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
+              Nhận xét của giáo viên
+            </label>
+            <textarea
+              rows={2}
+              value={editFormData.comment}
+              onChange={(e) => setEditFormData({ ...editFormData, comment: e.target.value })}
+              placeholder="VD: Nắm bài tốt, tính toán nhanh và chính xác."
+              className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
+            />
+          </div>
+        </div>
+      </Modal>
 
       {/* IMPORT EXCEL MODAL */}
-      <AnimatePresence>
-        {isImportModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl max-w-md w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 space-y-4"
-            >
-              <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
-                <h3 className="text-base font-bold text-slate-900 dark:text-white">Nhập Nhật Ký Từ Excel</h3>
-                <button
-                  onClick={() => setIsImportModalOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
-
-              <form onSubmit={handleImportExcel} className="space-y-4">
-                <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center">
-                  <input
-                    type="file"
-                    accept=".xlsx, .xls"
-                    onChange={(e) => setImportFile(e.target.files?.[0] || null)}
-                    className="hidden"
-                    id="excel-file-input"
-                  />
-                  <label htmlFor="excel-file-input" className="cursor-pointer">
-                    <FileSpreadsheet className="w-8 h-8 text-indigo-500 mx-auto mb-2" />
-                    <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
-                      {importFile ? importFile.name : 'Chọn file Excel (.xlsx)'}
-                    </span>
-                    <p className="text-[11px] text-slate-400 mt-1">Cột: Email, Ngày học, Nội dung, BTVN, Ý thức, Nhận xét</p>
-                  </label>
-                </div>
-
-                {importResult && (
-                  <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs space-y-1">
-                    <div className="text-emerald-600 font-bold">
-                      ✓ Đã nhập thành công: {importResult.successCount} bản ghi
-                    </div>
-                    {importResult.errors.length > 0 && (
-                      <div className="text-red-500 text-[11px]">
-                        {importResult.errors.map((err, i) => (
-                          <div key={i}>• {err}</div>
-                        ))}
-                      </div>
-                    )}
-                  </div>
-                )}
-
-                <div className="flex justify-end gap-3 pt-2">
-                  <button
-                    type="button"
-                    onClick={() => setIsImportModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-xs font-medium text-slate-600 hover:bg-slate-100"
-                  >
-                    Đóng
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={!importFile || importing}
-                    className="px-5 py-2 rounded-xl text-xs font-semibold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50"
-                  >
-                    {importing ? 'Đang xử lý...' : 'Tải lên & Nhập'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
+      <Modal
+        isOpen={isImportModalOpen}
+        onClose={() => setIsImportModalOpen(false)}
+        title="Nhập Nhật Ký Từ Excel"
+        icon={
+          <div className="p-2 bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 rounded-xl">
+            <FileSpreadsheet className="w-5 h-5" />
           </div>
-        )}
-      </AnimatePresence>
+        }
+        maxWidth="md"
+        onSubmit={handleImportExcel}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsImportModalOpen(false)}
+              className="px-4 py-2 rounded-xl text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Đóng
+            </button>
+            <button
+              type="submit"
+              disabled={!importFile || importing}
+              className="px-5 py-2 rounded-xl text-xs sm:text-sm font-semibold bg-indigo-600 hover:bg-indigo-700 text-white disabled:opacity-50 transition-colors shadow-sm"
+            >
+              {importing ? 'Đang xử lý...' : 'Tải lên & Nhập'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="border-2 border-dashed border-slate-200 dark:border-slate-700 rounded-2xl p-6 text-center">
+            <input
+              type="file"
+              accept=".xlsx, .xls"
+              onChange={(e) => setImportFile(e.target.files?.[0] || null)}
+              className="hidden"
+              id="excel-file-input"
+            />
+            <label htmlFor="excel-file-input" className="cursor-pointer">
+              <FileSpreadsheet className="w-8 h-8 text-indigo-500 mx-auto mb-2" />
+              <span className="text-xs font-semibold text-indigo-600 dark:text-indigo-400">
+                {importFile ? importFile.name : 'Chọn file Excel (.xlsx)'}
+              </span>
+              <p className="text-[11px] text-slate-400 mt-1">Cột: Email, Ngày học, Nội dung, BTVN, Ý thức, Nhận xét</p>
+            </label>
+          </div>
+
+          {importResult && (
+            <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-xl text-xs space-y-1">
+              <div className="text-emerald-600 font-bold">
+                ✓ Đã nhập thành công: {importResult.successCount} bản ghi
+              </div>
+              {importResult.errors.length > 0 && (
+                <div className="text-red-500 text-[11px]">
+                  {importResult.errors.map((err, i) => (
+                    <div key={i}>• {err}</div>
+                  ))}
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </Modal>
     </div>
   );
 };

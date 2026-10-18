@@ -22,6 +22,7 @@ import { useUiStore } from '../../stores/ui.store';
 import { useAuthStore } from '../../stores/auth.store';
 import { Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
+import { Modal } from '../../components/common/Modal';
 import {
   BarChart,
   Bar,
@@ -582,180 +583,158 @@ export const TeacherClassroomsPage: React.FC = () => {
       )}
 
       {/* Create Modal */}
-      <AnimatePresence>
-        {showCreateModal && (
-          <motion.div
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm"
-            onClick={(e) => {
-              if (e.target === e.currentTarget) setShowCreateModal(false);
-            }}
-          >
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 16 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 16 }}
-              transition={{ duration: 0.2, ease: 'easeOut' }}
-              className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-md overflow-hidden border border-slate-100 dark:border-slate-800"
+      <Modal
+        isOpen={showCreateModal}
+        onClose={() => setShowCreateModal(false)}
+        title="Tạo khóa học mới"
+        icon={
+          <div className="p-2 bg-sky-50 dark:bg-sky-950/60 text-sky-600 rounded-xl">
+            <PlusCircle className="w-5 h-5" />
+          </div>
+        }
+        maxWidth="md"
+        onSubmit={handleCreateSubmit}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setShowCreateModal(false)}
+              className="px-4 py-2.5 rounded-xl text-sm font-semibold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              {/* Modal Header */}
-              <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                <h3 className="text-lg font-black text-slate-800 dark:text-white">
-                  Tạo khóa học mới
-                </h3>
-                <button
-                  onClick={() => setShowCreateModal(false)}
-                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 p-2 rounded-xl transition-colors"
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting}
+              className={`px-5 py-2.5 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 text-sm shadow-md ${
+                formData.isPrivate
+                  ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200 dark:shadow-none'
+                  : 'bg-sky-600 hover:bg-sky-700 shadow-sky-200 dark:shadow-none'
+              }`}
+            >
+              {isSubmitting
+                ? 'Đang tạo...'
+                : formData.isPrivate
+                ? 'Tạo lớp kèm 1-1'
+                : 'Tạo lớp nhóm'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {/* Type selector */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">
+              Loại lớp học
+            </label>
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                type="button"
+                onClick={() => setFormData((f) => ({ ...f, isPrivate: false }))}
+                className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-center ${
+                  !formData.isPrivate
+                    ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300'
+                    : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-sky-300'
+                }`}
+              >
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    !formData.isPrivate
+                      ? 'bg-sky-600 text-white'
+                      : 'bg-slate-100 dark:bg-slate-800'
+                  }`}
                 >
-                  <X className="w-4 h-4" />
-                </button>
-              </div>
-
-              <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
-                {/* Type selector */}
+                  <Users className="w-5 h-5" />
+                </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-2 uppercase tracking-wider">
-                    Loại lớp học
-                  </label>
-                  <div className="grid grid-cols-2 gap-3">
-                    <button
-                      type="button"
-                      onClick={() => setFormData((f) => ({ ...f, isPrivate: false }))}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-center ${
-                        !formData.isPrivate
-                          ? 'border-sky-500 bg-sky-50 dark:bg-sky-950/60 text-sky-700 dark:text-sky-300'
-                          : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-sky-300'
-                      }`}
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                          !formData.isPrivate
-                            ? 'bg-sky-600 text-white'
-                            : 'bg-slate-100 dark:bg-slate-800'
-                        }`}
-                      >
-                        <Users className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold">Lớp nhóm</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
-                          Nhiều học sinh
-                        </p>
-                      </div>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => setFormData((f) => ({ ...f, isPrivate: true }))}
-                      className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-center ${
-                        formData.isPrivate
-                          ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
-                          : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-amber-300'
-                      }`}
-                    >
-                      <div
-                        className={`w-10 h-10 rounded-xl flex items-center justify-center ${
-                          formData.isPrivate
-                            ? 'bg-amber-500 text-white'
-                            : 'bg-slate-100 dark:bg-slate-800'
-                        }`}
-                      >
-                        <User className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <p className="text-sm font-bold">Kèm 1-1</p>
-                        <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
-                          Dạy riêng cá nhân
-                        </p>
-                      </div>
-                    </button>
-                  </div>
+                  <p className="text-sm font-bold">Lớp nhóm</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
+                    Nhiều học sinh
+                  </p>
                 </div>
-
-                {/* Name */}
+              </button>
+              <button
+                type="button"
+                onClick={() => setFormData((f) => ({ ...f, isPrivate: true }))}
+                className={`flex flex-col items-center gap-2 p-4 rounded-2xl border-2 transition-all text-center ${
+                  formData.isPrivate
+                    ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300'
+                    : 'border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400 hover:border-amber-300'
+                }`}
+              >
+                <div
+                  className={`w-10 h-10 rounded-xl flex items-center justify-center ${
+                    formData.isPrivate
+                      ? 'bg-amber-500 text-white'
+                      : 'bg-slate-100 dark:bg-slate-800'
+                  }`}
+                >
+                  <User className="w-5 h-5" />
+                </div>
                 <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Tên lớp học *
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    value={formData.name}
-                    onChange={(e) =>
-                      setFormData({ ...formData, name: e.target.value })
-                    }
-                    placeholder={
-                      formData.isPrivate
-                        ? 'VD: Kèm Toán - Bé An'
-                        : 'VD: Lớp 10A1 - Toán nâng cao'
-                    }
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
-                  />
+                  <p className="text-sm font-bold">Kèm 1-1</p>
+                  <p className="text-[10px] text-slate-400 dark:text-slate-500 leading-tight mt-0.5">
+                    Dạy riêng cá nhân
+                  </p>
                 </div>
+              </button>
+            </div>
+          </div>
 
-                {/* Subject */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Môn học
-                  </label>
-                  <input
-                    type="text"
-                    value={formData.subject}
-                    onChange={(e) =>
-                      setFormData({ ...formData, subject: e.target.value })
-                    }
-                    placeholder="VD: Toán học, Tiếng Anh..."
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
-                  />
-                </div>
+          {/* Name */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              Tên lớp học *
+            </label>
+            <input
+              type="text"
+              required
+              value={formData.name}
+              onChange={(e) =>
+                setFormData({ ...formData, name: e.target.value })
+              }
+              placeholder={
+                formData.isPrivate
+                  ? 'VD: Kèm Toán - Bé An'
+                  : 'VD: Lớp 10A1 - Toán nâng cao'
+              }
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
+            />
+          </div>
 
-                {/* Description */}
-                <div>
-                  <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                    Mô tả (Tùy chọn)
-                  </label>
-                  <textarea
-                    value={formData.description}
-                    onChange={(e) =>
-                      setFormData({ ...formData, description: e.target.value })
-                    }
-                    placeholder="Mô tả ngắn về lớp học này..."
-                    rows={2}
-                    className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all resize-none text-sm"
-                  />
-                </div>
+          {/* Subject */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              Môn học
+            </label>
+            <input
+              type="text"
+              value={formData.subject}
+              onChange={(e) =>
+                setFormData({ ...formData, subject: e.target.value })
+              }
+              placeholder="VD: Toán học, Tiếng Anh..."
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
+            />
+          </div>
 
-                {/* Actions */}
-                <div className="pt-2 flex gap-3">
-                  <button
-                    type="button"
-                    onClick={() => setShowCreateModal(false)}
-                    className="flex-1 py-2.5 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-semibold transition-colors text-sm"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className={`flex-1 py-2.5 px-4 text-white rounded-xl font-semibold transition-colors disabled:opacity-50 text-sm shadow-md ${
-                      formData.isPrivate
-                        ? 'bg-amber-500 hover:bg-amber-600 shadow-amber-200 dark:shadow-none'
-                        : 'bg-sky-600 hover:bg-sky-700 shadow-sky-200 dark:shadow-none'
-                    }`}
-                  >
-                    {isSubmitting
-                      ? 'Đang tạo...'
-                      : formData.isPrivate
-                      ? 'Tạo lớp kèm 1-1'
-                      : 'Tạo lớp nhóm'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+          {/* Description */}
+          <div>
+            <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
+              Mô tả (Tùy chọn)
+            </label>
+            <textarea
+              value={formData.description}
+              onChange={(e) =>
+                setFormData({ ...formData, description: e.target.value })
+              }
+              placeholder="Mô tả ngắn về lớp học này..."
+              rows={2}
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all resize-none text-sm"
+            />
+          </div>
+        </div>
+      </Modal>
     </div>
   );
 };

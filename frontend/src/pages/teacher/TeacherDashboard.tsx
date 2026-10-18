@@ -26,6 +26,7 @@ import {
   DollarSign,
 } from 'lucide-react';
 import { ConfirmationModal } from '../../components/common/ConfirmationModal';
+import { Modal } from '../../components/common/Modal';
 import { quizService } from '../../services/quiz.service';
 import { useUiStore } from '../../stores/ui.store';
 
@@ -539,276 +540,271 @@ export const TeacherDashboard: React.FC = () => {
       </div>
 
       {/* Submissions Detail Modal */}
-      {showSubmissionsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-4xl max-h-[85vh] flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden">
-            {/* Header */}
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2">
-                  <span>Chi tiết lượt nộp bài</span>
-                  {submissionsFilter.scoreLabel && (
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300">
-                      {submissionsFilter.scoreLabel}
-                    </span>
-                  )}
-                  {submissionsFilter.studentName && (
-                    <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
-                      Học sinh: {submissionsFilter.studentName}
-                    </span>
-                  )}
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Tổng cộng {submissionsTotal} lượt nộp bài phù hợp
-                </p>
-              </div>
-
+      <Modal
+        isOpen={showSubmissionsModal}
+        onClose={() => setShowSubmissionsModal(false)}
+        maxWidth="4xl"
+        title={
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white flex items-center gap-2 flex-wrap">
+              <span>Chi tiết lượt nộp bài</span>
+              {submissionsFilter.scoreLabel && (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-sky-100 dark:bg-sky-950 text-sky-700 dark:text-sky-300">
+                  {submissionsFilter.scoreLabel}
+                </span>
+              )}
+              {submissionsFilter.studentName && (
+                <span className="text-xs font-semibold px-2.5 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-300">
+                  Học sinh: {submissionsFilter.studentName}
+                </span>
+              )}
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Tổng cộng {submissionsTotal} lượt nộp bài phù hợp
+            </p>
+          </div>
+        }
+        bodyClassName="p-0"
+        footer={
+          <div className="w-full flex items-center justify-between text-xs text-slate-500">
+            <span>Trang {submissionsPage} / {Math.max(1, Math.ceil(submissionsTotal / 10))}</span>
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowSubmissionsModal(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                type="button"
+                disabled={submissionsPage <= 1 || submissionsLoading}
+                onClick={() => loadSubmissions(submissionsPage - 1)}
+                className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
+              </button>
+              <button
+                type="button"
+                disabled={submissionsPage * 10 >= submissionsTotal || submissionsLoading}
+                onClick={() => loadSubmissions(submissionsPage + 1)}
+                className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              >
+                <ChevronRight className="w-4 h-4" />
               </button>
             </div>
-
-            {/* Search toolbar */}
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Tìm học sinh theo tên hoặc email..."
-                  value={submissionsSearch}
-                  onChange={(e) => setSubmissionsSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') loadSubmissions(1, submissionsSearch);
-                  }}
-                  className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
-                />
-              </div>
-              <button
-                onClick={() => loadSubmissions(1, submissionsSearch)}
-                className="px-4 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors"
-              >
-                Tìm
-              </button>
+          </div>
+        }
+      >
+        <div className="flex flex-col">
+          {/* Search toolbar */}
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-800/30">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Tìm học sinh theo tên hoặc email..."
+                value={submissionsSearch}
+                onChange={(e) => setSubmissionsSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') loadSubmissions(1, submissionsSearch);
+                }}
+                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
+              />
             </div>
+            <button
+              type="button"
+              onClick={() => loadSubmissions(1, submissionsSearch)}
+              className="px-4 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors"
+            >
+              Tìm
+            </button>
+          </div>
 
-            {/* List */}
-            <div className="flex-1 overflow-y-auto p-4 divide-y divide-slate-100 dark:divide-slate-800">
-              {submissionsLoading ? (
-                <div className="py-16 text-center">
-                  <div className="w-7 h-7 rounded-full border-2 border-sky-500 border-t-transparent animate-spin mx-auto mb-2" />
-                  <span className="text-xs text-slate-400">Đang tải danh sách...</span>
-                </div>
-              ) : submissionsList.length === 0 ? (
-                <div className="py-16 text-center text-xs text-slate-400">
-                  Không tìm thấy lượt nộp bài nào phù hợp điều kiện.
-                </div>
-              ) : (
-                submissionsList.map((sub: any) => (
-                  <div
-                    key={sub.id}
-                    className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 px-3 rounded-2xl transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={sub.studentAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256'}
-                        alt={sub.studentName}
-                        className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
-                      />
-                      <div>
-                        <div className="font-bold text-xs text-slate-900 dark:text-white">
-                          {sub.studentName}
-                        </div>
-                        <div className="text-[11px] text-slate-400">{sub.studentEmail}</div>
-                        <div className="text-[11px] text-sky-600 dark:text-sky-400 font-medium mt-0.5">
-                          Đề: {sub.quizTitle}
-                        </div>
+          {/* List */}
+          <div className="p-4 divide-y divide-slate-100 dark:divide-slate-800">
+            {submissionsLoading ? (
+              <div className="py-16 text-center">
+                <div className="w-7 h-7 rounded-full border-2 border-sky-500 border-t-transparent animate-spin mx-auto mb-2" />
+                <span className="text-xs text-slate-400">Đang tải danh sách...</span>
+              </div>
+            ) : submissionsList.length === 0 ? (
+              <div className="py-16 text-center text-xs text-slate-400">
+                Không tìm thấy lượt nộp bài nào phù hợp điều kiện.
+              </div>
+            ) : (
+              submissionsList.map((sub: any) => (
+                <div
+                  key={sub.id}
+                  className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 px-3 rounded-2xl transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={sub.studentAvatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256'}
+                      alt={sub.studentName}
+                      className="w-9 h-9 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                    />
+                    <div>
+                      <div className="font-bold text-xs text-slate-900 dark:text-white">
+                        {sub.studentName}
                       </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 self-end sm:self-auto text-xs">
-                      <div className="text-right">
-                        <div className="font-extrabold text-sm text-sky-600 dark:text-sky-400">
-                          {((Number(sub.percentage) || 0) / 10).toFixed(2)}/10.00
-                        </div>
-                        <div className="text-[11px] text-slate-400">
-                          Đúng {sub.correctCount} • Sai {sub.wrongCount}
-                        </div>
-                      </div>
-
-                      <div className="text-right text-[11px] text-slate-400 hidden md:block">
-                        <div>{new Date(sub.createdAt).toLocaleDateString('vi-VN')}</div>
-                        <div>{Math.round(sub.timeUsedSeconds / 60)} phút</div>
-                      </div>
-
-                      <div className="flex items-center gap-2">
-                        <Link
-                          to={`/teacher/quizzes/${sub.quizId}/grade/${sub.id}`}
-                          className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 hover:bg-sky-100 transition-colors"
-                        >
-                          Chấm bài
-                        </Link>
-                        <Link
-                          to={`/teacher/quizzes/${sub.quizId}/results`}
-                          className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                          title="Xem kết quả đề"
-                        >
-                          <ExternalLink className="w-4 h-4" />
-                        </Link>
+                      <div className="text-[11px] text-slate-400">{sub.studentEmail}</div>
+                      <div className="text-[11px] text-sky-600 dark:text-sky-400 font-medium mt-0.5">
+                        Đề: {sub.quizTitle}
                       </div>
                     </div>
                   </div>
-                ))
-              )}
-            </div>
 
-            {/* Pagination Footer */}
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-              <span>Trang {submissionsPage} / {Math.max(1, Math.ceil(submissionsTotal / 10))}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={submissionsPage <= 1 || submissionsLoading}
-                  onClick={() => loadSubmissions(submissionsPage - 1)}
-                  className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  disabled={submissionsPage * 10 >= submissionsTotal || submissionsLoading}
-                  onClick={() => loadSubmissions(submissionsPage + 1)}
-                  className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
-            </div>
+                  <div className="flex items-center gap-4 self-end sm:self-auto text-xs">
+                    <div className="text-right">
+                      <div className="font-extrabold text-sm text-sky-600 dark:text-sky-400">
+                        {((Number(sub.percentage) || 0) / 10).toFixed(2)}/10.00
+                      </div>
+                      <div className="text-[11px] text-slate-400">
+                        Đúng {sub.correctCount} • Sai {sub.wrongCount}
+                      </div>
+                    </div>
+
+                    <div className="text-right text-[11px] text-slate-400 hidden md:block">
+                      <div>{new Date(sub.createdAt).toLocaleDateString('vi-VN')}</div>
+                      <div>{Math.round(sub.timeUsedSeconds / 60)} phút</div>
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <Link
+                        to={`/teacher/quizzes/${sub.quizId}/grade/${sub.id}`}
+                        className="px-3 py-1.5 text-xs font-semibold rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 hover:bg-sky-100 transition-colors"
+                      >
+                        Chấm bài
+                      </Link>
+                      <Link
+                        to={`/teacher/quizzes/${sub.quizId}/results`}
+                        className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                        title="Xem kết quả đề"
+                      >
+                        <ExternalLink className="w-4 h-4" />
+                      </Link>
+                    </div>
+                  </div>
+                </div>
+              ))
+            )}
           </div>
         </div>
-      )}
+      </Modal>
 
       {/* Students Modal */}
-      {showStudentsModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl w-full max-w-3xl max-h-[85vh] flex flex-col border border-slate-200 dark:border-slate-800 overflow-hidden">
-            {/* Header */}
-            <div className="p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-4">
-              <div>
-                <h3 className="text-lg font-bold text-slate-800 dark:text-white">
-                  Danh sách học sinh tham gia thi
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Tổng cộng {studentsTotal} học sinh đã tham gia các bài kiểm tra của bạn
-                </p>
-              </div>
-
+      <Modal
+        isOpen={showStudentsModal}
+        onClose={() => setShowStudentsModal(false)}
+        maxWidth="3xl"
+        title={
+          <div>
+            <h3 className="text-base sm:text-lg font-bold text-slate-800 dark:text-white">
+              Danh sách học sinh tham gia thi
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              Tổng cộng {studentsTotal} học sinh đã tham gia các bài kiểm tra của bạn
+            </p>
+          </div>
+        }
+        bodyClassName="p-0"
+        footer={
+          <div className="w-full flex items-center justify-between text-xs text-slate-500">
+            <span>Trang {studentsPage} / {Math.max(1, Math.ceil(studentsTotal / 10))}</span>
+            <div className="flex items-center gap-2">
               <button
-                onClick={() => setShowStudentsModal(false)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                type="button"
+                disabled={studentsPage <= 1 || studentsLoading}
+                onClick={() => loadStudents(studentsPage - 1)}
+                className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
-                <X className="w-5 h-5" />
+                <ChevronLeft className="w-4 h-4" />
               </button>
-            </div>
-
-            {/* Search */}
-            <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-800/30">
-              <div className="relative flex-1">
-                <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  placeholder="Tìm học sinh theo tên hoặc email..."
-                  value={studentsSearch}
-                  onChange={(e) => setStudentsSearch(e.target.value)}
-                  onKeyDown={(e) => {
-                    if (e.key === 'Enter') loadStudents(1, studentsSearch);
-                  }}
-                  className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
-                />
-              </div>
               <button
-                onClick={() => loadStudents(1, studentsSearch)}
-                className="px-4 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors"
+                type="button"
+                disabled={studentsPage * 10 >= studentsTotal || studentsLoading}
+                onClick={() => loadStudents(studentsPage + 1)}
+                className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
               >
-                Tìm
+                <ChevronRight className="w-4 h-4" />
               </button>
-            </div>
-
-            {/* List */}
-            <div className="flex-1 overflow-y-auto p-4 divide-y divide-slate-100 dark:divide-slate-800">
-              {studentsLoading ? (
-                <div className="py-16 text-center">
-                  <div className="w-7 h-7 rounded-full border-2 border-sky-500 border-t-transparent animate-spin mx-auto mb-2" />
-                  <span className="text-xs text-slate-400">Đang tải danh sách học sinh...</span>
-                </div>
-              ) : studentsList.length === 0 ? (
-                <div className="py-16 text-center text-xs text-slate-400">
-                  Chưa có học sinh nào nộp bài kiểm tra.
-                </div>
-              ) : (
-                studentsList.map((stu: any) => (
-                  <div
-                    key={stu.id}
-                    className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 px-3 rounded-2xl transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <img
-                        src={stu.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256'}
-                        alt={stu.name}
-                        className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
-                      />
-                      <div>
-                        <div className="font-bold text-xs text-slate-900 dark:text-white">
-                          {stu.name}
-                        </div>
-                        <div className="text-[11px] text-slate-400">{stu.email}</div>
-                        <div className="text-[11px] text-slate-500 mt-0.5">
-                          Đã làm {stu.submissionsCount} bài thi
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="flex items-center gap-4 self-end sm:self-auto text-xs">
-                      <div className="text-right">
-                        <div className="text-[11px] text-slate-400">Điểm TB: <span className="font-bold text-sky-600 dark:text-sky-400">{stu.averageScore}/10</span></div>
-                        <div className="text-[11px] text-slate-400">Cao nhất: <span className="font-bold text-emerald-600 dark:text-emerald-400">{stu.highestScore}/10</span></div>
-                      </div>
-
-                      <button
-                        onClick={() => handleOpenStudentSubmissions(stu)}
-                        className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 hover:bg-sky-100 transition-colors"
-                      >
-                        Xem bài làm
-                      </button>
-                    </div>
-                  </div>
-                ))
-              )}
-            </div>
-
-            {/* Pagination Footer */}
-            <div className="p-4 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between text-xs text-slate-500">
-              <span>Trang {studentsPage} / {Math.max(1, Math.ceil(studentsTotal / 10))}</span>
-              <div className="flex items-center gap-2">
-                <button
-                  disabled={studentsPage <= 1 || studentsLoading}
-                  onClick={() => loadStudents(studentsPage - 1)}
-                  className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-                <button
-                  disabled={studentsPage * 10 >= studentsTotal || studentsLoading}
-                  onClick={() => loadStudents(studentsPage + 1)}
-                  className="p-1.5 rounded-xl border border-slate-200 dark:border-slate-700 disabled:opacity-40 hover:bg-slate-50 dark:hover:bg-slate-800"
-                >
-                  <ChevronRight className="w-4 h-4" />
-                </button>
-              </div>
             </div>
           </div>
+        }
+      >
+        <div className="flex flex-col">
+          {/* Search */}
+          <div className="p-4 border-b border-slate-100 dark:border-slate-800 flex items-center gap-3 bg-slate-50/50 dark:bg-slate-800/30">
+            <div className="relative flex-1">
+              <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+              <input
+                type="text"
+                placeholder="Tìm học sinh theo tên hoặc email..."
+                value={studentsSearch}
+                onChange={(e) => setStudentsSearch(e.target.value)}
+                onKeyDown={(e) => {
+                  if (e.key === 'Enter') loadStudents(1, studentsSearch);
+                }}
+                className="w-full pl-9 pr-4 py-2 text-xs rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => loadStudents(1, studentsSearch)}
+              className="px-4 py-2 text-xs font-bold text-white bg-sky-600 hover:bg-sky-700 rounded-xl transition-colors"
+            >
+              Tìm
+            </button>
+          </div>
+
+          {/* List */}
+          <div className="p-4 divide-y divide-slate-100 dark:divide-slate-800">
+            {studentsLoading ? (
+              <div className="py-16 text-center">
+                <div className="w-7 h-7 rounded-full border-2 border-sky-500 border-t-transparent animate-spin mx-auto mb-2" />
+                <span className="text-xs text-slate-400">Đang tải danh sách học sinh...</span>
+              </div>
+            ) : studentsList.length === 0 ? (
+              <div className="py-16 text-center text-xs text-slate-400">
+                Chưa có học sinh nào nộp bài kiểm tra.
+              </div>
+            ) : (
+              studentsList.map((stu: any) => (
+                <div
+                  key={stu.id}
+                  className="py-3.5 flex flex-col sm:flex-row sm:items-center justify-between gap-3 hover:bg-slate-50/50 dark:hover:bg-slate-800/40 px-3 rounded-2xl transition-colors"
+                >
+                  <div className="flex items-center gap-3">
+                    <img
+                      src={stu.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256'}
+                      alt={stu.name}
+                      className="w-10 h-10 rounded-xl object-cover ring-1 ring-slate-200 dark:ring-slate-700"
+                    />
+                    <div>
+                      <div className="font-bold text-xs text-slate-900 dark:text-white">
+                        {stu.name}
+                      </div>
+                      <div className="text-[11px] text-slate-400">{stu.email}</div>
+                      <div className="text-[11px] text-slate-500 mt-0.5">
+                        Đã làm {stu.submissionsCount} bài thi
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 self-end sm:self-auto text-xs">
+                    <div className="text-right">
+                      <div className="text-[11px] text-slate-400">Điểm TB: <span className="font-bold text-sky-600 dark:text-sky-400">{stu.averageScore}/10</span></div>
+                      <div className="text-[11px] text-slate-400">Cao nhất: <span className="font-bold text-emerald-600 dark:text-emerald-400">{stu.highestScore}/10</span></div>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => handleOpenStudentSubmissions(stu)}
+                      className="px-3.5 py-1.5 text-xs font-semibold rounded-xl bg-sky-50 dark:bg-sky-950/60 text-sky-600 hover:bg-sky-100 transition-colors"
+                    >
+                      Xem bài làm
+                    </button>
+                  </div>
+                </div>
+              ))
+            )}
+          </div>
         </div>
-      )}
+      </Modal>
 
       {/* Delete Confirmation Modal */}
       <ConfirmationModal

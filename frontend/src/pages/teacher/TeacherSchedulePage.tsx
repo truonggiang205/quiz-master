@@ -26,6 +26,7 @@ import {
 } from 'lucide-react';
 import { TeachingService } from '../../services/teaching.service';
 import { ClassroomService } from '../../services/classroom.service';
+import { Modal } from '../../components/common/Modal';
 import type { Lesson, LessonParticipant, CreateLessonPayload, UpdateLessonPayload } from '../../types/teaching';
 import type { Classroom } from '../../types/classroom';
 import { useNavigate } from 'react-router-dom';
@@ -862,38 +863,44 @@ export const TeacherSchedulePage: React.FC = () => {
       )}
 
       {/* CREATE LESSON MODAL */}
-      <AnimatePresence>
-        {isCreateModalOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl max-w-xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 my-8"
+      <Modal
+        isOpen={isCreateModalOpen}
+        onClose={() => setIsCreateModalOpen(false)}
+        title="Tạo Buổi Học Mới"
+        icon={
+          <div className="p-2 bg-blue-50 dark:bg-blue-950/60 text-blue-600 rounded-xl">
+            <Plus className="w-5 h-5" />
+          </div>
+        }
+        maxWidth="xl"
+        onSubmit={handleCreateSubmit}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setIsCreateModalOpen(false)}
+              className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
             >
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-                <div className="flex items-center gap-2.5">
-                  <div className="p-2 bg-blue-50 dark:bg-blue-950/60 text-blue-600 rounded-xl">
-                    <Plus className="w-5 h-5" />
-                  </div>
-                  <h3 className="text-lg font-bold text-slate-900 dark:text-white">Tạo Buổi Học Mới</h3>
-                </div>
-                <button
-                  onClick={() => setIsCreateModalOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={submitting}
+              className="px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:opacity-50 transition-colors"
+            >
+              {submitting ? 'Đang tạo...' : 'Tạo Buổi Học'}
+            </button>
+          </>
+        }
+      >
+        {formError && (
+          <div className="p-3 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/50 rounded-xl text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
+            <AlertCircle className="w-4 h-4 shrink-0" />
+            <span>{formError}</span>
+          </div>
+        )}
 
-              {formError && (
-                <div className="mt-4 p-3 bg-red-50 dark:bg-red-950/50 border border-red-200 dark:border-red-900/50 rounded-xl text-red-600 dark:text-red-400 text-xs flex items-center gap-2">
-                  <AlertCircle className="w-4 h-4 shrink-0" />
-                  <span>{formError}</span>
-                </div>
-              )}
-
-              <form onSubmit={handleCreateSubmit} className="space-y-4 mt-4">
+        <div className="space-y-4">
                 <div>
                   <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">
                     Lớp Học <span className="text-red-500">*</span>
@@ -1043,55 +1050,50 @@ export const TeacherSchedulePage: React.FC = () => {
                   )}
                 </div>
 
-                <div className="flex justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
-                  <button
-                    type="button"
-                    onClick={() => setIsCreateModalOpen(false)}
-                    className="px-4 py-2 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800"
-                  >
-                    Hủy
-                  </button>
-                  <button
-                    type="submit"
-                    disabled={submitting}
-                    className="px-5 py-2 rounded-xl text-sm font-medium bg-blue-600 hover:bg-blue-700 text-white shadow-sm disabled:opacity-50"
-                  >
-                    {submitting ? 'Đang tạo...' : 'Tạo Buổi Học'}
-                  </button>
-                </div>
-              </form>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
+        </div>
+      </Modal>
 
       {/* LESSON DETAILS MODAL */}
-      <AnimatePresence>
-        {isDetailModalOpen && selectedLesson && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs overflow-y-auto">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95 }}
-              animate={{ opacity: 1, scale: 1 }}
-              exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full p-6 shadow-2xl border border-slate-200 dark:border-slate-800 my-8 space-y-6"
-            >
-              {/* Header */}
-              <div className="flex items-center justify-between pb-4 border-b border-slate-100 dark:border-slate-800">
-                <div>
-                  <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
-                    {selectedLesson.class?.name}
-                  </span>
-                  <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-0.5">
-                    {selectedLesson.title}
-                  </h3>
-                </div>
-                <button
-                  onClick={() => setIsDetailModalOpen(false)}
-                  className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
-                >
-                  <X className="w-5 h-5" />
-                </button>
-              </div>
+      <Modal
+        isOpen={isDetailModalOpen && !!selectedLesson}
+        onClose={() => setIsDetailModalOpen(false)}
+        maxWidth="2xl"
+        title={
+          selectedLesson ? (
+            <div>
+              <span className="text-xs font-bold text-blue-600 dark:text-blue-400 uppercase tracking-wider">
+                {selectedLesson.class?.name}
+              </span>
+              <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white mt-0.5 truncate">
+                {selectedLesson.title}
+              </h3>
+            </div>
+          ) : null
+        }
+        footer={
+          selectedLesson ? (
+            <div className="flex justify-between items-center w-full">
+              <button
+                type="button"
+                onClick={() => handleDeleteLesson(selectedLesson.id)}
+                className="flex items-center gap-1.5 text-red-600 hover:text-red-700 text-xs font-semibold px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
+              >
+                <Trash2 className="w-4 h-4" />
+                Xóa buổi học
+              </button>
+              <button
+                type="button"
+                onClick={() => setIsDetailModalOpen(false)}
+                className="px-5 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition-colors"
+              >
+                Đóng
+              </button>
+            </div>
+          ) : null
+        }
+      >
+        {selectedLesson && (
+          <div className="space-y-6">
 
               {/* Quick Info Grid */}
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -1210,26 +1212,9 @@ export const TeacherSchedulePage: React.FC = () => {
                 </div>
               </div>
 
-              {/* Delete Button */}
-              <div className="flex justify-between items-center pt-2 border-t border-slate-100 dark:border-slate-800">
-                <button
-                  onClick={() => handleDeleteLesson(selectedLesson.id)}
-                  className="flex items-center gap-1.5 text-red-600 hover:text-red-700 text-xs font-semibold px-3 py-2 rounded-xl hover:bg-red-50 dark:hover:bg-red-950/40 transition-colors"
-                >
-                  <Trash2 className="w-4 h-4" />
-                  Xóa buổi học
-                </button>
-                <button
-                  onClick={() => setIsDetailModalOpen(false)}
-                  className="px-5 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200"
-                >
-                  Đóng
-                </button>
-              </div>
-            </motion.div>
           </div>
         )}
-      </AnimatePresence>
+      </Modal>
     </div>
   );
 };

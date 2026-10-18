@@ -3,6 +3,7 @@ import { StudentService } from '../../services/student.service';
 import { User } from '../../types/user';
 import { Mail, UserMinus, UserPlus, Search, GraduationCap } from 'lucide-react';
 import { useUiStore } from '../../stores/ui.store';
+import { Modal } from '../../components/common/Modal';
 
 export const TeacherStudentsPage: React.FC = () => {
   const [students, setStudents] = useState<User[]>([]);
@@ -130,50 +131,53 @@ export const TeacherStudentsPage: React.FC = () => {
       )}
 
       {/* Invite Modal */}
-      {showInviteModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/50 backdrop-blur-sm">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xl w-full max-w-md overflow-hidden">
-            <div className="px-6 py-4 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-              <h3 className="text-xl font-bold text-slate-800 dark:text-white">Mời học sinh qua Email</h3>
-              <button onClick={() => setShowInviteModal(false)} className="text-slate-400 hover:text-slate-600">
-                &times;
-              </button>
-            </div>
-            
-            <form onSubmit={handleInviteSubmit} className="p-6 space-y-4">
-              <div>
-                <label className="block text-sm font-medium text-slate-700 dark:text-slate-300 mb-1">Địa chỉ Email học sinh *</label>
-                <input
-                  type="email"
-                  required
-                  value={inviteEmail}
-                  onChange={e => setInviteEmail(e.target.value)}
-                  placeholder="hocsinh@example.com"
-                  className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all"
-                />
-                <p className="text-xs text-slate-500 mt-2">Hệ thống sẽ gửi một link mời đặc biệt tới địa chỉ email này.</p>
-              </div>
-              
-              <div className="pt-4 flex gap-3">
-                <button
-                  type="button"
-                  onClick={() => setShowInviteModal(false)}
-                  className="flex-1 py-3 px-4 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl font-medium transition-colors"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={isSubmitting || !inviteEmail}
-                  className="flex-1 py-3 px-4 bg-sky-600 hover:bg-sky-700 text-white rounded-xl font-medium transition-colors disabled:opacity-50"
-                >
-                  {isSubmitting ? 'Đang gửi...' : 'Gửi lời mời'}
-                </button>
-              </div>
-            </form>
+      <Modal
+        isOpen={showInviteModal}
+        onClose={() => setShowInviteModal(false)}
+        title="Mời học sinh qua Email"
+        icon={
+          <div className="p-2 bg-sky-50 dark:bg-sky-950/60 text-sky-600 rounded-xl">
+            <Mail className="w-5 h-5" />
+          </div>
+        }
+        maxWidth="md"
+        onSubmit={handleInviteSubmit}
+        footer={
+          <>
+            <button
+              type="button"
+              onClick={() => setShowInviteModal(false)}
+              className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+            >
+              Hủy
+            </button>
+            <button
+              type="submit"
+              disabled={isSubmitting || !inviteEmail}
+              className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-sky-600 hover:bg-sky-700 text-white disabled:opacity-50 transition-colors shadow-sm"
+            >
+              {isSubmitting ? 'Đang gửi...' : 'Gửi lời mời'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-xs sm:text-sm font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              Địa chỉ Email học sinh <span className="text-red-500">*</span>
+            </label>
+            <input
+              type="email"
+              required
+              value={inviteEmail}
+              onChange={(e) => setInviteEmail(e.target.value)}
+              placeholder="hocsinh@example.com"
+              className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
+            />
+            <p className="text-xs text-slate-500 mt-2">Hệ thống sẽ gửi một link mời đặc biệt tới địa chỉ email này.</p>
           </div>
         </div>
-      )}
+      </Modal>
     </div>
   );
 };

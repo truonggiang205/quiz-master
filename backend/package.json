@@ -60,6 +60,7 @@
     "typeorm": "^1.1.1",
     "uuid": "^14.0.2",
     "word-extractor": "^1.0.4",
+    "xlsx": "^0.18.5",
     "xml2js": "^0.6.2"
   },
   "devDependencies": {

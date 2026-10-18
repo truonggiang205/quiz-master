@@ -21,6 +21,8 @@ import {
   X,
   Check,
   Search,
+  Sparkles,
+  Layers,
 } from 'lucide-react';
 import { TeachingService } from '../../services/teaching.service';
 import { ClassroomService } from '../../services/classroom.service';
@@ -28,12 +30,87 @@ import type { Lesson, LessonParticipant, CreateLessonPayload, UpdateLessonPayloa
 import type { Classroom } from '../../types/classroom';
 import { useNavigate } from 'react-router-dom';
 
+// Modern pastel palettes for lessons (inspired by NTTClass & modern calendars)
+const CLASS_PALETTES = [
+  {
+    bg: 'bg-emerald-100/90 dark:bg-emerald-950/70',
+    border: 'border-emerald-300 dark:border-emerald-700',
+    text: 'text-emerald-950 dark:text-emerald-100',
+    timeText: 'text-emerald-800 dark:text-emerald-300',
+    badgeBg: 'bg-emerald-200/80 dark:bg-emerald-900/60 text-emerald-900 dark:text-emerald-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-emerald-200/50 dark:hover:shadow-emerald-950/60',
+    indicator: 'bg-emerald-500',
+  },
+  {
+    bg: 'bg-rose-100/90 dark:bg-rose-950/70',
+    border: 'border-rose-300 dark:border-rose-700',
+    text: 'text-rose-950 dark:text-rose-100',
+    timeText: 'text-rose-800 dark:text-rose-300',
+    badgeBg: 'bg-rose-200/80 dark:bg-rose-900/60 text-rose-900 dark:text-rose-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-rose-200/50 dark:hover:shadow-rose-950/60',
+    indicator: 'bg-rose-500',
+  },
+  {
+    bg: 'bg-teal-100/90 dark:bg-teal-950/70',
+    border: 'border-teal-300 dark:border-teal-700',
+    text: 'text-teal-950 dark:text-teal-100',
+    timeText: 'text-teal-800 dark:text-teal-300',
+    badgeBg: 'bg-teal-200/80 dark:bg-teal-900/60 text-teal-900 dark:text-teal-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-teal-200/50 dark:hover:shadow-teal-950/60',
+    indicator: 'bg-teal-500',
+  },
+  {
+    bg: 'bg-amber-100/90 dark:bg-amber-950/70',
+    border: 'border-amber-300 dark:border-amber-700',
+    text: 'text-amber-950 dark:text-amber-100',
+    timeText: 'text-amber-800 dark:text-amber-300',
+    badgeBg: 'bg-amber-200/80 dark:bg-amber-900/60 text-amber-900 dark:text-amber-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-amber-200/50 dark:hover:shadow-amber-950/60',
+    indicator: 'bg-amber-500',
+  },
+  {
+    bg: 'bg-purple-100/90 dark:bg-purple-950/70',
+    border: 'border-purple-300 dark:border-purple-700',
+    text: 'text-purple-950 dark:text-purple-100',
+    timeText: 'text-purple-800 dark:text-purple-300',
+    badgeBg: 'bg-purple-200/80 dark:bg-purple-900/60 text-purple-900 dark:text-purple-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-purple-200/50 dark:hover:shadow-purple-950/60',
+    indicator: 'bg-purple-500',
+  },
+  {
+    bg: 'bg-sky-100/90 dark:bg-sky-950/70',
+    border: 'border-sky-300 dark:border-sky-700',
+    text: 'text-sky-950 dark:text-sky-100',
+    timeText: 'text-sky-800 dark:text-sky-300',
+    badgeBg: 'bg-sky-200/80 dark:bg-sky-900/60 text-sky-900 dark:text-sky-200',
+    hoverShadow: 'hover:shadow-lg hover:shadow-sky-200/50 dark:hover:shadow-sky-950/60',
+    indicator: 'bg-sky-500',
+  },
+];
+
+const getLessonPalette = (classId?: string) => {
+  if (!classId) return CLASS_PALETTES[0];
+  let hash = 0;
+  for (let i = 0; i < classId.length; i++) {
+    hash = (hash << 5) - hash + classId.charCodeAt(i);
+    hash |= 0;
+  }
+  return CLASS_PALETTES[Math.abs(hash) % CLASS_PALETTES.length];
+};
+
 export const TeacherSchedulePage: React.FC = () => {
   const navigate = useNavigate();
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [classes, setClasses] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClassId, setSelectedClassId] = useState<string>('ALL');
+
+  // Real-time clock for current-time indicator line
+  const [now, setNow] = useState<Date>(new Date());
+  useEffect(() => {
+    const timer = setInterval(() => setNow(new Date()), 60000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Calendar view mode: 'WEEK' | 'MONTH'
   const [viewMode, setViewMode] = useState<'WEEK' | 'MONTH'>('WEEK');
@@ -226,10 +303,82 @@ export const TeacherSchedulePage: React.FC = () => {
     if (viewMode === 'MONTH') {
       return `Tháng ${currentDate.getMonth() + 1} / ${currentDate.getFullYear()}`;
     }
-    const start = weekDays[0]?.dateStr;
-    const end = weekDays[6]?.dateStr;
-    return `Tuần: ${start} → ${end}`;
+    const dStart = weekDays[0]?.date;
+    const dEnd = weekDays[6]?.date;
+    if (!dStart || !dEnd) return '';
+    const pad = (n: number) => String(n).padStart(2, '0');
+    return `${pad(dStart.getDate())}/${pad(dStart.getMonth() + 1)} - ${pad(dEnd.getDate())}/${pad(dEnd.getMonth() + 1)}/${dEnd.getFullYear()}`;
   }, [viewMode, currentDate, weekDays]);
+
+  // Dynamic hours range (defaults to 7:00 -> 22:00, expands if lessons outside)
+  const START_DEFAULT = 7;
+  const END_DEFAULT = 22;
+  const HOUR_HEIGHT = 68;
+
+  const { startHour, endHour, hours } = useMemo(() => {
+    let minH = START_DEFAULT;
+    let maxH = END_DEFAULT;
+    for (const l of lessons) {
+      if (l.startTime) {
+        const h = parseInt(l.startTime.split(':')[0], 10);
+        if (!isNaN(h)) minH = Math.min(minH, h);
+      }
+      if (l.endTime) {
+        const h = parseInt(l.endTime.split(':')[0], 10);
+        if (!isNaN(h)) maxH = Math.max(maxH, h + 1);
+      }
+    }
+    const sH = Math.max(0, minH);
+    const eH = Math.min(24, Math.max(END_DEFAULT, maxH));
+    const hArr: number[] = [];
+    for (let h = sH; h <= eH; h++) {
+      hArr.push(h);
+    }
+    return { startHour: sH, endHour: eH, hours: hArr };
+  }, [lessons]);
+
+  // Weekly KPI stats (Tổng buổi, Tổng giờ, Lớp/Học sinh, Tổng tiền)
+  const weekStats = useMemo(() => {
+    const weekDateSet = new Set(weekDays.map((d) => d.dateStr));
+    const weekLessons = lessons.filter((l) => weekDateSet.has(l.date));
+
+    const totalLessons = weekLessons.length;
+    const totalHours = weekLessons.reduce((acc, l) => acc + Number(l.duration || 0), 0);
+    const totalFees = weekLessons.reduce((acc, l) => acc + Number(l.feePerLesson || 0), 0);
+    const distinctClasses = new Set(weekLessons.map((l) => l.classId)).size;
+    const totalStudents = weekLessons.reduce((acc, l) => acc + (l.participants?.length || 0), 0);
+
+    return {
+      totalLessons,
+      totalHours: Number(totalHours.toFixed(1)),
+      classStudentLabel: `${distinctClasses}/${totalStudents}`,
+      totalFees,
+    };
+  }, [lessons, weekDays]);
+
+  // Daily Fee calculation for headers
+  const dayFeeMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    for (const d of weekDays) {
+      const dayLessons = lessons.filter((l) => l.date === d.dateStr);
+      map[d.dateStr] = dayLessons.reduce((acc, l) => acc + Number(l.feePerLesson || 0), 0);
+    }
+    return map;
+  }, [lessons, weekDays]);
+
+  // Quick slot click to create lesson at selected date and time
+  const handleSlotClick = (dateStr: string, hour: number) => {
+    const startH = String(hour).padStart(2, '0');
+    const endH = String(Math.min(23, hour + 1)).padStart(2, '0');
+    setFormData((prev) => ({
+      ...prev,
+      date: dateStr,
+      startTime: `${startH}:00`,
+      endTime: `${endH}:30`,
+    }));
+    setFormError(null);
+    setIsCreateModalOpen(true);
+  };
 
   // Create lesson submit handler
   const handleCreateSubmit = async (e: React.FormEvent) => {
@@ -383,7 +532,7 @@ export const TeacherSchedulePage: React.FC = () => {
       </div>
 
       {/* Date Navigation Bar */}
-      <div className="flex items-center justify-between bg-white dark:bg-slate-900 rounded-2xl px-6 py-4 shadow-sm border border-slate-200/80 dark:border-slate-800">
+      <div className="flex flex-col sm:flex-row items-center justify-between bg-white dark:bg-slate-900 rounded-2xl px-6 py-4 shadow-sm border border-slate-200/80 dark:border-slate-800 gap-3">
         <div className="flex items-center gap-2">
           <button
             onClick={handlePrev}
@@ -414,81 +563,238 @@ export const TeacherSchedulePage: React.FC = () => {
         </div>
       </div>
 
+      {/* Weekly KPI Summary Pill Cards */}
+      {viewMode === 'WEEK' && (
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Tổng Buổi</span>
+              <span className="text-2xl font-black text-slate-800 dark:text-white mt-0.5 block">{weekStats.totalLessons}</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+              <CalendarIcon className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Tổng Giờ</span>
+              <span className="text-2xl font-black text-indigo-600 dark:text-indigo-400 mt-0.5 block">{weekStats.totalHours}h</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+              <Clock className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Lớp / Học Sinh</span>
+              <span className="text-2xl font-black text-purple-600 dark:text-purple-400 mt-0.5 block">{weekStats.classStudentLabel}</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400 flex items-center justify-center">
+              <Users className="w-5 h-5" />
+            </div>
+          </div>
+
+          <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 border border-slate-200/80 dark:border-slate-800 shadow-sm flex items-center justify-between transition-all hover:shadow-md">
+            <div>
+              <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">Tổng Tiền Tuần</span>
+              <span className="text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-0.5 block">{weekStats.totalFees.toLocaleString()} đ</span>
+            </div>
+            <div className="w-10 h-10 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+              <DollarSign className="w-5 h-5" />
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Main Calendar Views */}
       {loading ? (
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-          {[...Array(7)].map((_, i) => (
-            <div key={i} className="h-64 bg-slate-100 dark:bg-slate-800/50 rounded-2xl animate-pulse" />
-          ))}
+        <div className="bg-white dark:bg-slate-900 rounded-3xl p-8 border border-slate-200/80 dark:border-slate-800 shadow-sm">
+          <div className="grid grid-cols-7 gap-3 animate-pulse">
+            {[...Array(7)].map((_, i) => (
+              <div key={i} className="h-96 bg-slate-100 dark:bg-slate-800/50 rounded-2xl" />
+            ))}
+          </div>
         </div>
       ) : viewMode === 'WEEK' ? (
-        /* WEEK VIEW */
-        <div className="grid grid-cols-1 md:grid-cols-7 gap-4">
-          {weekDays.map((day) => {
-            const dayLessons = lessons.filter((l) => l.date === day.dateStr);
-            const isToday = day.dateStr === new Date().toISOString().substring(0, 10);
-
-            return (
-              <div
-                key={day.dateStr}
-                className={`bg-white dark:bg-slate-900 rounded-2xl p-4 border flex flex-col min-h-[380px] transition-all ${
-                  isToday
-                    ? 'border-blue-500 shadow-md ring-2 ring-blue-500/10'
-                    : 'border-slate-200/80 dark:border-slate-800 shadow-sm'
-                }`}
-              >
-                {/* Day Header */}
-                <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100 dark:border-slate-800">
-                  <div>
-                    <span className="text-xs font-semibold text-slate-400 uppercase">{day.dayName}</span>
-                    <h3 className={`text-base font-bold ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-slate-800 dark:text-slate-200'}`}>
-                      {day.date.getDate()}/{day.date.getMonth() + 1}
-                    </h3>
-                  </div>
-                  {dayLessons.length > 0 && (
-                    <span className="text-[11px] font-bold px-2 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
-                      {dayLessons.length} buổi
-                    </span>
-                  )}
+        /* WEEK VIEW - Modern Timetable Schedule Grid */
+        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-sm border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+          <div className="overflow-x-auto">
+            <div className="min-w-[880px]">
+              {/* Day Headers */}
+              <div className="grid grid-cols-[64px_repeat(7,1fr)] border-b border-slate-200 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-800/50 sticky top-0 z-20 backdrop-blur-md">
+                {/* Time corner header */}
+                <div className="p-3 text-center border-r border-slate-100 dark:border-slate-800 flex items-center justify-center text-slate-400">
+                  <Clock className="w-4 h-4" />
                 </div>
 
-                {/* Day Lessons List */}
-                <div className="space-y-3 flex-1 overflow-y-auto">
-                  {dayLessons.length === 0 ? (
-                    <div className="h-full flex flex-col items-center justify-center text-center p-4">
-                      <p className="text-xs text-slate-400">Trống lịch</p>
-                    </div>
-                  ) : (
-                    dayLessons.map((l) => (
-                      <div
-                        key={l.id}
-                        onClick={() => handleOpenDetail(l)}
-                        className="group p-3 rounded-xl bg-slate-50 dark:bg-slate-800/70 hover:bg-blue-50/80 dark:hover:bg-blue-950/40 border border-slate-200/60 dark:border-slate-700/60 hover:border-blue-300 dark:hover:border-blue-800 transition-all cursor-pointer"
-                      >
-                        <div className="flex items-center justify-between text-xs font-semibold text-blue-600 dark:text-blue-400 mb-1">
-                          <span className="flex items-center gap-1">
-                            <Clock className="w-3.5 h-3.5" />
-                            {l.startTime} - {l.endTime}
-                          </span>
-                          <span className="text-[10px] text-slate-400">{l.duration}h</span>
-                        </div>
-                        <h4 className="text-xs font-bold text-slate-800 dark:text-white line-clamp-1 group-hover:text-blue-600 dark:group-hover:text-blue-400 transition-colors">
-                          {l.title}
-                        </h4>
-                        <div className="flex items-center justify-between text-[11px] text-slate-500 dark:text-slate-400 mt-2">
-                          <span className="truncate max-w-[90px]">{l.class?.name}</span>
-                          <span className="flex items-center gap-1">
-                            <Users className="w-3 h-3 text-slate-400" />
-                            {l.participants?.length || 0}
-                          </span>
-                        </div>
+                {/* 7 Day Headers */}
+                {weekDays.map((day) => {
+                  const isToday = day.dateStr === new Date().toISOString().substring(0, 10);
+                  const dayFee = dayFeeMap[day.dateStr] || 0;
+
+                  return (
+                    <div
+                      key={day.dateStr}
+                      className={`p-3 text-center border-r border-slate-100 dark:border-slate-800 last:border-r-0 transition-colors ${
+                        isToday ? 'bg-blue-50/60 dark:bg-blue-950/30' : ''
+                      }`}
+                    >
+                      <div className="flex items-center justify-center gap-1.5">
+                        <span className={`text-xs font-bold uppercase tracking-wider ${isToday ? 'text-blue-600 dark:text-blue-400' : 'text-slate-700 dark:text-slate-300'}`}>
+                          {day.dayName} · {day.date.getDate()}/{day.date.getMonth() + 1}
+                        </span>
+                        {isToday && (
+                          <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
+                        )}
                       </div>
-                    ))
-                  )}
-                </div>
+                      <div className="text-[11px] font-medium text-slate-400 dark:text-slate-500 mt-0.5">
+                        {dayFee > 0 ? (
+                          <span className="text-emerald-600 dark:text-emerald-400 font-semibold">
+                            {dayFee.toLocaleString()} đ
+                          </span>
+                        ) : (
+                          <span>0 đ</span>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
               </div>
-            );
-          })}
+
+              {/* Timetable Body (Hourly grid + Absolutely positioned lesson cards) */}
+              <div
+                className="grid grid-cols-[64px_repeat(7,1fr)] relative"
+                style={{ height: `${hours.length * HOUR_HEIGHT}px` }}
+              >
+                {/* Left Column: Time Axis Labels */}
+                <div className="border-r border-slate-100 dark:border-slate-800 select-none bg-slate-50/30 dark:bg-slate-900/30">
+                  {hours.map((hour) => (
+                    <div
+                      key={hour}
+                      className="relative text-[11px] font-semibold text-slate-400 text-center"
+                      style={{ height: `${HOUR_HEIGHT}px` }}
+                    >
+                      <span className="-top-2.5 relative block bg-white dark:bg-slate-900 px-1 mx-auto w-fit text-[11px]">
+                        {String(hour).padStart(2, '0')}:00
+                      </span>
+                    </div>
+                  ))}
+                </div>
+
+                {/* 7 Day Columns */}
+                {weekDays.map((day) => {
+                  const isToday = day.dateStr === new Date().toISOString().substring(0, 10);
+                  const dayLessons = lessons.filter((l) => l.date === day.dateStr);
+
+                  return (
+                    <div
+                      key={day.dateStr}
+                      className={`relative border-r border-slate-100 dark:border-slate-800 last:border-r-0 ${
+                        isToday ? 'bg-blue-50/[0.08] dark:bg-blue-950/[0.08]' : ''
+                      }`}
+                    >
+                      {/* Horizontal Grid lines for each hour */}
+                      {hours.map((hour) => (
+                        <div
+                          key={hour}
+                          onClick={() => handleSlotClick(day.dateStr, hour)}
+                          className="group/slot border-b border-slate-100 dark:border-slate-800/80 relative cursor-pointer hover:bg-blue-50/40 dark:hover:bg-blue-950/20 transition-colors"
+                          style={{ height: `${HOUR_HEIGHT}px` }}
+                        >
+                          {/* Subtle 30-min dashed line */}
+                          <div className="absolute top-1/2 left-0 right-0 border-b border-dashed border-slate-100 dark:border-slate-800/40 pointer-events-none" />
+
+                          {/* Quick Add Button on Slot Hover */}
+                          <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover/slot:opacity-100 transition-opacity pointer-events-none">
+                            <span className="flex items-center gap-1 text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-white dark:bg-slate-800 px-2 py-0.5 rounded-full shadow-xs border border-blue-200 dark:border-blue-900">
+                              <Plus className="w-3 h-3" /> {hour}:00
+                            </span>
+                          </div>
+                        </div>
+                      ))}
+
+                      {/* Red Current Time Line if isToday */}
+                      {isToday && now.getHours() >= startHour && now.getHours() <= endHour && (
+                        <div
+                          className="absolute left-0 right-0 z-20 pointer-events-none flex items-center"
+                          style={{
+                            top: `${(((now.getHours() * 60 + now.getMinutes()) - startHour * 60) / 60) * HOUR_HEIGHT}px`,
+                          }}
+                        >
+                          <div className="w-2.5 h-2.5 rounded-full bg-red-500 -ml-1.5 shadow-sm ring-2 ring-white animate-pulse" />
+                          <div className="flex-1 h-[2px] bg-red-500 shadow-sm" />
+                        </div>
+                      )}
+
+                      {/* Lessons positioned at their exact start/end time */}
+                      {dayLessons.map((l) => {
+                        const palette = getLessonPalette(l.classId);
+                        const [sH, sM] = (l.startTime || '00:00').split(':').map(Number);
+                        const [eH, eM] = (l.endTime || '00:00').split(':').map(Number);
+                        const startMins = (isNaN(sH) ? 0 : sH) * 60 + (isNaN(sM) ? 0 : sM);
+                        const endMins = (isNaN(eH) ? 0 : eH) * 60 + (isNaN(eM) ? 0 : eM);
+                        const durationMins = Math.max(30, endMins - startMins);
+
+                        const top = ((startMins - startHour * 60) / 60) * HOUR_HEIGHT;
+                        const height = (durationMins / 60) * HOUR_HEIGHT;
+
+                        return (
+                          <motion.div
+                            key={l.id}
+                            initial={{ opacity: 0, scale: 0.95 }}
+                            animate={{ opacity: 1, scale: 1 }}
+                            whileHover={{ scale: 1.02, y: -2, zIndex: 30 }}
+                            transition={{ duration: 0.15 }}
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenDetail(l);
+                            }}
+                            className={`absolute left-1 right-1 rounded-2xl p-2.5 border shadow-xs cursor-pointer overflow-hidden transition-all flex flex-col justify-between group/card ${palette.bg} ${palette.border} ${palette.hoverShadow}`}
+                            style={{
+                              top: `${Math.max(2, top + 2)}px`,
+                              height: `${Math.max(48, height - 4)}px`,
+                            }}
+                          >
+                            <div>
+                              <div className="flex items-center justify-between text-[11px] font-bold mb-0.5">
+                                <span className={`flex items-center gap-1 truncate ${palette.timeText}`}>
+                                  <Clock className="w-3 h-3 shrink-0" />
+                                  {l.startTime} - {l.endTime}
+                                </span>
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded-md ${palette.badgeBg}`}>
+                                  {l.duration}h
+                                </span>
+                              </div>
+
+                              <h4 className="text-xs font-bold line-clamp-1 tracking-tight text-slate-900 dark:text-white group-hover/card:text-blue-600 dark:group-hover/card:text-blue-400 transition-colors">
+                                {l.title}
+                              </h4>
+
+                              <div className="text-[11px] font-medium opacity-80 truncate text-slate-600 dark:text-slate-300">
+                                {l.class?.name}
+                              </div>
+                            </div>
+
+                            <div className="flex items-center justify-between text-[10px] font-semibold mt-1 pt-1 border-t border-black/5 dark:border-white/10">
+                              <span className="font-bold text-slate-800 dark:text-slate-100">
+                                {Number(l.feePerLesson || 0).toLocaleString()} đ
+                              </span>
+                              <span className="flex items-center gap-1 text-slate-500 dark:text-slate-400">
+                                <Users className="w-3 h-3" />
+                                {l.participants?.length || 0}
+                              </span>
+                            </div>
+                          </motion.div>
+                        );
+                      })}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          </div>
         </div>
       ) : (
         /* MONTH VIEW */

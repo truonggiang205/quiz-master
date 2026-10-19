@@ -28,7 +28,7 @@ export class LessonParticipantEntity {
   @JoinColumn({ name: 'lessonId' })
   lesson: ILessonEntity;
 
-  @ManyToOne(() => TeacherStudentEntity, { onDelete: 'CASCADE', nullable: true })
+  @ManyToOne(() => TeacherStudentEntity, { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'studentId' })
   student: ITeacherStudentEntity;
 }

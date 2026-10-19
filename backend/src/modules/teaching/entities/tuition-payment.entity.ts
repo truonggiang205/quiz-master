@@ -50,7 +50,7 @@ export class TuitionPaymentEntity {
   @JoinColumn({ name: 'tuitionItemId' })
   tuitionItem: ITuitionItemEntity;
 
-  @ManyToOne(() => TeacherStudentEntity, { onDelete: 'CASCADE', nullable: true })
+  @ManyToOne(() => TeacherStudentEntity, { onDelete: 'RESTRICT', nullable: true })
   @JoinColumn({ name: 'studentId' })
   student: ITeacherStudentEntity;
 

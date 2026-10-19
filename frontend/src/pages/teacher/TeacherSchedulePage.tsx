@@ -176,11 +176,13 @@ export const TeacherSchedulePage: React.FC = () => {
   const [searchParams] = useSearchParams();
   const initialClassId = searchParams.get('classId') || 'ALL';
   const initialDateStr = searchParams.get('date');
+  const initialStudentId = searchParams.get('studentId') || undefined;
 
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [classes, setClasses] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
   const [selectedClassId, setSelectedClassId] = useState<string>(initialClassId);
+  const [selectedStudentId, setSelectedStudentId] = useState<string | undefined>(initialStudentId);
 
   // Real-time clock for current-time indicator line
   const [now, setNow] = useState<Date>(new Date());
@@ -189,8 +191,10 @@ export const TeacherSchedulePage: React.FC = () => {
     return () => clearInterval(timer);
   }, []);
 
-  // Calendar view mode: 'WEEK' | 'MONTH'
-  const [viewMode, setViewMode] = useState<'WEEK' | 'MONTH'>('WEEK');
+  // Calendar view mode: 'WEEK' | 'MONTH' - default to MONTH if date was specified from tuition
+  const [viewMode, setViewMode] = useState<'WEEK' | 'MONTH'>(() => {
+    return initialDateStr ? 'MONTH' : 'WEEK';
+  });
   const [currentDate, setCurrentDate] = useState<Date>(() => {
     if (initialDateStr) {
       const d = new Date(initialDateStr);
@@ -301,7 +305,7 @@ export const TeacherSchedulePage: React.FC = () => {
     [classPaletteMap]
   );
 
-  // Load lessons whenever currentDate or selectedClassId changes
+  // Load lessons whenever currentDate, selectedClassId, or selectedStudentId changes
   const fetchLessons = async () => {
     setLoading(true);
     try {
@@ -311,6 +315,7 @@ export const TeacherSchedulePage: React.FC = () => {
 
       const data = await TeachingService.getLessons({
         classId: selectedClassId !== 'ALL' ? selectedClassId : undefined,
+        studentId: selectedStudentId || undefined,
         month: viewMode === 'MONTH' ? monthStr : undefined,
       });
       setLessons(data);
@@ -323,7 +328,7 @@ export const TeacherSchedulePage: React.FC = () => {
 
   useEffect(() => {
     fetchLessons();
-  }, [currentDate, selectedClassId, viewMode]);
+  }, [currentDate, selectedClassId, selectedStudentId, viewMode]);
 
   // Handle class selection change in Create form to auto-select students
   const activeClassForForm = useMemo(() => {
@@ -715,8 +720,21 @@ export const TeacherSchedulePage: React.FC = () => {
                   onClick={() => setSelectedClassId('ALL')}
                   className="text-xs text-blue-600 dark:text-blue-400 font-semibold hover:underline ml-1"
                 >
-                  (Xem tất cả)
+                  (Xem tất cả lớp)
                 </button>
+              )}
+              {selectedStudentId && (
+                <div className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-900 border border-amber-300 dark:bg-amber-950/80 dark:text-amber-200 dark:border-amber-700 shadow-xs ml-2">
+                  <span>Lọc theo học sinh nguồn</span>
+                  <button
+                    type="button"
+                    onClick={() => setSelectedStudentId(undefined)}
+                    className="hover:text-red-600 transition-colors ml-0.5 cursor-pointer"
+                    title="Bỏ lọc theo học sinh này"
+                  >
+                    <X className="w-3.5 h-3.5" />
+                  </button>
+                </div>
               )}
             </div>
           </div>

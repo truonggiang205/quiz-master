@@ -158,5 +158,16 @@ export class TuitionController {
     const data = await this.tuitionService.recordPayment(user.id, id, dto);
     return createSuccessResponse(data, 'Ghi nhận thanh toán thành công');
   }
+
+  @Post('payments/:paymentId/refund')
+  @ApiOperation({ summary: 'Hoàn tiền hoặc hủy giao dịch thanh toán (Bảo lưu audit trail)' })
+  async refundPayment(
+    @CurrentUser() user: any,
+    @Param('paymentId') paymentId: string,
+    @Body('reason') reason?: string,
+  ) {
+    const data = await this.tuitionService.refundPayment(user.id, paymentId, reason);
+    return createSuccessResponse(data, 'Hoàn tiền giao dịch thành công');
+  }
 }
 

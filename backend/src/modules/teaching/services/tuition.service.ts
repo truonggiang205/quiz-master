@@ -171,9 +171,28 @@ export class TuitionService {
     for (const existing of existingItems) {
       const key = `${existing.classId}__${existing.studentId}`;
       if (!groupedFees.has(key)) {
-        if (Number(existing.baseAmount) !== 0) {
-          existing.baseAmount = 0;
-          await this.recalculateTuitionItem(existing);
+        const payments = await this.paymentRepo.find({
+          where: { tuitionItemId: existing.id },
+        });
+        const hasCompletedPayment = payments.some(
+          (p) => p.status === 'COMPLETED' || !p.status,
+        );
+        const adjustments = await this.adjustmentRepo.find({
+          where: { tuitionItemId: existing.id },
+        });
+
+        if (!hasCompletedPayment && adjustments.length === 0) {
+          // Xóa orphan tuition nếu không phát sinh thanh toán hay điều chỉnh tài chính
+          if (payments.length > 0) {
+            await this.paymentRepo.remove(payments);
+          }
+          await this.tuitionRepo.remove(existing);
+        } else {
+          // Bảo toàn lịch sử thanh toán, cập nhật baseAmount về 0 và tính toán lại
+          if (Number(existing.baseAmount) !== 0) {
+            existing.baseAmount = 0;
+            await this.recalculateTuitionItem(existing);
+          }
         }
       }
     }
@@ -206,16 +225,18 @@ export class TuitionService {
     let surcharge = 0;
     let discount = 0;
     for (const adj of adjustments) {
-      if (adj.type === 'SURCHARGE') surcharge += Number(adj.amount || 0);
-      if (adj.type === 'DISCOUNT') discount += Number(adj.amount || 0);
+      if (adj.type === 'SURCHARGE') surcharge += Math.round(Number(adj.amount || 0));
+      if (adj.type === 'DISCOUNT') discount += Math.round(Number(adj.amount || 0));
     }
 
     let paid = 0;
     for (const p of payments) {
-      paid += Number(p.amount || 0);
+      if (p.status === 'COMPLETED' || !p.status) {
+        paid += Math.round(Number(p.amount || 0));
+      }
     }
 
-    const base = Number(item.baseAmount || 0);
+    const base = Math.round(Number(item.baseAmount || 0));
     const total = Math.max(0, Math.round(base + surcharge - discount));
     const remaining = Math.max(0, Math.round(total - paid));
 
@@ -582,8 +603,59 @@ export class TuitionService {
           where: { tuitionItemId: tuition.id },
         });
         if (payments.length > 0) {
-          await payRepo.remove(payments);
+          for (const p of payments) {
+            p.status = 'VOIDED';
+            await payRepo.save(p);
+          }
         }
+      }
+
+      return await this.recalculateTuitionItem(tuition, manager);
+    });
+  }
+
+  /**
+   * Hoàn tiền hoặc hủy giao dịch thanh toán (Bảo lưu audit trail, không hard-delete)
+   */
+  async refundPayment(
+    teacherId: string,
+    paymentId: string,
+    reason?: string,
+  ) {
+    return await this.dataSource.transaction(async (manager) => {
+      const payRepo = manager.getRepository(TuitionPaymentEntity);
+      const payment = await payRepo.findOne({
+        where: { id: paymentId },
+        relations: { tuitionItem: true },
+      });
+
+      if (!payment) {
+        throw new NotFoundException('Không tìm thấy giao dịch thanh toán');
+      }
+
+      if (payment.teacherId !== teacherId) {
+        throw new ForbiddenException('Bạn không có quyền hoàn tiền cho giao dịch này');
+      }
+
+      if (payment.status === 'REFUNDED' || payment.status === 'VOIDED') {
+        throw new BadRequestException('Giao dịch này đã được hoàn tiền hoặc hủy trước đó');
+      }
+
+      payment.status = 'REFUNDED';
+      if (reason) {
+        payment.note = payment.note
+          ? `${payment.note} | Hoàn tiền: ${reason}`
+          : `Hoàn tiền: ${reason}`;
+      }
+      await payRepo.save(payment);
+
+      const tuition = await manager.findOne(TuitionItemEntity, {
+        where: { id: payment.tuitionItemId },
+        lock: { mode: 'pessimistic_write' },
+      });
+
+      if (!tuition) {
+        throw new NotFoundException('Không tìm thấy bản ghi học phí liên quan');
       }
 
       return await this.recalculateTuitionItem(tuition, manager);

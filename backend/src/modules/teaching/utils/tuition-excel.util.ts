@@ -289,6 +289,13 @@ export async function generateTuitionExcelReport(
     { state: 'frozen', xSplit: 0, ySplit: 6, topLeftCell: 'A7', activeCell: 'A7' },
   ];
 
+  // Set Print Area & Professional Header / Footer
+  sheet.pageSetup.printArea = `A1:N${currentRowIndex}`;
+  sheet.headerFooter = {
+    oddHeader: '&LQuizMaster Education System&RBáo Cáo Học Phí',
+    oddFooter: '&CTrang &P / &N',
+  };
+
   const buffer = await workbook.xlsx.writeBuffer();
   return Buffer.from(buffer);
 }

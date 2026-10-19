@@ -359,6 +359,15 @@ export class ScheduleService {
       await this.checkConflict(teacherId, newDate, newStartTime, newEndTime, lessonId);
     }
 
+    // Bảo vệ ràng buộc tài chính nếu giảm tiền, hủy buổi hoặc đổi tháng
+    if (dto.status === 'CANCELLED' && lesson.status !== 'CANCELLED') {
+      await this.validateFinancialIntegrity(teacherId, lesson, 'CANCEL');
+    } else if (newMonth !== oldMonth) {
+      await this.validateFinancialIntegrity(teacherId, lesson, 'MOVE_MONTH');
+    } else if (dto.feePerLesson !== undefined && dto.feePerLesson < Number(lesson.feePerLesson || 0)) {
+      await this.validateFinancialIntegrity(teacherId, lesson, 'FEE_CHANGE', dto.feePerLesson);
+    }
+
     const updated = await this.dataSource.transaction(async (manager) => {
       lesson.title = dto.title ?? lesson.title;
       lesson.date = newDate;
@@ -412,6 +421,7 @@ export class ScheduleService {
   async deleteLesson(teacherId: string, lessonId: string) {
     const lesson = await this.lessonRepo.findOne({
       where: { id: lessonId },
+      relations: { participants: true },
     });
 
     if (!lesson) {
@@ -421,6 +431,9 @@ export class ScheduleService {
     if (lesson.teacherId !== teacherId) {
       throw new ForbiddenException('Bạn không có quyền xóa buổi học này');
     }
+
+    // Bảo vệ ràng buộc tài chính: Không cho phép xóa buổi học nếu đã phát sinh thanh toán vượt quá
+    await this.validateFinancialIntegrity(teacherId, lesson, 'DELETE');
 
     const month = lesson.date.substring(0, 7);
     await this.lessonRepo.remove(lesson);
@@ -433,5 +446,96 @@ export class ScheduleService {
     }
 
     return { success: true, message: 'Đã xóa buổi học thành công' };
+  }
+
+  /**
+   * Kiểm tra ràng buộc tài chính: Không cho phép thao tác làm tổng học phí giảm xuống thấp hơn số tiền học sinh đã thanh toán.
+   */
+  private async validateFinancialIntegrity(
+    teacherId: string,
+    lesson: LessonEntity,
+    action: 'DELETE' | 'CANCEL' | 'MOVE_MONTH' | 'FEE_CHANGE',
+    newFeePerLesson?: number,
+  ) {
+    const month = lesson.date.substring(0, 7);
+    const studentIds = new Set<string>();
+
+    if (lesson.participants && lesson.participants.length > 0) {
+      for (const p of lesson.participants) {
+        if (p.studentId) studentIds.add(p.studentId);
+      }
+    } else if (lesson.classId.startsWith('private-')) {
+      studentIds.add(lesson.classId.replace('private-', ''));
+    }
+
+    if (studentIds.size === 0) return;
+
+    const allMonthLessons = await this.lessonRepo.find({
+      where: { teacherId },
+    });
+    const validMonthLessons = allMonthLessons.filter(
+      (l) => l.date.startsWith(month) && l.status !== 'CANCELLED',
+    );
+    const validLessonIds = validMonthLessons.map((l) => l.id);
+
+    let allParticipants: LessonParticipantEntity[] = [];
+    if (validLessonIds.length > 0) {
+      allParticipants = await this.participantRepo.find({
+        where: { lessonId: In(validLessonIds) },
+      });
+    }
+
+    for (const studentId of studentIds) {
+      const tuitionItem = await this.tuitionRepo.findOne({
+        where: { teacherId, classId: lesson.classId, studentId, month },
+      });
+
+      if (!tuitionItem || Number(tuitionItem.paidAmount) <= 0) continue;
+
+      let simulatedBaseAmount = 0;
+
+      for (const otherLesson of validMonthLessons) {
+        if (action === 'DELETE' && otherLesson.id === lesson.id) continue;
+        if (action === 'CANCEL' && otherLesson.id === lesson.id) continue;
+        if (action === 'MOVE_MONTH' && otherLesson.id === lesson.id) continue;
+
+        let feeForThisLesson = 0;
+        if (otherLesson.id === lesson.id && action === 'FEE_CHANGE' && newFeePerLesson !== undefined) {
+          feeForThisLesson = newFeePerLesson;
+        } else {
+          const part = allParticipants.find(
+            (p) => p.lessonId === otherLesson.id && p.studentId === studentId,
+          );
+          if (part) {
+            if (part.attendanceStatus === 'ABSENT') continue;
+            feeForThisLesson = Number(
+              part.feeAmount !== null && part.feeAmount !== undefined
+                ? part.feeAmount
+                : otherLesson.feePerLesson || 0,
+            );
+          } else if (otherLesson.classId === `private-${studentId}`) {
+            feeForThisLesson = Number(otherLesson.feePerLesson || 0);
+          }
+        }
+
+        simulatedBaseAmount += feeForThisLesson;
+      }
+
+      const simulatedTotalAmount = Math.max(
+        0,
+        Math.round(
+          simulatedBaseAmount +
+            Number(tuitionItem.surcharge || 0) -
+            Number(tuitionItem.discount || 0),
+        ),
+      );
+
+      const paidAmount = Number(tuitionItem.paidAmount);
+      if (simulatedTotalAmount < paidAmount) {
+        throw new BadRequestException(
+          `Không thể thực hiện thao tác: Học sinh đã thanh toán ${paidAmount.toLocaleString('vi-VN')} đ (học phí sau khi điều chỉnh là ${simulatedTotalAmount.toLocaleString('vi-VN')} đ). Vui lòng hoàn tiền hoặc điều chỉnh học phí trước.`,
+        );
+      }
+    }
   }
 }

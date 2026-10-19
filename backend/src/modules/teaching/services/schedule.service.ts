@@ -11,6 +11,7 @@ import { LessonParticipantEntity } from '../entities/lesson-participant.entity.j
 import { ClassEntity } from '../../../entities/class.entity.js';
 import { UserEntity } from '../../../entities/user.entity.js';
 import { TuitionItemEntity } from '../entities/tuition-item.entity.js';
+import { TuitionService } from './tuition.service.js';
 import { CreateLessonDto, UpdateLessonDto } from '../dto/schedule.dto.js';
 import crypto from 'crypto';
 
@@ -27,6 +28,7 @@ export class ScheduleService {
     private readonly userRepo: Repository<UserEntity>,
     @InjectRepository(TuitionItemEntity)
     private readonly tuitionRepo: Repository<TuitionItemEntity>,
+    private readonly tuitionService: TuitionService,
     private readonly dataSource: DataSource,
   ) {}
 
@@ -265,7 +267,8 @@ export class ScheduleService {
     }
 
     // 6. Transactional creation
-    return await this.dataSource.transaction(async (manager) => {
+    // 6. Transactional creation
+    const result = await this.dataSource.transaction(async (manager) => {
       const createdLessons: LessonEntity[] = [];
 
       for (let i = 0; i < datesToSchedule.length; i++) {
@@ -312,6 +315,18 @@ export class ScheduleService {
 
       return createdLessons.length === 1 ? createdLessons[0] : createdLessons;
     });
+
+    // Tự động đồng bộ học phí cho tất cả các tháng bị ảnh hưởng
+    try {
+      const distinctMonths = Array.from(new Set(datesToSchedule.map((d) => d.substring(0, 7))));
+      for (const m of distinctMonths) {
+        await this.tuitionService.syncTuitionData(teacherId, m);
+      }
+    } catch (err) {
+      console.error('Failed to auto-sync tuition after creating lesson:', err);
+    }
+
+    return result;
   }
 
   async updateLesson(teacherId: string, lessonId: string, dto: UpdateLessonDto) {
@@ -328,7 +343,9 @@ export class ScheduleService {
       throw new ForbiddenException('Bạn không có quyền sửa buổi học này');
     }
 
+    const oldMonth = lesson.date.substring(0, 7);
     const newDate = dto.date || lesson.date;
+    const newMonth = newDate.substring(0, 7);
     const newStartTime = dto.startTime || lesson.startTime;
     const newEndTime = dto.endTime || lesson.endTime;
 
@@ -342,7 +359,7 @@ export class ScheduleService {
       await this.checkConflict(teacherId, newDate, newStartTime, newEndTime, lessonId);
     }
 
-    return await this.dataSource.transaction(async (manager) => {
+    const updated = await this.dataSource.transaction(async (manager) => {
       lesson.title = dto.title ?? lesson.title;
       lesson.date = newDate;
       lesson.startTime = newStartTime;
@@ -354,7 +371,7 @@ export class ScheduleService {
       lesson.homework = dto.homework ?? lesson.homework;
       lesson.notes = dto.notes ?? lesson.notes;
 
-      const updated = await manager.save(lesson);
+      const saved = await manager.save(lesson);
 
       // Update participants attendance / fees if provided
       if (dto.participants && dto.participants.length > 0) {
@@ -368,10 +385,28 @@ export class ScheduleService {
             await manager.save(part);
           }
         }
+      } else if (dto.feePerLesson !== undefined && lesson.participants && lesson.participants.length > 0) {
+        // Đồng bộ giá mới cho toàn bộ học sinh trong buổi nếu đổi giá buổi học
+        for (const part of lesson.participants) {
+          part.feeAmount = dto.feePerLesson;
+          await manager.save(part);
+        }
       }
 
-      return updated;
+      return saved;
     });
+
+    // Tự động đồng bộ học phí cho các tháng liên quan
+    try {
+      await this.tuitionService.syncTuitionData(teacherId, newMonth);
+      if (oldMonth !== newMonth) {
+        await this.tuitionService.syncTuitionData(teacherId, oldMonth);
+      }
+    } catch (err) {
+      console.error('Failed to auto-sync tuition after updating lesson:', err);
+    }
+
+    return updated;
   }
 
   async deleteLesson(teacherId: string, lessonId: string) {
@@ -387,7 +422,16 @@ export class ScheduleService {
       throw new ForbiddenException('Bạn không có quyền xóa buổi học này');
     }
 
+    const month = lesson.date.substring(0, 7);
     await this.lessonRepo.remove(lesson);
+
+    // Tự động đồng bộ học phí sau khi xóa buổi học
+    try {
+      await this.tuitionService.syncTuitionData(teacherId, month);
+    } catch (err) {
+      console.error('Failed to auto-sync tuition after deleting lesson:', err);
+    }
+
     return { success: true, message: 'Đã xóa buổi học thành công' };
   }
 }

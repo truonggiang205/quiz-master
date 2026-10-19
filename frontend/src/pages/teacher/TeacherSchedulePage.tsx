@@ -33,7 +33,7 @@ import { CalendarService } from '../../services/calendar.service';
 import type { Holiday } from '../../types/calendar';
 import type { Lesson, LessonParticipant, CreateLessonPayload, UpdateLessonPayload } from '../../types/teaching';
 import type { Classroom } from '../../types/classroom';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useSearchParams } from 'react-router-dom';
 
 // 12 Modern high-contrast pastel palettes (guaranteeing unique colors per student/class)
 const CLASS_PALETTES = [
@@ -173,10 +173,14 @@ const CLASS_PALETTES = [
 
 export const TeacherSchedulePage: React.FC = () => {
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const initialClassId = searchParams.get('classId') || 'ALL';
+  const initialDateStr = searchParams.get('date');
+
   const [lessons, setLessons] = useState<Lesson[]>([]);
   const [classes, setClasses] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
-  const [selectedClassId, setSelectedClassId] = useState<string>('ALL');
+  const [selectedClassId, setSelectedClassId] = useState<string>(initialClassId);
 
   // Real-time clock for current-time indicator line
   const [now, setNow] = useState<Date>(new Date());
@@ -187,7 +191,13 @@ export const TeacherSchedulePage: React.FC = () => {
 
   // Calendar view mode: 'WEEK' | 'MONTH'
   const [viewMode, setViewMode] = useState<'WEEK' | 'MONTH'>('WEEK');
-  const [currentDate, setCurrentDate] = useState<Date>(new Date());
+  const [currentDate, setCurrentDate] = useState<Date>(() => {
+    if (initialDateStr) {
+      const d = new Date(initialDateStr);
+      if (!isNaN(d.getTime())) return d;
+    }
+    return new Date();
+  });
 
   // Modal states
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);

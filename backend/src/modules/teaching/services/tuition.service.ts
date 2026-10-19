@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository, DataSource, In } from 'typeorm';
+import { Repository, DataSource, In, EntityManager } from 'typeorm';
 import { TuitionItemEntity, TuitionStatus } from '../entities/tuition-item.entity.js';
 import { TuitionAdjustmentEntity } from '../entities/tuition-adjustment.entity.js';
 import { TuitionPaymentEntity } from '../entities/tuition-payment.entity.js';
@@ -18,9 +18,8 @@ import {
   RecordPaymentDto,
   BulkTuitionAdjustmentDto,
   BulkPaymentDto,
-  UpdateTuitionStatusDto,
 } from '../dto/tuition.dto.js';
-import * as xlsx from 'xlsx';
+import { generateTuitionExcelReport } from '../utils/tuition-excel.util.js';
 import crypto from 'crypto';
 
 export interface TuitionRowSummary {
@@ -65,61 +64,87 @@ export class TuitionService {
   ) {}
 
   /**
-   * Đồng bộ & tính toán học phí động cho giáo viên theo tháng.
-   * Quét toàn bộ lớp học của giáo viên và các học sinh có buổi học trong tháng đó.
+   * Đồng bộ & tính toán học phí chuẩn từ lịch dạy (Schedule is Source of Truth).
+   * Chỉ tính các buổi học hợp lệ (status !== 'CANCELLED' và attendance !== 'ABSENT').
    */
   async syncTuitionData(teacherId: string, month: string): Promise<void> {
-    const teacherClasses = await this.classRepo.find({
-      where: { teacherId },
-      relations: { students: true },
-    });
-
-    if (teacherClasses.length === 0) return;
-
-    // Lấy tất cả các buổi học trong tháng của giáo viên
+    // 1. Lấy tất cả các buổi học hợp lệ trong tháng của giáo viên
     const lessons = await this.lessonRepo.find({
       where: { teacherId },
     });
-    const monthLessons = lessons.filter((l) => l.date.startsWith(month));
+    const monthLessons = lessons.filter(
+      (l) => l.date.startsWith(month) && l.status !== 'CANCELLED',
+    );
     const lessonMap = new Map(monthLessons.map((l) => [l.id, l]));
-
-    if (monthLessons.length === 0) return;
-
     const lessonIds = monthLessons.map((l) => l.id);
-    const participants = await this.participantRepo.find({
-      where: { lessonId: In(lessonIds) },
-    });
 
-    // Gom nhóm học phí theo (classId, studentId)
-    const groupedFees = new Map<string, { baseAmount: number; lessonCount: number; totalHours: number }>();
+    let participants: LessonParticipantEntity[] = [];
+    if (lessonIds.length > 0) {
+      participants = await this.participantRepo.find({
+        where: { lessonId: In(lessonIds) },
+      });
+    }
+
+    // 2. Gom nhóm học phí theo (classId, studentId)
+    const groupedFees = new Map<
+      string,
+      { baseAmount: number; lessonCount: number; totalHours: number }
+    >();
 
     for (const p of participants) {
       const lesson = lessonMap.get(p.lessonId);
       if (!lesson) continue;
 
+      // Không tính tiền cho học sinh vắng mặt
+      if (p.attendanceStatus === 'ABSENT') continue;
+
       const key = `${lesson.classId}__${p.studentId}`;
       const current = groupedFees.get(key) || { baseAmount: 0, lessonCount: 0, totalHours: 0 };
+      const fee = Number(
+        p.feeAmount !== null && p.feeAmount !== undefined
+          ? p.feeAmount
+          : lesson.feePerLesson || 0,
+      );
 
-      // Nếu không vắng mặt (hoặc vắng nhưng có tính phí)
-      if (p.attendanceStatus !== 'ABSENT') {
-        current.baseAmount += Number(p.feeAmount || lesson.feePerLesson || 0);
-        current.lessonCount += 1;
-        current.totalHours += Number(lesson.duration || 1);
-      }
+      current.baseAmount += fee;
+      current.lessonCount += 1;
+      current.totalHours += Number(lesson.duration || 1);
       groupedFees.set(key, current);
     }
 
-    // Đảm bảo mỗi cặp (classId, studentId) có 1 TuitionItemEntity
+    // 3. Fallback cho lớp kèm 1-1 nếu chưa có record participants
+    for (const lesson of monthLessons) {
+      if (lesson.classId.startsWith('private-')) {
+        const studentId = lesson.classId.replace('private-', '');
+        const key = `${lesson.classId}__${studentId}`;
+        const hasParticipant = participants.some(
+          (p) => p.lessonId === lesson.id && p.studentId === studentId,
+        );
+        if (!hasParticipant) {
+          const current = groupedFees.get(key) || { baseAmount: 0, lessonCount: 0, totalHours: 0 };
+          current.baseAmount += Number(lesson.feePerLesson || 0);
+          current.lessonCount += 1;
+          current.totalHours += Number(lesson.duration || 1);
+          groupedFees.set(key, current);
+        }
+      }
+    }
+
+    // 4. Lấy toàn bộ TuitionItemEntity hiện có của giáo viên trong tháng
+    const existingItems = await this.tuitionRepo.find({
+      where: { teacherId, month },
+    });
+    const existingMap = new Map(
+      existingItems.map((item) => [`${item.classId}__${item.studentId}`, item]),
+    );
+
+    // 5. Cập nhật hoặc tạo mới các mục học phí từ groupedFees (idempotent, không nhân đôi)
     for (const [key, feeInfo] of groupedFees.entries()) {
       const [classId, studentId] = key.split('__');
+      const existing = existingMap.get(key);
 
-      let tuitionItem = await this.tuitionRepo.findOne({
-        where: { teacherId, classId, studentId, month },
-        relations: { adjustments: true, payments: true },
-      });
-
-      if (!tuitionItem) {
-        tuitionItem = this.tuitionRepo.create({
+      if (!existing) {
+        const tuitionItem = this.tuitionRepo.create({
           id: `tui-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
           teacherId,
           classId,
@@ -135,35 +160,64 @@ export class TuitionService {
         });
         await this.tuitionRepo.save(tuitionItem);
       } else {
-        // Cập nhật lại baseAmount từ dữ liệu buổi học
-        tuitionItem.baseAmount = feeInfo.baseAmount;
-        await this.recalculateTuitionItem(tuitionItem);
+        if (Number(existing.baseAmount) !== Number(feeInfo.baseAmount)) {
+          existing.baseAmount = feeInfo.baseAmount;
+          await this.recalculateTuitionItem(existing);
+        }
+      }
+    }
+
+    // 6. Xử lý các mục học phí cũ mà hiện tại không còn buổi học nào hợp lệ (buổi học bị xóa hoặc hủy)
+    for (const existing of existingItems) {
+      const key = `${existing.classId}__${existing.studentId}`;
+      if (!groupedFees.has(key)) {
+        if (Number(existing.baseAmount) !== 0) {
+          existing.baseAmount = 0;
+          await this.recalculateTuitionItem(existing);
+        }
       }
     }
   }
 
-  async recalculateTuitionItem(item: TuitionItemEntity): Promise<TuitionItemEntity> {
-    const adjustments = await this.adjustmentRepo.find({
+  /**
+   * Tính toán lại tổng tiền, số tiền còn lại và trạng thái của bản ghi học phí.
+   */
+  async recalculateTuitionItem(
+    item: TuitionItemEntity,
+    manager?: EntityManager,
+  ): Promise<TuitionItemEntity> {
+    const adjRepo = manager
+      ? manager.getRepository(TuitionAdjustmentEntity)
+      : this.adjustmentRepo;
+    const payRepo = manager
+      ? manager.getRepository(TuitionPaymentEntity)
+      : this.paymentRepo;
+    const tuiRepo = manager
+      ? manager.getRepository(TuitionItemEntity)
+      : this.tuitionRepo;
+
+    const adjustments = await adjRepo.find({
       where: { tuitionItemId: item.id },
     });
-    const payments = await this.paymentRepo.find({
+    const payments = await payRepo.find({
       where: { tuitionItemId: item.id },
     });
 
     let surcharge = 0;
     let discount = 0;
     for (const adj of adjustments) {
-      if (adj.type === 'SURCHARGE') surcharge += Number(adj.amount);
-      if (adj.type === 'DISCOUNT') discount += Number(adj.amount);
+      if (adj.type === 'SURCHARGE') surcharge += Number(adj.amount || 0);
+      if (adj.type === 'DISCOUNT') discount += Number(adj.amount || 0);
     }
 
     let paid = 0;
     for (const p of payments) {
-      paid += Number(p.amount);
+      paid += Number(p.amount || 0);
     }
 
-    const total = Math.max(0, Number(item.baseAmount) + surcharge - discount);
-    const remaining = Math.max(0, total - paid);
+    const base = Number(item.baseAmount || 0);
+    const total = Math.max(0, Math.round(base + surcharge - discount));
+    const remaining = Math.max(0, Math.round(total - paid));
 
     let status: TuitionStatus = 'UNPAID';
     if (paid >= total && total > 0) {
@@ -181,7 +235,7 @@ export class TuitionService {
     item.remainingAmount = remaining;
     item.status = status;
 
-    return await this.tuitionRepo.save(item);
+    return await tuiRepo.save(item);
   }
 
   async getTuitionList(
@@ -223,11 +277,13 @@ export class TuitionService {
 
     const items = await qb.getMany();
 
-    // Lấy thông tin số buổi và số giờ cho từng học sinh trong tháng
+    // Lấy thông tin số buổi và số giờ cho từng học sinh trong tháng từ các buổi hợp lệ
     const lessons = await this.lessonRepo.find({
       where: { teacherId },
     });
-    const monthLessons = lessons.filter((l) => l.date.startsWith(currentMonth));
+    const monthLessons = lessons.filter(
+      (l) => l.date.startsWith(currentMonth) && l.status !== 'CANCELLED',
+    );
     const lessonIds = monthLessons.map((l) => l.id);
     let participants: LessonParticipantEntity[] = [];
     if (lessonIds.length > 0) {
@@ -243,12 +299,27 @@ export class TuitionService {
           p.studentId === item.studentId &&
           p.lesson &&
           p.lesson.classId === item.classId &&
+          p.lesson.status !== 'CANCELLED' &&
           p.attendanceStatus !== 'ABSENT',
       );
-      const lessonCount = studentParts.length;
-      const totalHours = Number(
-        studentParts.reduce((acc, cur) => acc + Number(cur.lesson?.duration || 1), 0).toFixed(2),
+
+      let lessonCount = studentParts.length;
+      let totalHours = Number(
+        studentParts
+          .reduce((acc, cur) => acc + Number(cur.lesson?.duration || 1), 0)
+          .toFixed(2),
       );
+
+      // Fallback cho lớp 1-1 nếu không có record trong participants
+      if (lessonCount === 0 && item.classId.startsWith('private-')) {
+        const privateLessons = monthLessons.filter((l) => l.classId === item.classId);
+        lessonCount = privateLessons.length;
+        totalHours = Number(
+          privateLessons
+            .reduce((acc, cur) => acc + Number(cur.duration || 1), 0)
+            .toFixed(2),
+        );
+      }
 
       return {
         id: item.id,
@@ -277,23 +348,37 @@ export class TuitionService {
     teacherId: string,
     endMonth: string,
   ): Promise<{ month: string; label: string; total: number; paid: number; unpaid: number }[]> {
-    const [currY, currM] = (endMonth || new Date().toISOString().substring(0, 7)).split('-').map(Number);
-    const months: { month: string; label: string; total: number; paid: number; unpaid: number }[] = [];
+    const [currY, currM] = (endMonth || new Date().toISOString().substring(0, 7))
+      .split('-')
+      .map(Number);
+    const months: { month: string; label: string; total: number; paid: number; unpaid: number }[] =
+      [];
+
+    // Đồng bộ tháng hiện tại đang xem
+    await this.syncTuitionData(teacherId, endMonth);
+
+    // Lấy toàn bộ bản ghi học phí của giáo viên trong 1 truy vấn duy nhất
+    const items = await this.tuitionRepo.find({
+      where: { teacherId },
+    });
+
+    const itemsByMonth = new Map<string, TuitionItemEntity[]>();
+    for (const item of items) {
+      if (!itemsByMonth.has(item.month)) {
+        itemsByMonth.set(item.month, []);
+      }
+      itemsByMonth.get(item.month)!.push(item);
+    }
 
     for (let i = 5; i >= 0; i--) {
       const d = new Date(currY, currM - 1 - i, 1);
       const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
       const label = `T${d.getMonth() + 1}`;
 
-      await this.syncTuitionData(teacherId, mStr);
-
-      const items = await this.tuitionRepo.find({
-        where: { teacherId, month: mStr },
-      });
-
-      const total = items.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0);
-      const paid = items.reduce((sum, item) => sum + Number(item.paidAmount || 0), 0);
-      const unpaid = items.reduce((sum, item) => sum + Number(item.remainingAmount || 0), 0);
+      const monthItems = itemsByMonth.get(mStr) || [];
+      const total = monthItems.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0);
+      const paid = monthItems.reduce((sum, item) => sum + Number(item.paidAmount || 0), 0);
+      const unpaid = monthItems.reduce((sum, item) => sum + Number(item.remainingAmount || 0), 0);
 
       months.push({
         month: mStr,
@@ -349,27 +434,45 @@ export class TuitionService {
     tuitionId: string,
     dto: RecordPaymentDto,
   ) {
-    const tuition = await this.getTuitionDetail(teacherId, tuitionId);
-
-    if (dto.amount > Number(tuition.remainingAmount)) {
-      throw new BadRequestException(
-        `Số tiền thanh toán (${dto.amount.toLocaleString()} đ) không được vượt quá số tiền còn lại (${Number(tuition.remainingAmount).toLocaleString()} đ)`,
-      );
+    if (dto.amount <= 0) {
+      throw new BadRequestException('Số tiền thanh toán phải lớn hơn 0');
     }
 
-    const payment = this.paymentRepo.create({
-      id: `pay-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
-      tuitionItemId: tuition.id,
-      teacherId,
-      studentId: tuition.studentId,
-      amount: dto.amount,
-      paymentDate: dto.paymentDate,
-      paymentMethod: dto.paymentMethod || 'CASH',
-      note: dto.note || '',
-    });
+    return await this.dataSource.transaction(async (manager) => {
+      const tuition = await manager.findOne(TuitionItemEntity, {
+        where: { id: tuitionId },
+        lock: { mode: 'pessimistic_write' },
+      });
 
-    await this.paymentRepo.save(payment);
-    return await this.recalculateTuitionItem(tuition);
+      if (!tuition) {
+        throw new NotFoundException('Không tìm thấy bản ghi học phí');
+      }
+
+      if (tuition.teacherId !== teacherId) {
+        throw new ForbiddenException('Bạn không có quyền truy cập bản ghi học phí này');
+      }
+
+      const remaining = Number(tuition.remainingAmount);
+      if (dto.amount > remaining) {
+        throw new BadRequestException(
+          `Số tiền thanh toán (${dto.amount.toLocaleString('vi-VN')} đ) không được vượt quá số tiền còn lại (${remaining.toLocaleString('vi-VN')} đ)`,
+        );
+      }
+
+      const payment = manager.create(TuitionPaymentEntity, {
+        id: `pay-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        tuitionItemId: tuition.id,
+        teacherId,
+        studentId: tuition.studentId,
+        amount: dto.amount,
+        paymentDate: dto.paymentDate,
+        paymentMethod: dto.paymentMethod || 'CASH',
+        note: dto.note || '',
+      });
+
+      await manager.save(payment);
+      return await this.recalculateTuitionItem(tuition, manager);
+    });
   }
 
   async deleteAdjustment(teacherId: string, adjustmentId: string) {
@@ -389,7 +492,7 @@ export class TuitionService {
   }
 
   async bulkAdjustment(teacherId: string, dto: BulkTuitionAdjustmentDto) {
-    const results = [];
+    const results: TuitionItemEntity[] = [];
     for (const tuitionId of dto.tuitionIds) {
       const tuition = await this.tuitionRepo.findOne({
         where: { id: tuitionId, teacherId },
@@ -412,26 +515,29 @@ export class TuitionService {
   }
 
   async bulkPayment(teacherId: string, dto: BulkPaymentDto) {
-    const results = [];
+    const results: TuitionItemEntity[] = [];
     for (const tuitionId of dto.tuitionIds) {
-      const tuition = await this.tuitionRepo.findOne({
-        where: { id: tuitionId, teacherId },
-      });
-      if (!tuition || Number(tuition.remainingAmount) <= 0) continue;
+      await this.dataSource.transaction(async (manager) => {
+        const tuition = await manager.findOne(TuitionItemEntity, {
+          where: { id: tuitionId, teacherId },
+          lock: { mode: 'pessimistic_write' },
+        });
+        if (!tuition || Number(tuition.remainingAmount) <= 0) return;
 
-      const payment = this.paymentRepo.create({
-        id: `pay-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
-        tuitionItemId: tuition.id,
-        teacherId,
-        studentId: tuition.studentId,
-        amount: Number(tuition.remainingAmount),
-        paymentDate: dto.paymentDate,
-        paymentMethod: dto.paymentMethod || 'CASH',
-        note: dto.note || 'Thanh toán hàng loạt',
+        const payment = manager.create(TuitionPaymentEntity, {
+          id: `pay-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+          tuitionItemId: tuition.id,
+          teacherId,
+          studentId: tuition.studentId,
+          amount: Number(tuition.remainingAmount),
+          paymentDate: dto.paymentDate,
+          paymentMethod: dto.paymentMethod || 'CASH',
+          note: dto.note || 'Thanh toán hàng loạt',
+        });
+        await manager.save(payment);
+        const updated = await this.recalculateTuitionItem(tuition, manager);
+        results.push(updated);
       });
-      await this.paymentRepo.save(payment);
-      const updated = await this.recalculateTuitionItem(tuition);
-      results.push(updated);
     }
     return results;
   }
@@ -441,32 +547,47 @@ export class TuitionService {
     tuitionId: string,
     targetStatus: TuitionStatus,
   ) {
-    const tuition = await this.getTuitionDetail(teacherId, tuitionId);
-
-    if (targetStatus === 'PAID') {
-      if (Number(tuition.remainingAmount) > 0) {
-        const payment = this.paymentRepo.create({
-          id: `pay-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
-          tuitionItemId: tuition.id,
-          teacherId,
-          studentId: tuition.studentId,
-          amount: Number(tuition.remainingAmount),
-          paymentDate: new Date().toISOString().substring(0, 10),
-          paymentMethod: 'CASH',
-          note: 'Xác nhận thanh toán đủ',
-        });
-        await this.paymentRepo.save(payment);
-      }
-    } else if (targetStatus === 'UNPAID') {
-      const payments = await this.paymentRepo.find({
-        where: { tuitionItemId: tuition.id },
+    return await this.dataSource.transaction(async (manager) => {
+      const tuition = await manager.findOne(TuitionItemEntity, {
+        where: { id: tuitionId },
+        relations: { student: true, class: true },
+        lock: { mode: 'pessimistic_write' },
       });
-      if (payments.length > 0) {
-        await this.paymentRepo.remove(payments);
-      }
-    }
 
-    return await this.recalculateTuitionItem(tuition);
+      if (!tuition) {
+        throw new NotFoundException('Không tìm thấy bản ghi học phí');
+      }
+
+      if (tuition.teacherId !== teacherId) {
+        throw new ForbiddenException('Bạn không có quyền truy cập bản ghi học phí này');
+      }
+
+      if (targetStatus === 'PAID') {
+        if (Number(tuition.remainingAmount) > 0) {
+          const payment = manager.create(TuitionPaymentEntity, {
+            id: `pay-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+            tuitionItemId: tuition.id,
+            teacherId,
+            studentId: tuition.studentId,
+            amount: Number(tuition.remainingAmount),
+            paymentDate: new Date().toISOString().substring(0, 10),
+            paymentMethod: 'CASH',
+            note: 'Xác nhận thanh toán đủ',
+          });
+          await manager.save(payment);
+        }
+      } else if (targetStatus === 'UNPAID') {
+        const payRepo = manager.getRepository(TuitionPaymentEntity);
+        const payments = await payRepo.find({
+          where: { tuitionItemId: tuition.id },
+        });
+        if (payments.length > 0) {
+          await payRepo.remove(payments);
+        }
+      }
+
+      return await this.recalculateTuitionItem(tuition, manager);
+    });
   }
 
   async exportTuitionToExcel(
@@ -474,33 +595,18 @@ export class TuitionService {
     query: { month?: string; classId?: string; status?: TuitionStatus },
   ): Promise<Buffer> {
     const list = await this.getTuitionList(teacherId, query);
+    const teacher = await this.userRepo.findOne({ where: { id: teacherId } });
 
-    const rows = list.map((item, index) => ({
-      STT: index + 1,
-      'Học sinh': item.studentName,
-      Email: item.studentEmail,
-      'Lớp học': item.className,
-      Tháng: item.month,
-      'Số buổi': item.lessonCount,
-      'Số giờ dạy': item.totalHours,
-      'Học phí gốc': item.baseAmount,
-      'Phụ thu': item.surcharge,
-      'Giảm trừ': item.discount,
-      'Tổng học phí': item.totalAmount,
-      'Đã thanh toán': item.paidAmount,
-      'Còn lại': item.remainingAmount,
-      'Trạng thái':
-        item.status === 'PAID'
-          ? 'Đã hoàn thành'
-          : item.status === 'PARTIALLY_PAID'
-            ? 'Thanh toán một phần'
-            : 'Chưa thanh toán',
-    }));
+    let className: string | undefined = undefined;
+    if (query.classId) {
+      const cls = await this.classRepo.findOne({ where: { id: query.classId } });
+      if (cls) className = cls.name;
+    }
 
-    const worksheet = xlsx.utils.json_to_sheet(rows);
-    const workbook = xlsx.utils.book_new();
-    xlsx.utils.book_append_sheet(workbook, worksheet, 'HocPhi');
-
-    return xlsx.write(workbook, { type: 'buffer', bookType: 'xlsx' });
+    return await generateTuitionExcelReport(list, {
+      teacherName: teacher?.name || 'Giáo viên',
+      month: query.month,
+      className,
+    });
   }
 }

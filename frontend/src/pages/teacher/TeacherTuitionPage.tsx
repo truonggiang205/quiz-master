@@ -58,7 +58,7 @@ import type {
   InvoiceTemplateConfig,
 } from '../../types/teaching';
 import type { Classroom } from '../../types/classroom';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, useNavigate } from 'react-router-dom';
 
 const POPULAR_BANKS = [
   { code: 'MB', name: 'MBBank (Quân Đội)' },
@@ -75,6 +75,7 @@ const POPULAR_BANKS = [
 ];
 
 export const TeacherTuitionPage: React.FC = () => {
+  const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialClassId = searchParams.get('classId') || 'ALL';
   const { user } = useAuthStore();
@@ -83,6 +84,7 @@ export const TeacherTuitionPage: React.FC = () => {
   const [tuitionList, setTuitionList] = useState<TuitionRow[]>([]);
   const [classes, setClasses] = useState<Classroom[]>([]);
   const [loading, setLoading] = useState(true);
+  const [fetchError, setFetchError] = useState<string | null>(null);
 
   // Month navigation: default to current year-month
   const [selectedMonth, setSelectedMonth] = useState<string>(
@@ -195,6 +197,7 @@ export const TeacherTuitionPage: React.FC = () => {
   // Fetch tuition list
   const fetchTuitionList = async () => {
     setLoading(true);
+    setFetchError(null);
     try {
       const data = await TeachingService.getTuitionList({
         month: selectedMonth,
@@ -208,6 +211,7 @@ export const TeacherTuitionPage: React.FC = () => {
       setExpandedClassIds(allClassIds);
     } catch (err) {
       console.error('Failed to fetch tuition list', err);
+      setFetchError('Không thể tải dữ liệu học phí. Vui lòng thử lại sau.');
     } finally {
       setLoading(false);
     }
@@ -632,7 +636,7 @@ export const TeacherTuitionPage: React.FC = () => {
               <span>ĐÃ THANH TOÁN</span>
             </div>
             <h2 className="text-3xl font-black text-emerald-800 dark:text-emerald-300 mt-2">
-              {kpiStats.paid.toLocaleString()} đ
+              {kpiStats.paid.toLocaleString('vi-VN')} đ
             </h2>
           </div>
         </div>
@@ -645,7 +649,7 @@ export const TeacherTuitionPage: React.FC = () => {
               <span>CHƯA THANH TOÁN</span>
             </div>
             <h2 className="text-3xl font-black text-rose-800 dark:text-rose-300 mt-2">
-              {kpiStats.remaining.toLocaleString()} đ
+              {kpiStats.remaining.toLocaleString('vi-VN')} đ
             </h2>
           </div>
         </div>
@@ -658,7 +662,7 @@ export const TeacherTuitionPage: React.FC = () => {
               <span>TỔNG</span>
             </div>
             <h2 className="text-3xl font-black text-white mt-2">
-              {kpiStats.total.toLocaleString()} đ
+              {kpiStats.total.toLocaleString('vi-VN')} đ
             </h2>
           </div>
         </div>
@@ -833,8 +837,26 @@ export const TeacherTuitionPage: React.FC = () => {
       {loading ? (
         <div className="space-y-3">
           {[...Array(4)].map((_, i) => (
-            <div key={i} className="h-16 bg-slate-100 dark:bg-slate-800 rounded-3xl animate-pulse" />
+            <div key={i} className="h-20 bg-slate-100 dark:bg-slate-800 rounded-3xl animate-pulse" />
           ))}
+        </div>
+      ) : fetchError ? (
+        <div className="bg-rose-50/50 dark:bg-rose-950/20 rounded-3xl p-8 text-center border border-rose-200/80 dark:border-rose-800/50 shadow-xs">
+          <div className="w-12 h-12 bg-rose-100 dark:bg-rose-900/40 text-rose-600 rounded-2xl flex items-center justify-center mx-auto mb-3">
+            <AlertCircle className="w-6 h-6" />
+          </div>
+          <h3 className="text-base font-bold text-rose-900 dark:text-rose-200">
+            {fetchError}
+          </h3>
+          <p className="text-xs text-rose-600/80 dark:text-rose-400 mt-1 max-w-sm mx-auto">
+            Hệ thống không thể tải bảng tổng hợp học phí. Vui lòng kiểm tra kết nối mạng và thử lại.
+          </p>
+          <button
+            onClick={() => fetchTuitionList()}
+            className="mt-4 px-4 py-2 bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold rounded-xl shadow-xs transition-colors"
+          >
+            Thử lại
+          </button>
         </div>
       ) : tuitionList.length === 0 ? (
         <div className="bg-white dark:bg-slate-900 rounded-3xl p-12 text-center border border-slate-200/80 dark:border-slate-800 shadow-xs">
@@ -842,10 +864,10 @@ export const TeacherTuitionPage: React.FC = () => {
             <DollarSign className="w-8 h-8" />
           </div>
           <h3 className="text-base font-bold text-slate-800 dark:text-white">
-            Chưa có học sinh để hiển thị học phí tháng này
+            Chưa phát sinh học phí trong khoảng thời gian này
           </h3>
           <p className="text-xs text-slate-400 mt-1 max-w-sm mx-auto">
-            Học phí được tính toán tự động khi giáo viên lên lịch buổi học có học phí cho lớp trong {formattedMonthLabel}.
+            Học phí được tính toán tự động từ các buổi học hợp lệ trên Lịch dạy trong {formattedMonthLabel}.
           </p>
         </div>
       ) : (
@@ -855,15 +877,15 @@ export const TeacherTuitionPage: React.FC = () => {
               <thead>
                 <tr className="bg-slate-50/80 dark:bg-slate-800/50 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
                   <th className="py-4 px-4 w-12 text-center">STT</th>
-                  <th className="py-4 px-4">HỌ VÀ TÊN</th>
+                  <th className="py-4 px-4">HỌC SINH</th>
                   <th className="py-4 px-4">LỚP</th>
                   <th className="py-4 px-4 text-center">SỐ BUỔI</th>
                   <th className="py-4 px-4 text-center">SỐ GIỜ</th>
                   <th className="py-4 px-4 text-right">TỔNG</th>
-                  <th className="py-4 px-4 text-right">ĐÃ TT</th>
-                  <th className="py-4 px-4 text-right">CHƯA TT</th>
+                  <th className="py-4 px-4 text-right">ĐÃ THANH TOÁN</th>
+                  <th className="py-4 px-4 text-right">CÒN LẠI</th>
                   <th className="py-4 px-4 text-center">TRẠNG THÁI</th>
-                  <th className="py-4 px-4 text-right">PHIẾU</th>
+                  <th className="py-4 px-4 text-right">THAO TÁC</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
@@ -936,29 +958,41 @@ export const TeacherTuitionPage: React.FC = () => {
                                 {row.className}
                               </td>
 
-                              {/* Sessions */}
-                              <td className="py-3.5 px-4 text-center font-bold text-slate-800 dark:text-slate-200">
-                                {row.lessonCount}
+                              {/* Sessions: Clickable Link to Schedule */}
+                              <td className="py-3.5 px-4 text-center">
+                                <button
+                                  type="button"
+                                  onClick={() =>
+                                    navigate(
+                                      `/teacher/schedule?classId=${row.classId}&studentId=${row.studentId}&date=${row.month}-01`,
+                                    )
+                                  }
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:text-indigo-300 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 transition-all cursor-pointer group shadow-2xs"
+                                  title="Bấm để xem các buổi học này trên Lịch dạy"
+                                >
+                                  <Calendar className="w-3.5 h-3.5 text-indigo-500 group-hover:scale-110 transition-transform" />
+                                  <span>{row.lessonCount} buổi</span>
+                                </button>
                               </td>
 
                               {/* Hours */}
-                              <td className="py-3.5 px-4 text-center font-semibold text-slate-500 dark:text-slate-400">
+                              <td className="py-3.5 px-4 text-center font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                 {row.totalHours}h
                               </td>
 
                               {/* Total Amount */}
-                              <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white">
-                                {row.totalAmount.toLocaleString()} đ
+                              <td className="py-3.5 px-4 text-right font-black text-slate-900 dark:text-white whitespace-nowrap">
+                                {row.totalAmount.toLocaleString('vi-VN')} đ
                               </td>
 
                               {/* Paid Amount */}
-                              <td className="py-3.5 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400">
-                                {row.paidAmount.toLocaleString()} đ
+                              <td className="py-3.5 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                                {row.paidAmount.toLocaleString('vi-VN')} đ
                               </td>
 
                               {/* Remaining Amount */}
-                              <td className="py-3.5 px-4 text-right font-bold text-rose-600 dark:text-rose-400">
-                                {row.remainingAmount.toLocaleString()} đ
+                              <td className="py-3.5 px-4 text-right font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                                {row.remainingAmount.toLocaleString('vi-VN')} đ
                               </td>
 
                               {/* Status Dropdown Pill (Interactive) */}

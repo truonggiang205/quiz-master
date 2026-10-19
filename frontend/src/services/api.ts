@@ -20,12 +20,18 @@ apiClient.interceptors.request.use((config) => {
     const userRaw = localStorage.getItem('quizmaster_auth_user');
     if (token) {
       config.headers.Authorization = `Bearer ${token}`;
+    } else {
+      delete config.headers.Authorization;
     }
     if (userRaw) {
       const user = JSON.parse(userRaw);
       if (user?.role) {
         config.headers['x-user-role'] = user.role;
+      } else {
+        delete config.headers['x-user-role'];
       }
+    } else {
+      delete config.headers['x-user-role'];
     }
   } catch (err) {
     // Ignore storage parse error
@@ -39,6 +45,11 @@ apiClient.interceptors.response.use(
     if (error.response && error.response.status === 401) {
       localStorage.removeItem('quizmaster_auth_token');
       localStorage.removeItem('quizmaster_auth_user');
+      try {
+        localStorage.removeItem('quiz-master-taking-storage');
+      } catch {
+        // Ignore
+      }
       // Use location reload/redirect to force clear state
       if (window.location.pathname !== '/login') {
         window.location.href = '/login';

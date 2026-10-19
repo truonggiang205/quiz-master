@@ -16,22 +16,29 @@ interface AuthState {
 const STORAGE_USER_KEY = 'quizmaster_auth_user';
 const STORAGE_TOKEN_KEY = 'quizmaster_auth_token';
 
-const getSavedUser = (): User | null => {
+const getInitialAuth = (): { user: User | null; token: string | null } => {
   try {
     const raw = localStorage.getItem(STORAGE_USER_KEY);
-    return raw ? JSON.parse(raw) : null;
+    const token = localStorage.getItem(STORAGE_TOKEN_KEY);
+    if (!raw || !token) {
+      return { user: null, token: null };
+    }
+    const user = JSON.parse(raw);
+    if (!user || !user.id || !user.role) {
+      return { user: null, token: null };
+    }
+    return { user, token };
   } catch {
-    return null;
+    return { user: null, token: null };
   }
 };
 
-const savedUser = getSavedUser();
-const savedToken = localStorage.getItem(STORAGE_TOKEN_KEY);
+const initialAuth = getInitialAuth();
 
 export const useAuthStore = create<AuthState>((set) => ({
-  user: savedUser,
-  token: savedToken,
-  isAuthenticated: !!savedUser,
+  user: initialAuth.user,
+  token: initialAuth.token,
+  isAuthenticated: !!(initialAuth.user && initialAuth.token),
   isLoading: false,
 
 
@@ -54,6 +61,11 @@ export const useAuthStore = create<AuthState>((set) => ({
   logout: () => {
     localStorage.removeItem(STORAGE_USER_KEY);
     localStorage.removeItem(STORAGE_TOKEN_KEY);
+    try {
+      localStorage.removeItem('quiz-master-taking-storage');
+    } catch {
+      // Ignore
+    }
     set({
       user: null,
       token: null,

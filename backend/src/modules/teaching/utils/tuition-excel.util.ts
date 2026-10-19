@@ -112,7 +112,7 @@ export async function generateTuitionExcelReport(
   sheet.getCell('E4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: THEME.blueSoft } };
 
   sheet.mergeCells('H4:I4');
-  sheet.getCell('H4').value = `Đã thu: ${totalPaid.toLocaleString('vi-VN')} ₫`;
+  sheet.getCell('H4').value = `Đã xác nhận thu: ${totalPaid.toLocaleString('vi-VN')} ₫`;
   sheet.getCell('H4').font = { name: 'Arial', size: 9, bold: true, color: { argb: THEME.paidGreen } };
   sheet.getCell('H4').alignment = { horizontal: 'center', vertical: 'middle' };
   sheet.getCell('H4').fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'ECFDF5' } };
@@ -146,7 +146,7 @@ export async function generateTuitionExcelReport(
     'PHỤ THU',
     'GIẢM TRỪ',
     'TỔNG CỘNG',
-    'ĐÃ NỘP',
+    'ĐÃ XÁC NHẬN THU',
     'CÒN LẠI',
     'TRẠNG THÁI',
   ];

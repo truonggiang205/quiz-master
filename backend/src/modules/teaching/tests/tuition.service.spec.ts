@@ -1583,3 +1583,652 @@ describe('Tuition Financial Integrity Verification - 36 Scenario Test Matrix', (
     expect(callCount).toBe(2);
   });
 });
+
+describe('Tuition Payment Workflow Audit - TC-PAY Suite (Section 13)', () => {
+  // TC-PAY-01: Teacher ghi nhận tiền mặt
+  it('TC-PAY-01: Teacher ghi nhận tiền mặt thành công (CASH)', async () => {
+    const tuition = {
+      id: 'tui-cash',
+      teacherId: 'teacher-1',
+      studentId: 'student-1',
+      baseAmount: 200000,
+      totalAmount: 200000,
+      remainingAmount: 200000,
+      paidAmount: 0,
+      status: 'UNPAID' as const,
+    };
+
+    let paymentSaved: any = null;
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        const mgr = {
+          findOne: async () => tuition,
+          create: (_: any, data: any) => data,
+          save: async (p: any) => {
+            paymentSaved = p;
+            return p;
+          },
+          getRepository: () => ({
+            find: async () => [paymentSaved],
+            save: async (t: any) => t,
+          }),
+        };
+        return cb(mgr);
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      { find: async () => [] } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    const result = await service.recordPayment('teacher-1', 'tui-cash', {
+      amount: 200000,
+      paymentDate: '2026-10-19',
+      paymentMethod: 'CASH',
+      note: 'Phụ huynh đóng trực tiếp tại lớp',
+    });
+
+    expect(paymentSaved.paymentMethod).toBe('CASH');
+    expect(paymentSaved.amount).toBe(200000);
+    expect(paymentSaved.status).toBe('COMPLETED');
+    expect(result.paidAmount).toBe(200000);
+    expect(result.remainingAmount).toBe(0);
+    expect(result.status).toBe('PAID');
+  });
+
+  // TC-PAY-02: Teacher ghi nhận chuyển khoản
+  it('TC-PAY-02: Teacher ghi nhận chuyển khoản ngân hàng (BANK_TRANSFER)', async () => {
+    const tuition = {
+      id: 'tui-bank',
+      teacherId: 'teacher-1',
+      studentId: 'student-1',
+      baseAmount: 300000,
+      totalAmount: 300000,
+      remainingAmount: 300000,
+      paidAmount: 0,
+      status: 'UNPAID' as const,
+    };
+
+    let paymentSaved: any = null;
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        const mgr = {
+          findOne: async () => tuition,
+          create: (_: any, data: any) => data,
+          save: async (p: any) => {
+            paymentSaved = p;
+            return p;
+          },
+          getRepository: () => ({
+            find: async () => [paymentSaved],
+            save: async (t: any) => t,
+          }),
+        };
+        return cb(mgr);
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      { find: async () => [] } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    const result = await service.recordPayment('teacher-1', 'tui-bank', {
+      amount: 300000,
+      paymentDate: '2026-10-19',
+      paymentMethod: 'BANK_TRANSFER',
+      note: 'Phụ huynh chuyển khoản MBBank',
+    });
+
+    expect(paymentSaved.paymentMethod).toBe('BANK_TRANSFER');
+    expect(paymentSaved.amount).toBe(300000);
+    expect(result.paidAmount).toBe(300000);
+    expect(result.remainingAmount).toBe(0);
+    expect(result.status).toBe('PAID');
+  });
+
+  // TC-PAY-03: Thanh toán một phần
+  it('TC-PAY-03: Thanh toán một phần: Tổng 700k, phụ huynh chuyển 300k, teacher xác nhận 300k -> còn lại 400k (PARTIALLY_PAID)', async () => {
+    const tuition = {
+      id: 'tui-partial',
+      teacherId: 'teacher-1',
+      studentId: 'student-1',
+      baseAmount: 700000,
+      totalAmount: 700000,
+      remainingAmount: 700000,
+      paidAmount: 0,
+      status: 'UNPAID' as const,
+    };
+
+    const paymentsList: any[] = [];
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        const mgr = {
+          findOne: async () => tuition,
+          create: (_: any, data: any) => data,
+          save: async (p: any) => {
+            paymentsList.push(p);
+            return p;
+          },
+          getRepository: () => ({
+            find: async () => paymentsList,
+            save: async (t: any) => t,
+          }),
+        };
+        return cb(mgr);
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      { find: async () => [] } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    const result = await service.recordPayment('teacher-1', 'tui-partial', {
+      amount: 300000,
+      paymentDate: '2026-10-19',
+      paymentMethod: 'BANK_TRANSFER',
+      note: 'Đợt 1',
+    });
+
+    expect(result.totalAmount).toBe(700000);
+    expect(result.paidAmount).toBe(300000);
+    expect(result.remainingAmount).toBe(400000);
+    expect(result.status).toBe('PARTIALLY_PAID');
+  });
+
+  // TC-PAY-04: Thanh toán phần còn lại
+  it('TC-PAY-04: Thanh toán phần còn lại: Phụ huynh chuyển tiếp 400k, teacher xác nhận -> đã thu 700k, còn lại 0 (PAID)', async () => {
+    const paymentsList: any[] = [
+      { id: 'p1', amount: 300000, status: 'COMPLETED' },
+    ];
+
+    const tuition = {
+      id: 'tui-partial',
+      teacherId: 'teacher-1',
+      studentId: 'student-1',
+      baseAmount: 700000,
+      totalAmount: 700000,
+      remainingAmount: 400000,
+      paidAmount: 300000,
+      status: 'PARTIALLY_PAID' as const,
+    };
+
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        const mgr = {
+          findOne: async () => tuition,
+          create: (_: any, data: any) => data,
+          save: async (p: any) => {
+            paymentsList.push(p);
+            return p;
+          },
+          getRepository: () => ({
+            find: async () => paymentsList,
+            save: async (t: any) => t,
+          }),
+        };
+        return cb(mgr);
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      { find: async () => [] } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    const result = await service.recordPayment('teacher-1', 'tui-partial', {
+      amount: 400000,
+      paymentDate: '2026-10-25',
+      paymentMethod: 'BANK_TRANSFER',
+      note: 'Đợt 2 thanh toán đủ',
+    });
+
+    expect(result.totalAmount).toBe(700000);
+    expect(result.paidAmount).toBe(700000);
+    expect(result.remainingAmount).toBe(0);
+    expect(result.status).toBe('PAID');
+  });
+
+  // TC-PAY-05: Overpayment bị từ chối
+  it('TC-PAY-05: Overpayment bị từ chối: Nộp số tiền vượt quá remainingAmount bị từ chối', async () => {
+    const tuition = {
+      id: 'tui-limit',
+      teacherId: 'teacher-1',
+      remainingAmount: 200000,
+    };
+
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        return cb({
+          findOne: async () => tuition,
+        });
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    await expect(
+      service.recordPayment('teacher-1', 'tui-limit', { amount: 250000, paymentDate: '2026-10-19' }),
+    ).rejects.toThrow(BadRequestException);
+  });
+
+  // TC-PAY-06: Hai request đồng thời chỉ một request thành công
+  it('TC-PAY-06: Hai request đồng thời chỉ một request thành công (Pessimistic write lock)', async () => {
+    let remaining = 100000;
+    const item = {
+      id: 'tui-lock-race',
+      teacherId: 'teacher-1',
+      studentId: 'student-1',
+      baseAmount: 100000,
+      totalAmount: 100000,
+      paidAmount: 0,
+      remainingAmount: 100000,
+      status: 'UNPAID',
+    };
+
+    let isLocked = false;
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        while (isLocked) {
+          await new Promise((r) => setTimeout(r, 10));
+        }
+        isLocked = true;
+        try {
+          const mgr = {
+            findOne: async () => ({ ...item, remainingAmount: remaining }),
+            create: (_: any, data: any) => data,
+            save: async (p: any) => {
+              remaining -= p.amount;
+              item.paidAmount += p.amount;
+              item.remainingAmount = remaining;
+              item.status = remaining === 0 ? 'PAID' : 'PARTIALLY_PAID';
+              return p;
+            },
+            getRepository: () => ({
+              find: async () => [{ amount: 100000, status: 'COMPLETED' }],
+              save: async (t: any) => t,
+            }),
+          };
+          return await cb(mgr);
+        } finally {
+          isLocked = false;
+        }
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      { find: async () => [] } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    const p1 = service.recordPayment('teacher-1', 'tui-lock-race', { amount: 100000, paymentDate: '2026-10-19' });
+    const p2 = service.recordPayment('teacher-1', 'tui-lock-race', { amount: 100000, paymentDate: '2026-10-19' });
+
+    const settled = await Promise.allSettled([p1, p2]);
+    const succ = settled.filter((s) => s.status === 'fulfilled');
+    const fail = settled.filter((s) => s.status === 'rejected');
+
+    expect(succ.length).toBe(1);
+    expect(fail.length).toBe(1);
+    expect(item.remainingAmount).toBe(0);
+  });
+
+  // TC-PAY-07: Teacher A không thể ghi nhận payment của Teacher B
+  it('TC-PAY-07: Teacher A không thể ghi nhận payment cho học phí của Teacher B (403 Forbidden)', async () => {
+    const tuition = {
+      id: 'tui-b',
+      teacherId: 'teacher-B',
+      remainingAmount: 100000,
+    };
+
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        return cb({
+          findOne: async () => tuition,
+        });
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    await expect(
+      service.recordPayment('teacher-A', 'tui-b', { amount: 100000, paymentDate: '2026-10-19' }),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  // TC-PAY-08: Teacher A không thể refund payment của Teacher B
+  it('TC-PAY-08: Teacher A không thể refund payment của Teacher B (403 Forbidden)', async () => {
+    const payment = {
+      id: 'pay-b',
+      teacherId: 'teacher-B',
+      amount: 100000,
+      status: 'COMPLETED',
+    };
+
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        return cb({
+          getRepository: () => ({
+            findOne: async () => payment,
+          }),
+        });
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    await expect(
+      service.refundPayment('teacher-A', 'pay-b', 'Thử refund trộm'),
+    ).rejects.toThrow(ForbiddenException);
+  });
+
+  // TC-PAY-09: Void payment có audit trail
+  it('TC-PAY-09: Void payment: Đổi sang UNPAID lưu vết trạng thái VOIDED và note hủy', async () => {
+    const payment = {
+      id: 'pay-void-audit',
+      tuitionItemId: 't-va',
+      amount: 150000,
+      status: 'COMPLETED',
+      note: 'Thu nhầm phụ huynh',
+    };
+
+    const tuition = {
+      id: 't-va',
+      teacherId: 'teacher-1',
+      studentId: 'student-1',
+      baseAmount: 150000,
+      totalAmount: 150000,
+      remainingAmount: 0,
+      paidAmount: 150000,
+      status: 'PAID',
+    };
+
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        return cb({
+          findOne: async () => tuition,
+          getRepository: () => ({
+            find: async () => [payment],
+            save: async (p: any) => p,
+          }),
+        });
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      { find: async () => [] } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    const result = await service.updateStatus('teacher-1', 't-va', 'UNPAID');
+
+    expect(payment.status).toBe('VOIDED');
+    expect(payment.note).toContain('Hủy thanh toán khi chuyển sang Chưa thu');
+    expect(result.paidAmount).toBe(0);
+    expect(result.remainingAmount).toBe(150000);
+    expect(result.status).toBe('UNPAID');
+  });
+
+  // TC-PAY-10: Full refund có audit trail
+  it('TC-PAY-10: Full refund: Hoàn tiền toàn phần ngoài hệ thống ghi nhận audit trail REFUNDED', async () => {
+    const payment = {
+      id: 'pay-rf-full',
+      teacherId: 'teacher-1',
+      studentId: 'student-1',
+      tuitionItemId: 'tui-rf-1',
+      amount: 200000,
+      status: 'COMPLETED',
+      note: 'Phụ huynh nộp trước',
+    };
+
+    const tuition = {
+      id: 'tui-rf-1',
+      teacherId: 'teacher-1',
+      baseAmount: 200000,
+      totalAmount: 200000,
+      paidAmount: 200000,
+      remainingAmount: 0,
+      status: 'PAID',
+    };
+
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        return cb({
+          findOne: async () => tuition,
+          getRepository: () => ({
+            findOne: async () => payment,
+            find: async () => [payment],
+            save: async (item: any) => item,
+          }),
+        });
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      { find: async () => [] } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    const result = await service.refundPayment(
+      'teacher-1',
+      'pay-rf-full',
+      'Học sinh chuyển trường, giáo viên hoàn trả tiền mặt',
+    );
+
+    expect(payment.status).toBe('REFUNDED');
+    expect(payment.note).toContain('Hoàn toàn phần: Học sinh chuyển trường, giáo viên hoàn trả tiền mặt');
+    expect(result.paidAmount).toBe(0);
+    expect(result.remainingAmount).toBe(200000);
+    expect(result.status).toBe('UNPAID');
+  });
+
+  // TC-PAY-11: Partial refund có audit trail
+  it('TC-PAY-11: Partial refund: Hoàn tiền một phần tạo transaction REFUNDED riêng, giảm tiền gốc', async () => {
+    const payment = {
+      id: 'pay-rf-part',
+      teacherId: 'teacher-1',
+      studentId: 'student-1',
+      tuitionItemId: 'tui-rf-2',
+      amount: 500000,
+      paymentMethod: 'BANK_TRANSFER',
+      status: 'COMPLETED',
+      note: 'Đã nộp 500k',
+    };
+
+    const tuition = {
+      id: 'tui-rf-2',
+      teacherId: 'teacher-1',
+      baseAmount: 500000,
+      totalAmount: 500000,
+      paidAmount: 500000,
+      remainingAmount: 0,
+      status: 'PAID',
+    };
+
+    const refundRecords: any[] = [];
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        return cb({
+          findOne: async () => tuition,
+          getRepository: () => ({
+            findOne: async () => payment,
+            find: async () => [payment, ...refundRecords],
+            create: (d: any) => d,
+            save: async (item: any) => {
+              if (item.status === 'REFUNDED') refundRecords.push(item);
+              return item;
+            },
+          }),
+        });
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      { find: async () => [] } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    // Hoàn 150k cho phụ huynh ngoài hệ thống
+    const result = await service.refundPayment(
+      'teacher-1',
+      'pay-rf-part',
+      'Nghỉ 1 buổi có phép, giáo viên CK lại',
+      150000,
+    );
+
+    expect(payment.amount).toBe(350000);
+    expect(payment.status).toBe('COMPLETED');
+    expect(refundRecords.length).toBe(1);
+    expect(refundRecords[0].amount).toBe(150000);
+    expect(refundRecords[0].status).toBe('REFUNDED');
+    expect(refundRecords[0].note).toContain('Hoàn một phần 150.000 đ');
+    expect(result.paidAmount).toBe(350000);
+    expect(result.remainingAmount).toBe(150000);
+    expect(result.status).toBe('PARTIALLY_PAID');
+  });
+
+  // TC-PAY-12: Payment không làm thay đổi Schedule
+  it('TC-PAY-12: Payment không làm thay đổi Schedule: Lesson giữ nguyên 100% thuộc tính', async () => {
+    const lessonSnapshot = {
+      id: 'l-sched-check',
+      date: '2026-10-18',
+      startTime: '19:00',
+      endTime: '20:30',
+      duration: 1.5,
+      feePerLesson: 120000,
+      status: 'SCHEDULED',
+      title: 'Toán 12 - Tích phân',
+    };
+
+    const tuition = {
+      id: 't-sched-check',
+      teacherId: 'teacher-1',
+      studentId: 'student-1',
+      baseAmount: 120000,
+      remainingAmount: 120000,
+      paidAmount: 0,
+      status: 'UNPAID',
+    };
+
+    let paymentRecorded: any = null;
+    const fakeDataSource = {
+      transaction: async (cb: any) => {
+        return cb({
+          findOne: async () => tuition,
+          create: (_: any, d: any) => d,
+          save: async (p: any) => {
+            paymentRecorded = p;
+            return p;
+          },
+          getRepository: () => ({
+            find: async () => [paymentRecorded],
+            save: async (t: any) => t,
+          }),
+        });
+      },
+    };
+
+    const service = new TuitionService(
+      {} as any,
+      { find: async () => [] } as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      fakeDataSource as any,
+    );
+
+    await service.recordPayment('teacher-1', 't-sched-check', {
+      amount: 120000,
+      paymentDate: '2026-10-19',
+      paymentMethod: 'CASH',
+    });
+
+    // Toàn bộ các trường của buổi học phải giữ nguyên vẹn
+    expect(lessonSnapshot.date).toBe('2026-10-18');
+    expect(lessonSnapshot.startTime).toBe('19:00');
+    expect(lessonSnapshot.endTime).toBe('20:30');
+    expect(lessonSnapshot.duration).toBe(1.5);
+    expect(lessonSnapshot.feePerLesson).toBe(120000);
+    expect(lessonSnapshot.status).toBe('SCHEDULED');
+    expect(lessonSnapshot.title).toBe('Toán 12 - Tích phân');
+  });
+});

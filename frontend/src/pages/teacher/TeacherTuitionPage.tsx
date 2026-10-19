@@ -580,33 +580,33 @@ export const TeacherTuitionPage: React.FC = () => {
   return (
     <div className="space-y-6 max-w-7xl mx-auto px-4 sm:px-6 py-6 font-sans">
       {/* ==================== 1. TOP HEADER & MONTH NAVIGATOR ==================== */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 sm:p-7 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-5">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-6 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-3">
-            <span className="inline-flex items-center justify-center w-10 h-10 rounded-2xl bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-bold">
+            <span className="inline-flex items-center justify-center w-11 h-11 rounded-xl bg-indigo-50 dark:bg-indigo-950/60 text-[#4F46E5] dark:text-indigo-400 font-bold">
               <Receipt className="w-5 h-5" />
             </span>
             <div>
-              <h1 className="text-2xl font-black text-slate-900 dark:text-white tracking-tight uppercase">
+              <h1 className="text-2xl font-bold text-slate-900 dark:text-white tracking-tight">
                 Học Phí
               </h1>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
-                Xem thông tin đóng học phí của tất cả học sinh.
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-normal">
+                Xem thông tin và theo dõi ghi nhận học phí của tất cả học sinh
               </p>
             </div>
           </div>
         </div>
 
         {/* Month Selector Pill */}
-        <div className="flex items-center gap-2 self-start md:self-auto bg-slate-50 dark:bg-slate-800/80 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700">
+        <div className="flex items-center gap-1 self-start md:self-auto bg-white dark:bg-slate-800 p-1 rounded-xl border border-slate-200/90 dark:border-slate-700 shadow-2xs">
           <button
             onClick={() => handleShiftMonth(-1)}
-            className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors shadow-xs"
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition-colors"
             title="Tháng trước"
           >
             <ChevronLeft className="w-4 h-4" />
           </button>
-          <div className="px-3 py-1 font-bold text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
+          <div className="px-3 py-1 font-semibold text-xs sm:text-sm text-slate-800 dark:text-slate-100 flex items-center gap-2">
             <span>{formattedMonthLabel}</span>
             <input
               type="month"
@@ -618,7 +618,7 @@ export const TeacherTuitionPage: React.FC = () => {
           </div>
           <button
             onClick={() => handleShiftMonth(1)}
-            className="p-2 hover:bg-white dark:hover:bg-slate-700 rounded-xl text-slate-600 dark:text-slate-300 transition-colors shadow-xs"
+            className="p-1.5 hover:bg-slate-100 dark:hover:bg-slate-700 rounded-lg text-slate-600 dark:text-slate-300 transition-colors"
             title="Tháng tiếp theo"
           >
             <ChevronRight className="w-4 h-4" />
@@ -628,60 +628,69 @@ export const TeacherTuitionPage: React.FC = () => {
 
       {/* ==================== 2. TOP 3 KPI CARDS ==================== */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-        {/* Card 1: ĐÃ THANH TOÁN */}
-        <div className="bg-emerald-50/50 dark:bg-emerald-950/20 rounded-3xl p-6 border border-emerald-200/80 dark:border-emerald-800/50 shadow-xs flex items-center justify-between">
+        {/* Card 1: ĐÃ XÁC NHẬN THU (Emerald / Green) */}
+        <div className="bg-[#ECFDF5] dark:bg-emerald-950/20 rounded-2xl p-5 sm:p-6 border border-[#A7F3D0] dark:border-emerald-800/50 shadow-xs flex items-center justify-between transition-all hover:shadow-sm">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-emerald-700 dark:text-emerald-400 tracking-wider uppercase">
-              <CheckCircle2 className="w-4 h-4 text-emerald-600 dark:text-emerald-400" />
-              <span>ĐÃ THANH TOÁN</span>
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#047857] dark:text-emerald-400 tracking-wider uppercase">
+              <CheckCircle2 className="w-4 h-4 text-[#059669] dark:text-emerald-400" />
+              <span>ĐÃ XÁC NHẬN THU</span>
             </div>
-            <h2 className="text-3xl font-black text-emerald-800 dark:text-emerald-300 mt-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#047857] dark:text-emerald-300 mt-2 tracking-tight">
               {kpiStats.paid.toLocaleString('vi-VN')} đ
             </h2>
           </div>
-        </div>
-
-        {/* Card 2: CHƯA THANH TOÁN */}
-        <div className="bg-rose-50/50 dark:bg-rose-950/20 rounded-3xl p-6 border border-rose-200/80 dark:border-rose-800/50 shadow-xs flex items-center justify-between">
-          <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-rose-700 dark:text-rose-400 tracking-wider uppercase">
-              <Clock className="w-4 h-4 text-rose-600 dark:text-rose-400" />
-              <span>CHƯA THANH TOÁN</span>
-            </div>
-            <h2 className="text-3xl font-black text-rose-800 dark:text-rose-300 mt-2">
-              {kpiStats.remaining.toLocaleString('vi-VN')} đ
-            </h2>
+          <div className="w-12 h-12 rounded-xl bg-emerald-100/70 dark:bg-emerald-900/40 text-[#059669] dark:text-emerald-300 flex items-center justify-center shrink-0">
+            <CheckCircle2 className="w-6 h-6" />
           </div>
         </div>
 
-        {/* Card 3: TỔNG */}
-        <div className="bg-slate-900 text-white dark:bg-slate-800 rounded-3xl p-6 border border-slate-800 dark:border-slate-700 shadow-xs flex items-center justify-between">
+        {/* Card 2: CÒN PHẢI THU (Soft Rose) */}
+        <div className="bg-[#FFF1F2] dark:bg-rose-950/20 rounded-2xl p-5 sm:p-6 border border-[#FECDD3] dark:border-rose-800/50 shadow-xs flex items-center justify-between transition-all hover:shadow-sm">
           <div>
-            <div className="flex items-center gap-2 text-xs font-bold text-slate-300 tracking-wider uppercase">
-              <DollarSign className="w-4 h-4 text-indigo-400" />
-              <span>TỔNG</span>
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#BE123C] dark:text-rose-400 tracking-wider uppercase">
+              <Clock className="w-4 h-4 text-[#DC2626] dark:text-rose-400" />
+              <span>CÒN PHẢI THU</span>
             </div>
-            <h2 className="text-3xl font-black text-white mt-2">
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#BE123C] dark:text-rose-300 mt-2 tracking-tight">
+              {kpiStats.remaining.toLocaleString('vi-VN')} đ
+            </h2>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-rose-100/70 dark:bg-rose-900/40 text-[#DC2626] dark:text-rose-300 flex items-center justify-center shrink-0">
+            <Clock className="w-6 h-6" />
+          </div>
+        </div>
+
+        {/* Card 3: TỔNG HỌC PHÍ (Soft Indigo - NO Black/Navy) */}
+        <div className="bg-gradient-to-br from-[#EEF2FF] to-[#F5F3FF] dark:from-indigo-950/30 dark:to-purple-950/20 rounded-2xl p-5 sm:p-6 border border-[#C7D2FE] dark:border-indigo-800/50 shadow-xs flex items-center justify-between transition-all hover:shadow-sm">
+          <div>
+            <div className="flex items-center gap-2 text-xs font-semibold text-[#4338CA] dark:text-indigo-300 tracking-wider uppercase">
+              <DollarSign className="w-4 h-4 text-[#4F46E5] dark:text-indigo-400" />
+              <span>TỔNG HỌC PHÍ</span>
+            </div>
+            <h2 className="text-2xl sm:text-3xl font-bold text-[#312E81] dark:text-indigo-200 mt-2 tracking-tight">
               {kpiStats.total.toLocaleString('vi-VN')} đ
             </h2>
+          </div>
+          <div className="w-12 h-12 rounded-xl bg-[#E0E7FF] dark:bg-indigo-900/40 text-[#4F46E5] dark:text-indigo-300 flex items-center justify-center shrink-0">
+            <DollarSign className="w-6 h-6" />
           </div>
         </div>
       </div>
 
       {/* ==================== 3. MONTHLY TREND BANNER ==================== */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-xs overflow-hidden">
         <div
           onClick={() => setShowTrend(!showTrend)}
-          className="p-5 sm:px-6 flex items-center justify-between cursor-pointer hover:bg-slate-50/60 dark:hover:bg-slate-800/40 transition-colors"
+          className="p-4 sm:px-6 flex items-center justify-between cursor-pointer hover:bg-slate-50/70 dark:hover:bg-slate-800/40 transition-colors"
         >
           <div className="flex flex-wrap items-center gap-3">
-            <span className="font-bold text-sm text-slate-900 dark:text-white">
+            <span className="font-semibold text-sm text-slate-900 dark:text-white">
               Biến động theo tháng
             </span>
-            <span className="text-xs text-slate-400 font-medium">
+            <span className="text-xs text-slate-400 font-normal">
               (6 tháng gần nhất)
             </span>
-            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
+            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/40">
               {monthDiffText}
             </span>
           </div>
@@ -708,10 +717,10 @@ export const TeacherTuitionPage: React.FC = () => {
                 ) : (
                   <ResponsiveContainer width="100%" height="100%">
                     <BarChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                      <XAxis dataKey="label" stroke="#94a3b8" fontSize={12} tickLine={false} />
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F1F5F9" />
+                      <XAxis dataKey="label" stroke="#94A3B8" fontSize={12} tickLine={false} />
                       <YAxis
-                        stroke="#94a3b8"
+                        stroke="#94A3B8"
                         fontSize={11}
                         tickLine={false}
                         axisLine={false}
@@ -721,16 +730,21 @@ export const TeacherTuitionPage: React.FC = () => {
                         formatter={(val: any) => [`${Number(val).toLocaleString()} đ`, 'Học phí']}
                         labelFormatter={(label) => `Tháng: ${label}`}
                         contentStyle={{
+                          backgroundColor: '#FFFFFF',
                           borderRadius: '12px',
-                          border: 'none',
-                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                          border: '1px solid #E8EDF5',
+                          boxShadow: '0 4px 12px rgba(15, 23, 42, 0.06)',
+                          color: '#0F172A',
+                          fontSize: '12px',
+                          fontWeight: '600',
                         }}
                       />
-                      <Bar dataKey="total" radius={[8, 8, 0, 0]} fill="#4f46e5">
+                      <Bar dataKey="total" radius={[6, 6, 0, 0]} fill="#4F46E5">
                         {trendData.map((entry, index) => (
                           <Cell
                             key={`cell-${index}`}
-                            fill={index === trendData.length - 1 ? '#4f46e5' : '#cbd5e1'}
+                            fill={index === trendData.length - 1 ? '#4F46E5' : '#C7D2FE'}
+                            className="transition-colors hover:opacity-90"
                           />
                         ))}
                       </Bar>
@@ -744,9 +758,9 @@ export const TeacherTuitionPage: React.FC = () => {
       </div>
 
       {/* ==================== 4. CONTROLS & ACTION TOOLBAR ==================== */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-4">
+      <div className="bg-white dark:bg-slate-900 rounded-2xl p-4 sm:p-5 shadow-xs border border-slate-200/80 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
         {/* Date Range Navigation */}
-        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 rounded-2xl border border-slate-200/80 dark:border-slate-700 text-xs font-bold text-slate-700 dark:text-slate-300">
+        <div className="flex items-center gap-2 bg-slate-50 dark:bg-slate-800 px-3.5 py-2 rounded-xl border border-slate-200/80 dark:border-slate-700 text-xs font-semibold text-slate-700 dark:text-slate-300">
           <Calendar className="w-4 h-4 text-slate-400" />
           <span>&lt; {dateRangeDisplay} &gt;</span>
         </div>
@@ -756,7 +770,7 @@ export const TeacherTuitionPage: React.FC = () => {
           {/* Phụ thu */}
           <button
             onClick={() => handleOpenAdjustmentFromToolbar('SURCHARGE')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#4338CA] bg-[#EEF2FF] hover:bg-[#E0E7FF] border border-[#C7D2FE] dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800/60 transition-colors shadow-2xs"
           >
             <Plus className="w-3.5 h-3.5" />
             <span>Phụ thu</span>
@@ -765,7 +779,7 @@ export const TeacherTuitionPage: React.FC = () => {
           {/* Giảm học phí */}
           <button
             onClick={() => handleOpenAdjustmentFromToolbar('DISCOUNT')}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-rose-700 dark:text-rose-300 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#BE123C] bg-[#FFF1F2] hover:bg-[#FFE4E6] border border-[#FECDD3] dark:bg-rose-950/60 dark:text-rose-300 dark:border-rose-800/60 transition-colors shadow-2xs"
           >
             <Minus className="w-3.5 h-3.5" />
             <span>Giảm học phí</span>
@@ -774,7 +788,7 @@ export const TeacherTuitionPage: React.FC = () => {
           {/* Thanh toán hàng loạt */}
           <button
             onClick={handleOpenBulkPayment}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-emerald-700 dark:text-emerald-300 bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-[#047857] bg-[#ECFDF5] hover:bg-[#D1FAE5] border border-[#A7F3D0] dark:bg-emerald-950/60 dark:text-emerald-300 dark:border-emerald-800/60 transition-colors shadow-2xs"
           >
             <CheckCheck className="w-3.5 h-3.5" />
             <span>Thanh toán hàng loạt</span>
@@ -783,17 +797,17 @@ export const TeacherTuitionPage: React.FC = () => {
           {/* Cấu hình STK ngân hàng */}
           <button
             onClick={() => setIsBankSetupOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-750 transition-colors"
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-semibold text-slate-700 dark:text-slate-300 bg-[#F8FAFC] hover:bg-slate-100 dark:bg-slate-800 dark:hover:bg-slate-750 border border-slate-200/80 dark:border-slate-700 transition-colors shadow-2xs"
             title="Cài đặt thông tin tài khoản ngân hàng & QR"
           >
-            <Building2 className="w-3.5 h-3.5" />
+            <Building2 className="w-3.5 h-3.5 text-slate-500" />
             <span>STK Ngân hàng</span>
           </button>
 
           {/* Xuất Báo Cáo Excel */}
           <button
             onClick={handleExportExcel}
-            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-white bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-700 transition-colors shadow-xs"
+            className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-semibold text-white bg-[#4F46E5] hover:bg-[#4338CA] dark:bg-indigo-600 dark:hover:bg-indigo-700 transition-colors shadow-xs"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Xuất Excel</span>
@@ -802,13 +816,13 @@ export const TeacherTuitionPage: React.FC = () => {
       </div>
 
       {/* ==================== 5. CLASS FILTER PILL TABS ==================== */}
-      <div className="flex items-center gap-2 overflow-x-auto pb-2 scrollbar-none">
+      <div className="flex items-center gap-2 overflow-x-auto pb-1 scrollbar-none">
         <button
           onClick={() => setSelectedClassId('ALL')}
-          className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-xs ${
+          className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all shadow-2xs ${
             selectedClassId === 'ALL'
-              ? 'bg-slate-900 text-white dark:bg-white dark:text-slate-900'
-              : 'bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800'
+              ? 'bg-[#EEF2FF] text-[#4338CA] border border-[#C7D2FE] font-bold dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800'
+              : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800'
           }`}
         >
           Tất cả lớp ({tuitionList.length})
@@ -821,10 +835,10 @@ export const TeacherTuitionPage: React.FC = () => {
             <button
               key={cls.id}
               onClick={() => setSelectedClassId(cls.id)}
-              className={`px-4 py-2 rounded-2xl text-xs font-bold whitespace-nowrap transition-all shadow-xs ${
+              className={`px-4 py-2 rounded-full text-xs font-semibold whitespace-nowrap transition-all shadow-2xs ${
                 isSelected
-                  ? 'bg-indigo-600 text-white'
-                  : 'bg-white text-slate-600 hover:bg-slate-100 dark:bg-slate-900 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800'
+                  ? 'bg-[#EEF2FF] text-[#4338CA] border border-[#C7D2FE] font-bold dark:bg-indigo-950/60 dark:text-indigo-300 dark:border-indigo-800'
+                  : 'bg-white text-slate-600 hover:bg-slate-50 dark:bg-slate-900 dark:text-slate-300 border border-slate-200/80 dark:border-slate-800'
               }`}
             >
               {cls.name} {count > 0 && `(${count})`}
@@ -871,21 +885,21 @@ export const TeacherTuitionPage: React.FC = () => {
           </p>
         </div>
       ) : (
-        <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
+        <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-xs border border-slate-200/80 dark:border-slate-800 overflow-hidden">
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-slate-50/80 dark:bg-slate-800/50 text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider border-b border-slate-100 dark:border-slate-800">
-                  <th className="py-4 px-4 w-12 text-center">STT</th>
-                  <th className="py-4 px-4">HỌC SINH</th>
-                  <th className="py-4 px-4">LỚP</th>
-                  <th className="py-4 px-4 text-center">SỐ BUỔI</th>
-                  <th className="py-4 px-4 text-center">SỐ GIỜ</th>
-                  <th className="py-4 px-4 text-right">TỔNG</th>
-                  <th className="py-4 px-4 text-right">ĐÃ THANH TOÁN</th>
-                  <th className="py-4 px-4 text-right">CÒN LẠI</th>
-                  <th className="py-4 px-4 text-center">TRẠNG THÁI</th>
-                  <th className="py-4 px-4 text-right">THAO TÁC</th>
+                <tr className="bg-[#F8FAFC] dark:bg-slate-800/50 text-[11px] font-semibold text-[#64748B] dark:text-slate-400 uppercase tracking-wider border-b border-[#E8EDF5] dark:border-slate-800">
+                  <th className="py-3.5 px-4 w-12 text-center">STT</th>
+                  <th className="py-3.5 px-4">HỌC SINH</th>
+                  <th className="py-3.5 px-4">LỚP</th>
+                  <th className="py-3.5 px-4 text-center">SỐ BUỔI</th>
+                  <th className="py-3.5 px-4 text-center">SỐ GIỜ</th>
+                  <th className="py-3.5 px-4 text-right">TỔNG</th>
+                  <th className="py-3.5 px-4 text-right">ĐÃ XÁC NHẬN THU</th>
+                  <th className="py-3.5 px-4 text-right">CÒN LẠI</th>
+                  <th className="py-3.5 px-4 text-center">TRẠNG THÁI</th>
+                  <th className="py-3.5 px-4 text-right">THAO TÁC</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
@@ -896,13 +910,13 @@ export const TeacherTuitionPage: React.FC = () => {
                       {/* Accordion Class Group Header */}
                       <tr
                         onClick={() => toggleClassExpansion(group.classId)}
-                        className="bg-slate-50/50 dark:bg-slate-800/30 hover:bg-slate-100/60 dark:hover:bg-slate-800/60 cursor-pointer transition-colors border-y border-slate-100 dark:border-slate-800 font-bold"
+                        className="bg-[#F8FAFC] dark:bg-slate-800/30 hover:bg-slate-100/60 dark:hover:bg-slate-800/60 cursor-pointer transition-colors border-y border-[#E8EDF5] dark:border-slate-800 font-semibold"
                       >
                         <td colSpan={10} className="py-3 px-4">
                           <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs">
+                            <div className="flex items-center gap-2 text-slate-800 dark:text-slate-200 uppercase tracking-wider text-xs font-bold">
                               <span>{group.className}</span>
-                              <span className="text-[11px] text-slate-400 font-semibold lowercase">
+                              <span className="text-[11px] text-[#64748B] font-normal lowercase">
                                 ({group.rows.length} học sinh)
                               </span>
                             </div>
@@ -924,10 +938,10 @@ export const TeacherTuitionPage: React.FC = () => {
                           return (
                             <tr
                               key={row.id}
-                              className="hover:bg-slate-50/50 dark:hover:bg-slate-800/30 transition-colors"
+                              className="hover:bg-[#F8FAFC] dark:hover:bg-slate-800/30 transition-colors border-b border-[#F1F5F9] dark:border-slate-800/60"
                             >
                               {/* STT */}
-                              <td className="py-3.5 px-4 text-center font-semibold text-slate-400">
+                              <td className="py-3.5 px-4 text-center font-medium text-[#94A3B8]">
                                 {idx + 1}
                               </td>
 
@@ -943,10 +957,10 @@ export const TeacherTuitionPage: React.FC = () => {
                                     size="sm"
                                   />
                                   <div>
-                                    <div className="font-bold text-slate-900 dark:text-white">
+                                    <div className="font-semibold text-slate-900 dark:text-white text-sm">
                                       {row.studentName}
                                     </div>
-                                    <div className="text-[11px] text-slate-400 font-medium">
+                                    <div className="text-[11px] text-[#94A3B8] font-normal">
                                       {row.studentEmail}
                                     </div>
                                   </div>
@@ -954,7 +968,7 @@ export const TeacherTuitionPage: React.FC = () => {
                               </td>
 
                               {/* Class */}
-                              <td className="py-3.5 px-4 font-semibold text-slate-700 dark:text-slate-300">
+                              <td className="py-3.5 px-4 font-medium text-slate-600 dark:text-slate-300">
                                 {row.className}
                               </td>
 
@@ -967,31 +981,31 @@ export const TeacherTuitionPage: React.FC = () => {
                                       `/teacher/schedule?classId=${row.classId}&studentId=${row.studentId}&date=${row.month}-01`,
                                     )
                                   }
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold text-indigo-700 bg-indigo-50 hover:bg-indigo-100 dark:text-indigo-300 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 transition-all cursor-pointer group shadow-2xs"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-[#4338CA] bg-[#EEF2FF] hover:bg-[#E0E7FF] border border-[#C7D2FE] dark:text-indigo-300 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 transition-all cursor-pointer group shadow-2xs"
                                   title="Bấm để xem các buổi học này trên Lịch dạy"
                                 >
-                                  <Calendar className="w-3.5 h-3.5 text-indigo-500 group-hover:scale-110 transition-transform" />
+                                  <Calendar className="w-3.5 h-3.5 text-[#4F46E5] group-hover:scale-110 transition-transform" />
                                   <span>{row.lessonCount} buổi</span>
                                 </button>
                               </td>
 
                               {/* Hours */}
-                              <td className="py-3.5 px-4 text-center font-bold text-slate-700 dark:text-slate-300 whitespace-nowrap">
+                              <td className="py-3.5 px-4 text-center font-semibold text-slate-700 dark:text-slate-300 whitespace-nowrap">
                                 {row.totalHours}h
                               </td>
 
                               {/* Total Amount */}
-                              <td className="py-3.5 px-4 text-right font-black text-slate-900 dark:text-white whitespace-nowrap">
+                              <td className="py-3.5 px-4 text-right font-bold text-slate-900 dark:text-white whitespace-nowrap">
                                 {row.totalAmount.toLocaleString('vi-VN')} đ
                               </td>
 
                               {/* Paid Amount */}
-                              <td className="py-3.5 px-4 text-right font-bold text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                              <td className="py-3.5 px-4 text-right font-semibold text-[#047857] dark:text-emerald-400 whitespace-nowrap">
                                 {row.paidAmount.toLocaleString('vi-VN')} đ
                               </td>
 
                               {/* Remaining Amount */}
-                              <td className="py-3.5 px-4 text-right font-bold text-rose-600 dark:text-rose-400 whitespace-nowrap">
+                              <td className="py-3.5 px-4 text-right font-semibold text-[#BE123C] dark:text-rose-400 whitespace-nowrap">
                                 {row.remainingAmount.toLocaleString('vi-VN')} đ
                               </td>
 
@@ -1003,20 +1017,27 @@ export const TeacherTuitionPage: React.FC = () => {
                                       e.stopPropagation();
                                       setActiveStatusDropdownId(isDropdownOpen ? null : row.id);
                                     }}
-                                    className={`inline-flex items-center gap-1 px-3 py-1.5 rounded-full text-[11px] font-bold transition-all shadow-2xs ${
+                                    className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-semibold transition-all shadow-2xs ${
                                       row.status === 'PAID'
-                                        ? 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/50'
+                                        ? 'bg-[#ECFDF5] text-[#047857] hover:bg-emerald-100/70 dark:bg-emerald-950/60 dark:text-emerald-300 border border-[#A7F3D0] dark:border-emerald-800/50'
                                         : row.status === 'PARTIALLY_PAID'
-                                        ? 'bg-amber-50 text-amber-700 hover:bg-amber-100 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/50'
-                                        : 'bg-rose-50 text-rose-700 hover:bg-rose-100 dark:bg-rose-950/60 dark:text-rose-400 border border-rose-200/80 dark:border-rose-800/50'
+                                        ? 'bg-[#FFFBEB] text-[#B45309] hover:bg-amber-100/70 dark:bg-amber-950/60 dark:text-amber-300 border border-[#FDE68A] dark:border-amber-800/50'
+                                        : 'bg-[#FFF1F2] text-[#BE123C] hover:bg-rose-100/70 dark:bg-rose-950/60 dark:text-rose-300 border border-[#FECDD3] dark:border-rose-800/50'
                                     }`}
                                   >
+                                    {row.status === 'PAID' ? (
+                                      <CheckCircle2 className="w-3.5 h-3.5 text-[#059669]" />
+                                    ) : row.status === 'PARTIALLY_PAID' ? (
+                                      <Clock className="w-3.5 h-3.5 text-[#D97706]" />
+                                    ) : (
+                                      <AlertCircle className="w-3.5 h-3.5 text-[#DC2626]" />
+                                    )}
                                     <span>
                                       {row.status === 'PAID'
-                                        ? 'Đã thanh toán'
+                                        ? 'Đã hoàn tất'
                                         : row.status === 'PARTIALLY_PAID'
-                                        ? 'Đã thanh toán một phần'
-                                        : 'Chưa thanh toán'}
+                                        ? 'Đã thu một phần'
+                                        : 'Chưa thu'}
                                     </span>
                                     <ChevronDown className="w-3 h-3 opacity-60" />
                                   </button>
@@ -1025,28 +1046,28 @@ export const TeacherTuitionPage: React.FC = () => {
                                   {isDropdownOpen && (
                                     <div
                                       onClick={(e) => e.stopPropagation()}
-                                      className="absolute z-30 left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 rounded-2xl shadow-xl border border-slate-200 dark:border-slate-700 p-1.5 text-left text-xs"
+                                      className="absolute z-30 left-1/2 -translate-x-1/2 mt-1 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-lg border border-[#E8EDF5] dark:border-slate-700 p-1.5 text-left text-xs"
                                     >
                                       <button
                                         onClick={() => handleQuickStatusChange(row.id, 'PAID')}
-                                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-emerald-50 dark:hover:bg-emerald-950/40 text-emerald-700 dark:text-emerald-400 font-bold flex items-center gap-2"
+                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#ECFDF5] dark:hover:bg-emerald-950/40 text-[#047857] dark:text-emerald-400 font-semibold flex items-center gap-2"
                                       >
-                                        <CheckCircle2 className="w-3.5 h-3.5" />
-                                        <span>Đã thanh toán</span>
+                                        <CheckCircle2 className="w-3.5 h-3.5 text-[#059669]" />
+                                        <span>Đã hoàn tất</span>
                                       </button>
                                       <button
                                         onClick={() => handleQuickStatusChange(row.id, 'UNPAID')}
-                                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-rose-50 dark:hover:bg-rose-950/40 text-rose-700 dark:text-rose-400 font-bold flex items-center gap-2"
+                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#FFF1F2] dark:hover:bg-rose-950/40 text-[#BE123C] dark:text-rose-400 font-semibold flex items-center gap-2"
                                       >
-                                        <X className="w-3.5 h-3.5" />
-                                        <span>Chưa thanh toán</span>
+                                        <AlertCircle className="w-3.5 h-3.5 text-[#DC2626]" />
+                                        <span>Chưa thu</span>
                                       </button>
                                       <button
                                         onClick={() => handleOpenPayment(row)}
-                                        className="w-full text-left px-3 py-2 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 font-bold flex items-center gap-2 border-t border-slate-100 dark:border-slate-700 mt-1"
+                                        className="w-full text-left px-3 py-2 rounded-lg hover:bg-[#EEF2FF] dark:hover:bg-indigo-950/40 text-[#4338CA] dark:text-indigo-400 font-semibold flex items-center gap-2 border-t border-slate-100 dark:border-slate-700 mt-1"
                                       >
-                                        <CreditCard className="w-3.5 h-3.5" />
-                                        <span>Ghi nhận số tiền...</span>
+                                        <CreditCard className="w-3.5 h-3.5 text-[#4F46E5]" />
+                                        <span>Ghi nhận thu tiền...</span>
                                       </button>
                                     </div>
                                   )}
@@ -1059,17 +1080,17 @@ export const TeacherTuitionPage: React.FC = () => {
                                   {/* Xuất phiếu button */}
                                   <button
                                     onClick={() => handleOpenReceiptModal(row)}
-                                    className="px-3 py-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 font-bold text-[11px] transition-colors flex items-center gap-1"
+                                    className="px-2.5 py-1.5 rounded-lg bg-slate-100 hover:bg-slate-200 text-slate-700 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-200 font-medium text-[11px] transition-colors flex items-center gap-1.5"
                                     title="Tạo phiếu học phí gửi phụ huynh"
                                   >
-                                    <Receipt className="w-3.5 h-3.5" />
+                                    <Receipt className="w-3.5 h-3.5 text-slate-500" />
                                     <span>Xuất phiếu</span>
                                   </button>
 
                                   {/* History button */}
                                   <button
                                     onClick={() => handleOpenDetail(row.id)}
-                                    className="p-1.5 text-slate-400 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-xl hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
+                                    className="p-1.5 text-slate-400 hover:text-[#4F46E5] dark:hover:text-indigo-400 rounded-lg hover:bg-indigo-50 dark:hover:bg-indigo-950/40 transition-colors"
                                     title="Lịch sử thanh toán & điều chỉnh"
                                   >
                                     <History className="w-4 h-4" />
@@ -1078,7 +1099,7 @@ export const TeacherTuitionPage: React.FC = () => {
                                   {/* Single student adjustment */}
                                   <button
                                     onClick={() => handleOpenSingleAdjustment(row)}
-                                    className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                                    className="p-1.5 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
                                     title="Thêm phụ thu / giảm trừ cho học sinh này"
                                   >
                                     <Plus className="w-4 h-4" />
@@ -1134,7 +1155,7 @@ export const TeacherTuitionPage: React.FC = () => {
                 type="button"
                 onClick={handleDownloadReceiptImage}
                 disabled={isExportingReceipt}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-bold bg-slate-900 hover:bg-slate-800 dark:bg-indigo-600 dark:hover:bg-indigo-700 text-white shadow-xs transition-colors disabled:opacity-50"
+                className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-semibold bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-xs transition-colors disabled:opacity-50"
               >
                 <Download className="w-3.5 h-3.5" />
                 <span>{isExportingReceipt ? 'Đang tạo...' : 'Xuất phiếu (ảnh)'}</span>
@@ -1181,7 +1202,7 @@ export const TeacherTuitionPage: React.FC = () => {
                         : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
                     }`}
                   >
-                    Mẫu 1 (Navy Hiện Đại)
+                    Mẫu 1 (Indigo Hiện Đại)
                   </button>
                   <button
                     type="button"
@@ -1277,7 +1298,7 @@ export const TeacherTuitionPage: React.FC = () => {
                 <div
                   className={`rounded-2xl p-4 text-center mb-5 ${
                     invoiceConfig.template === 'template-1'
-                      ? 'bg-slate-900 text-white'
+                      ? 'bg-[#312E81] text-white'
                       : 'bg-emerald-50 text-emerald-900 border border-emerald-100'
                   }`}
                 >
@@ -1354,8 +1375,8 @@ export const TeacherTuitionPage: React.FC = () => {
                       </span>
                     </div>
                     {invoiceStudent.paidAmount > 0 && (
-                      <span className="text-[10px] font-bold text-emerald-600 bg-emerald-50 px-2 py-1 rounded-lg">
-                        Đã đóng: {invoiceStudent.paidAmount.toLocaleString()} đ
+                      <span className="text-[10px] font-bold text-[#047857] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-1 rounded-lg">
+                        Đã xác nhận thu: {invoiceStudent.paidAmount.toLocaleString()} đ
                       </span>
                     )}
                   </div>
@@ -1416,10 +1437,10 @@ export const TeacherTuitionPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className={`px-5 py-2 rounded-xl text-xs font-bold text-white transition-colors shadow-xs ${
+              className={`px-5 py-2 rounded-xl text-xs font-semibold text-white transition-colors shadow-xs ${
                 adjustmentForm.type === 'SURCHARGE'
-                  ? 'bg-indigo-600 hover:bg-indigo-700'
-                  : 'bg-rose-600 hover:bg-rose-700'
+                  ? 'bg-[#4F46E5] hover:bg-[#4338CA]'
+                  : 'bg-[#DC2626] hover:bg-[#B91C1C]'
               }`}
             >
               {submitting ? 'Đang lưu...' : 'Lưu Khoản Điều Chỉnh'}
@@ -1446,7 +1467,7 @@ export const TeacherTuitionPage: React.FC = () => {
                 onClick={() => setAdjustmentForm({ ...adjustmentForm, type: 'SURCHARGE' })}
                 className={`py-2 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors ${
                   adjustmentForm.type === 'SURCHARGE'
-                    ? 'bg-indigo-600 text-white'
+                    ? 'bg-[#4F46E5] text-white'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                 }`}
               >
@@ -1458,7 +1479,7 @@ export const TeacherTuitionPage: React.FC = () => {
                 onClick={() => setAdjustmentForm({ ...adjustmentForm, type: 'DISCOUNT' })}
                 className={`py-2 px-3 rounded-xl font-bold flex items-center justify-center gap-1.5 transition-colors ${
                   adjustmentForm.type === 'DISCOUNT'
-                    ? 'bg-rose-600 text-white'
+                    ? 'bg-[#DC2626] text-white'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
                 }`}
               >
@@ -1587,7 +1608,7 @@ export const TeacherTuitionPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-xs"
+              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-[#059669] hover:bg-[#047857] transition-colors shadow-xs"
             >
               {submitting ? 'Đang lưu...' : 'Xác Nhận Thu Tiền'}
             </button>
@@ -1722,7 +1743,7 @@ export const TeacherTuitionPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 rounded-xl text-xs font-bold text-white bg-emerald-600 hover:bg-emerald-700 transition-colors shadow-xs"
+              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-[#059669] hover:bg-[#047857] transition-colors shadow-xs"
             >
               {submitting ? 'Đang lưu...' : 'Xác Nhận Nộp Tiền'}
             </button>
@@ -1859,14 +1880,14 @@ export const TeacherTuitionPage: React.FC = () => {
                 </span>
               </div>
               <div className="flex items-center justify-between">
-                <span className="text-slate-500">Đã thanh toán:</span>
-                <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                <span className="text-slate-500">Đã xác nhận thu:</span>
+                <span className="font-bold text-[#047857] dark:text-emerald-400">
                   {Number(selectedTuition.paidAmount).toLocaleString()} đ
                 </span>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-500">Còn lại:</span>
-                <span className="font-black text-rose-600 dark:text-rose-400">
+                <span className="font-bold text-[#BE123C] dark:text-rose-400">
                   {Number(selectedTuition.remainingAmount).toLocaleString()} đ
                 </span>
               </div>
@@ -1903,7 +1924,7 @@ export const TeacherTuitionPage: React.FC = () => {
                         paymentsCount: 0,
                       });
                     }}
-                    className="text-emerald-600 dark:text-emerald-400 font-bold hover:underline flex items-center gap-1"
+                    className="text-[#059669] dark:text-emerald-400 font-semibold hover:underline flex items-center gap-1"
                   >
                     <Plus className="w-3.5 h-3.5" />
                     <span>Thu thêm tiền</span>
@@ -1918,20 +1939,48 @@ export const TeacherTuitionPage: React.FC = () => {
                   {selectedTuition.payments?.map((pay) => (
                     <div
                       key={pay.id}
-                      className="p-3 bg-emerald-50/50 dark:bg-emerald-950/20 border border-emerald-100 dark:border-emerald-900/30 rounded-2xl flex items-center justify-between"
+                      className={`p-3 border rounded-2xl flex items-center justify-between ${
+                        (pay as any).status === 'REFUNDED'
+                          ? 'bg-rose-50/50 dark:bg-rose-950/20 border-rose-200/80 dark:border-rose-900/30'
+                          : (pay as any).status === 'VOIDED'
+                          ? 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200/80 dark:border-slate-700/60 opacity-60'
+                          : 'bg-[#ECFDF5] dark:bg-emerald-950/20 border-[#A7F3D0] dark:border-emerald-900/30'
+                      }`}
                     >
                       <div>
-                        <div className="font-black text-emerald-700 dark:text-emerald-400 text-sm">
-                          +{Number(pay.amount).toLocaleString()} đ
+                        <div className="flex items-center gap-2">
+                          <span
+                            className={`font-black text-sm ${
+                              (pay as any).status === 'REFUNDED'
+                                ? 'text-[#BE123C] dark:text-rose-400'
+                                : (pay as any).status === 'VOIDED'
+                                ? 'text-slate-400 dark:text-slate-500 line-through'
+                                : 'text-[#047857] dark:text-emerald-400'
+                            }`}
+                          >
+                            {(pay as any).status === 'REFUNDED' ? '-' : '+'}
+                            {Number(pay.amount).toLocaleString()} đ
+                          </span>
+                          {(pay as any).status && (pay as any).status !== 'COMPLETED' && (
+                            <span className="text-[10px] font-semibold px-2 py-0.5 rounded-full uppercase bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                              {(pay as any).status === 'REFUNDED' ? 'Đã hoàn trả' : 'Đã hủy (Void)'}
+                            </span>
+                          )}
                         </div>
                         <div className="text-[10px] text-slate-400 mt-0.5">
-                          {pay.paymentDate} • {pay.paymentMethod}
+                          {pay.paymentDate} • {pay.paymentMethod === 'BANK_TRANSFER' ? 'Chuyển khoản' : pay.paymentMethod === 'CASH' ? 'Tiền mặt' : pay.paymentMethod}
                         </div>
                         {pay.note && (
                           <div className="text-[11px] text-slate-500 italic mt-0.5">{pay.note}</div>
                         )}
                       </div>
-                      <CheckCircle2 className="w-5 h-5 text-emerald-500" />
+                      {(pay as any).status === 'REFUNDED' ? (
+                        <AlertCircle className="w-5 h-5 text-rose-500" />
+                      ) : (pay as any).status === 'VOIDED' ? (
+                        <X className="w-5 h-5 text-slate-400" />
+                      ) : (
+                        <CheckCircle2 className="w-5 h-5 text-[#059669]" />
+                      )}
                     </div>
                   ))}
                 </div>

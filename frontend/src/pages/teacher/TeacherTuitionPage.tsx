@@ -963,17 +963,17 @@ export const TeacherTuitionPage: React.FC = () => {
           <div className="overflow-x-auto">
             <table className="w-full text-left border-collapse">
               <thead>
-                <tr className="bg-[#F8FAFC] dark:bg-slate-800/50 text-[11px] font-semibold text-[#64748B] dark:text-slate-400 uppercase tracking-wider border-b border-[#E8EDF5] dark:border-slate-800">
-                  <th className="py-3.5 px-4 w-12 text-center">STT</th>
-                  <th className="py-3.5 px-4">HỌC SINH</th>
+                <tr className="bg-[#F8FAFC] dark:bg-slate-800/50 text-[11px] font-semibold text-[#64748B] dark:text-slate-400 uppercase tracking-wider border-b border-[#E8EDF5] dark:border-slate-800 whitespace-nowrap">
+                  <th className="py-3.5 px-4 w-12 text-center whitespace-nowrap">STT</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">HỌC SINH</th>
                   <th className="py-3.5 px-4 whitespace-nowrap">LỚP</th>
-                  <th className="py-3.5 px-4 text-center">SỐ BUỔI</th>
-                  <th className="py-3.5 px-4 text-center">SỐ GIỜ</th>
-                  <th className="py-3.5 px-4 text-right">TỔNG</th>
-                  <th className="py-3.5 px-4 text-right">ĐÃ XÁC NHẬN THU</th>
-                  <th className="py-3.5 px-4 text-right">CÒN LẠI</th>
-                  <th className="py-3.5 px-4 text-center">TRẠNG THÁI</th>
-                  <th className="py-3.5 px-4 text-right">THAO TÁC</th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">SỐ BUỔI</th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">SỐ GIỜ</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">TỔNG</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">ĐÃ XÁC NHẬN THU</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">CÒN LẠI</th>
+                  <th className="py-3.5 px-4 text-center whitespace-nowrap">TRẠNG THÁI</th>
+                  <th className="py-3.5 px-4 text-right whitespace-nowrap">THAO TÁC</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
@@ -1063,7 +1063,7 @@ export const TeacherTuitionPage: React.FC = () => {
                               </td>
 
                               {/* Sessions: Clickable Link to Schedule */}
-                              <td className="py-3.5 px-4 text-center">
+                              <td className="py-3.5 px-4 text-center whitespace-nowrap">
                                 <button
                                   type="button"
                                   onClick={() =>
@@ -1071,11 +1071,11 @@ export const TeacherTuitionPage: React.FC = () => {
                                       `/teacher/schedule?classId=${row.classId}&studentId=${row.studentId}&date=${row.month}-01`,
                                     )
                                   }
-                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-[#4338CA] bg-[#EEF2FF] hover:bg-[#E0E7FF] border border-[#C7D2FE] dark:text-indigo-300 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 transition-all cursor-pointer group shadow-2xs"
+                                  className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold text-[#4338CA] bg-[#EEF2FF] hover:bg-[#E0E7FF] border border-[#C7D2FE] dark:text-indigo-300 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 transition-all cursor-pointer group shadow-2xs whitespace-nowrap shrink-0"
                                   title="Bấm để xem các buổi học này trên Lịch dạy"
                                 >
-                                  <Calendar className="w-3.5 h-3.5 text-[#4F46E5] group-hover:scale-110 transition-transform" />
-                                  <span>{row.lessonCount} buổi</span>
+                                  <Calendar className="w-3.5 h-3.5 text-[#4F46E5] group-hover:scale-110 transition-transform shrink-0" />
+                                  <span className="whitespace-nowrap">{row.lessonCount} buổi</span>
                                 </button>
                               </td>
 

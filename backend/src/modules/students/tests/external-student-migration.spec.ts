@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from 'vitest';
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from 'vitest';
 import mysql from 'mysql2/promise';
 import { runExternalStudentLegacyBackfill } from '../../../migrations/external-student-legacy-backfill.js';
 
@@ -132,8 +132,24 @@ async function createBaseLegacySchema(connection: mysql.Connection) {
 
 describe('External Student Production Migration Suite (MySQL 8.0 Real Database)', () => {
   let conn: mysql.Connection;
+  let mysqlAvailable = false;
 
-  beforeEach(async () => {
+  beforeAll(async () => {
+    try {
+      const testConn = await mysql.createConnection(dbConfig);
+      await testConn.end();
+      mysqlAvailable = true;
+    } catch {
+      console.warn('⚠️ Local MySQL at 127.0.0.1:3308 is not reachable. Skipping live MySQL migration tests.');
+      mysqlAvailable = false;
+    }
+  });
+
+  beforeEach(async (context) => {
+    if (!mysqlAvailable) {
+      context.skip();
+      return;
+    }
     conn = await mysql.createConnection(dbConfig);
     await resetTestDatabase(conn);
     await createBaseLegacySchema(conn);

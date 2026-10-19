@@ -13,6 +13,8 @@ import type {
   TuitionStatus,
   AssessmentType,
   PaymentMethod,
+  BulkTuitionAdjustmentPayload,
+  BulkPaymentPayload,
 } from '../types/teaching';
 
 export const TeachingService = {
@@ -144,6 +146,26 @@ export const TeachingService = {
       responseType: 'blob',
     });
     return res.data;
+  },
+
+  bulkAdjustment: async (payload: BulkTuitionAdjustmentPayload): Promise<TuitionDetail[]> => {
+    const res = await apiClient.post('/teacher/tuition/bulk-adjustment', payload);
+    return res.data.data;
+  },
+
+  bulkPayment: async (payload: BulkPaymentPayload): Promise<TuitionDetail[]> => {
+    const res = await apiClient.post('/teacher/tuition/bulk-payment', payload);
+    return res.data.data;
+  },
+
+  updateTuitionStatus: async (id: string, status: TuitionStatus): Promise<TuitionDetail> => {
+    const res = await apiClient.patch(`/teacher/tuition/${id}/status`, { status });
+    return res.data.data;
+  },
+
+  deleteAdjustment: async (adjustmentId: string): Promise<TuitionDetail> => {
+    const res = await apiClient.delete(`/teacher/tuition/adjustments/${adjustmentId}`);
+    return res.data.data;
   },
 
   // ==================== SCORES ====================

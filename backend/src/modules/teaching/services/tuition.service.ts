@@ -16,6 +16,9 @@ import { UserEntity } from '../../../entities/user.entity.js';
 import {
   CreateTuitionAdjustmentDto,
   RecordPaymentDto,
+  BulkTuitionAdjustmentDto,
+  BulkPaymentDto,
+  UpdateTuitionStatusDto,
 } from '../dto/tuition.dto.js';
 import * as xlsx from 'xlsx';
 import crypto from 'crypto';
@@ -332,6 +335,103 @@ export class TuitionService {
     });
 
     await this.paymentRepo.save(payment);
+    return await this.recalculateTuitionItem(tuition);
+  }
+
+  async deleteAdjustment(teacherId: string, adjustmentId: string) {
+    const adj = await this.adjustmentRepo.findOne({
+      where: { id: adjustmentId },
+      relations: { tuitionItem: true },
+    });
+    if (!adj) {
+      throw new NotFoundException('Không tìm thấy khoản điều chỉnh');
+    }
+    if (adj.tuitionItem.teacherId !== teacherId) {
+      throw new ForbiddenException('Bạn không có quyền xóa khoản điều chỉnh này');
+    }
+    const tuitionItem = adj.tuitionItem;
+    await this.adjustmentRepo.remove(adj);
+    return await this.recalculateTuitionItem(tuitionItem);
+  }
+
+  async bulkAdjustment(teacherId: string, dto: BulkTuitionAdjustmentDto) {
+    const results = [];
+    for (const tuitionId of dto.tuitionIds) {
+      const tuition = await this.tuitionRepo.findOne({
+        where: { id: tuitionId, teacherId },
+      });
+      if (!tuition) continue;
+
+      const adj = this.adjustmentRepo.create({
+        id: `adj-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        tuitionItemId: tuition.id,
+        type: dto.type,
+        amount: dto.amount,
+        reason: dto.reason,
+        createdBy: teacherId,
+      });
+      await this.adjustmentRepo.save(adj);
+      const updated = await this.recalculateTuitionItem(tuition);
+      results.push(updated);
+    }
+    return results;
+  }
+
+  async bulkPayment(teacherId: string, dto: BulkPaymentDto) {
+    const results = [];
+    for (const tuitionId of dto.tuitionIds) {
+      const tuition = await this.tuitionRepo.findOne({
+        where: { id: tuitionId, teacherId },
+      });
+      if (!tuition || Number(tuition.remainingAmount) <= 0) continue;
+
+      const payment = this.paymentRepo.create({
+        id: `pay-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+        tuitionItemId: tuition.id,
+        teacherId,
+        studentId: tuition.studentId,
+        amount: Number(tuition.remainingAmount),
+        paymentDate: dto.paymentDate,
+        paymentMethod: dto.paymentMethod || 'CASH',
+        note: dto.note || 'Thanh toán hàng loạt',
+      });
+      await this.paymentRepo.save(payment);
+      const updated = await this.recalculateTuitionItem(tuition);
+      results.push(updated);
+    }
+    return results;
+  }
+
+  async updateStatus(
+    teacherId: string,
+    tuitionId: string,
+    targetStatus: TuitionStatus,
+  ) {
+    const tuition = await this.getTuitionDetail(teacherId, tuitionId);
+
+    if (targetStatus === 'PAID') {
+      if (Number(tuition.remainingAmount) > 0) {
+        const payment = this.paymentRepo.create({
+          id: `pay-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+          tuitionItemId: tuition.id,
+          teacherId,
+          studentId: tuition.studentId,
+          amount: Number(tuition.remainingAmount),
+          paymentDate: new Date().toISOString().substring(0, 10),
+          paymentMethod: 'CASH',
+          note: 'Xác nhận thanh toán đủ',
+        });
+        await this.paymentRepo.save(payment);
+      }
+    } else if (targetStatus === 'UNPAID') {
+      const payments = await this.paymentRepo.find({
+        where: { tuitionItemId: tuition.id },
+      });
+      if (payments.length > 0) {
+        await this.paymentRepo.remove(payments);
+      }
+    }
+
     return await this.recalculateTuitionItem(tuition);
   }
 

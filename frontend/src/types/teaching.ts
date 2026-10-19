@@ -184,6 +184,7 @@ export interface TuitionDetail {
     id: string;
     name: string;
     email: string;
+    avatar?: string;
   };
   class?: {
     id: string;
@@ -192,6 +193,43 @@ export interface TuitionDetail {
   adjustments?: TuitionAdjustment[];
   payments?: TuitionPayment[];
 }
+
+export interface TeacherBankInfo {
+  bankName: string;
+  bankCode: string;
+  accountNumber: string;
+  accountHolder: string;
+}
+
+export interface InvoiceTemplateConfig {
+  template: 'template-1' | 'template-2';
+  title: string;
+  note: string;
+  showStudent: boolean;
+  showClass: boolean;
+  showBaseTuition: boolean;
+  showLessonCount: boolean;
+  showTotalHours: boolean;
+  showLessonDates: boolean;
+  showDiscount: boolean;
+  showSurcharge: boolean;
+  showQr: boolean;
+}
+
+export interface BulkTuitionAdjustmentPayload {
+  tuitionIds: string[];
+  type: 'SURCHARGE' | 'DISCOUNT';
+  amount: number;
+  reason: string;
+}
+
+export interface BulkPaymentPayload {
+  tuitionIds: string[];
+  paymentDate: string;
+  paymentMethod?: PaymentMethod;
+  note?: string;
+}
+
 
 export interface ScoreRecord {
   id: string;

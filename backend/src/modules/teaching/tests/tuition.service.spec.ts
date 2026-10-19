@@ -96,4 +96,63 @@ describe('TuitionService - Business Calculations', () => {
     expect(result.remainingAmount).toBe(0);
     expect(result.status).toBe('PAID');
   });
+
+  it('TC-TCH-TUI-UNIT-003: bulkPayment tự động tạo payment với remainingAmount của học sinh', async () => {
+    const savedPayments: any[] = [];
+    const fakeTuitionRepo = {
+      findOne: async ({ where }: any) => {
+        if (where.id === 'tui-1') {
+          return {
+            id: 'tui-1',
+            teacherId: 'teacher-1',
+            studentId: 'student-1',
+            baseAmount: 500000,
+            surcharge: 0,
+            discount: 0,
+            totalAmount: 500000,
+            paidAmount: 0,
+            remainingAmount: 500000,
+            status: 'UNPAID',
+          };
+        }
+        return null;
+      },
+      save: async (item: any) => item,
+    };
+    const fakeAdjustmentRepo = {
+      find: async () => [],
+    };
+    const fakePaymentRepo = {
+      create: (data: any) => data,
+      save: async (data: any) => {
+        savedPayments.push(data);
+        return data;
+      },
+      find: async () => savedPayments,
+    };
+
+    const service = new TuitionService(
+      fakeTuitionRepo as any,
+      fakeAdjustmentRepo as any,
+      fakePaymentRepo as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+      {} as any,
+    );
+
+    const results = await service.bulkPayment('teacher-1', {
+      tuitionIds: ['tui-1'],
+      paymentDate: '2026-10-19',
+      paymentMethod: 'CASH',
+      note: 'Thanh toán hàng loạt',
+    });
+
+    expect(results.length).toBe(1);
+    expect(savedPayments.length).toBe(1);
+    expect(savedPayments[0].amount).toBe(500000);
+    expect(results[0].status).toBe('PAID');
+  });
 });
+

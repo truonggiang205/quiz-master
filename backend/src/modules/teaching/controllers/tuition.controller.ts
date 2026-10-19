@@ -165,8 +165,14 @@ export class TuitionController {
     @CurrentUser() user: any,
     @Param('paymentId') paymentId: string,
     @Body('reason') reason?: string,
+    @Body('refundAmount') refundAmount?: number,
   ) {
-    const data = await this.tuitionService.refundPayment(user.id, paymentId, reason);
+    const data = await this.tuitionService.refundPayment(
+      user.id,
+      paymentId,
+      reason,
+      refundAmount ? Number(refundAmount) : undefined,
+    );
     return createSuccessResponse(data, 'Hoàn tiền giao dịch thành công');
   }
 }

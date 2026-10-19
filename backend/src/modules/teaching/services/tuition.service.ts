@@ -435,13 +435,34 @@ export class TuitionService {
     tuitionId: string,
     dto: CreateTuitionAdjustmentDto,
   ) {
+    if (dto.amount <= 0) {
+      throw new BadRequestException('Số tiền điều chỉnh phải lớn hơn 0');
+    }
+
     const tuition = await this.getTuitionDetail(teacherId, tuitionId);
+
+    // Kiểm tra ràng buộc tài chính nếu là GIẢM TRỪ (DISCOUNT)
+    if (dto.type === 'DISCOUNT') {
+      const simulatedTotal = Math.max(
+        0,
+        Math.round(
+          Number(tuition.baseAmount) +
+            Number(tuition.surcharge) -
+            (Number(tuition.discount) + Number(dto.amount)),
+        ),
+      );
+      if (simulatedTotal < Number(tuition.paidAmount)) {
+        throw new BadRequestException(
+          `Không thể áp dụng giảm trừ: Số tiền giảm trừ (${dto.amount.toLocaleString('vi-VN')} đ) khiến tổng học phí (${simulatedTotal.toLocaleString('vi-VN')} đ) thấp hơn số tiền học sinh đã thanh toán (${Number(tuition.paidAmount).toLocaleString('vi-VN')} đ). Vui lòng hoàn tiền trước.`,
+        );
+      }
+    }
 
     const adj = this.adjustmentRepo.create({
       id: `adj-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
       tuitionItemId: tuition.id,
       type: dto.type,
-      amount: dto.amount,
+      amount: Math.round(Number(dto.amount)),
       reason: dto.reason,
       createdBy: teacherId,
     });
@@ -485,9 +506,10 @@ export class TuitionService {
         tuitionItemId: tuition.id,
         teacherId,
         studentId: tuition.studentId,
-        amount: dto.amount,
+        amount: Math.round(Number(dto.amount)),
         paymentDate: dto.paymentDate,
         paymentMethod: dto.paymentMethod || 'CASH',
+        status: 'COMPLETED',
         note: dto.note || '',
       });
 
@@ -508,11 +530,32 @@ export class TuitionService {
       throw new ForbiddenException('Bạn không có quyền xóa khoản điều chỉnh này');
     }
     const tuitionItem = adj.tuitionItem;
+
+    // Kiểm tra ràng buộc tài chính nếu xóa khoản PHỤ THU (SURCHARGE)
+    if (adj.type === 'SURCHARGE') {
+      const simulatedTotal = Math.max(
+        0,
+        Math.round(
+          Number(tuitionItem.baseAmount) +
+            (Number(tuitionItem.surcharge) - Number(adj.amount)) -
+            Number(tuitionItem.discount),
+        ),
+      );
+      if (simulatedTotal < Number(tuitionItem.paidAmount)) {
+        throw new BadRequestException(
+          `Không thể xóa phụ thu: Thao tác này khiến tổng học phí (${simulatedTotal.toLocaleString('vi-VN')} đ) thấp hơn số tiền học sinh đã thanh toán (${Number(tuitionItem.paidAmount).toLocaleString('vi-VN')} đ). Vui lòng hoàn tiền trước.`,
+        );
+      }
+    }
+
     await this.adjustmentRepo.remove(adj);
     return await this.recalculateTuitionItem(tuitionItem);
   }
 
   async bulkAdjustment(teacherId: string, dto: BulkTuitionAdjustmentDto) {
+    if (dto.amount <= 0) {
+      throw new BadRequestException('Số tiền điều chỉnh phải lớn hơn 0');
+    }
     const results: TuitionItemEntity[] = [];
     for (const tuitionId of dto.tuitionIds) {
       const tuition = await this.tuitionRepo.findOne({
@@ -520,11 +563,25 @@ export class TuitionService {
       });
       if (!tuition) continue;
 
+      if (dto.type === 'DISCOUNT') {
+        const simulatedTotal = Math.max(
+          0,
+          Math.round(
+            Number(tuition.baseAmount) +
+              Number(tuition.surcharge) -
+              (Number(tuition.discount) + Number(dto.amount)),
+          ),
+        );
+        if (simulatedTotal < Number(tuition.paidAmount)) {
+          continue;
+        }
+      }
+
       const adj = this.adjustmentRepo.create({
         id: `adj-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
         tuitionItemId: tuition.id,
         type: dto.type,
-        amount: dto.amount,
+        amount: Math.round(Number(dto.amount)),
         reason: dto.reason,
         createdBy: teacherId,
       });
@@ -604,8 +661,12 @@ export class TuitionService {
         });
         if (payments.length > 0) {
           for (const p of payments) {
-            p.status = 'VOIDED';
-            await payRepo.save(p);
+            // Chỉ VOID các giao dịch COMPLETED, bảo toàn các giao dịch đã REFUNDED
+            if (p.status === 'COMPLETED' || !p.status) {
+              p.status = 'VOIDED';
+              p.note = `${p.note || ''} | Hủy thanh toán khi chuyển sang Chưa thu`.trim();
+              await payRepo.save(p);
+            }
           }
         }
       }
@@ -616,11 +677,13 @@ export class TuitionService {
 
   /**
    * Hoàn tiền hoặc hủy giao dịch thanh toán (Bảo lưu audit trail, không hard-delete)
+   * Hỗ trợ cả Hoàn tiền toàn phần (Full Refund) và Hoàn tiền một phần (Partial Refund).
    */
   async refundPayment(
     teacherId: string,
     paymentId: string,
     reason?: string,
+    refundAmount?: number,
   ) {
     return await this.dataSource.transaction(async (manager) => {
       const payRepo = manager.getRepository(TuitionPaymentEntity);
@@ -637,17 +700,60 @@ export class TuitionService {
         throw new ForbiddenException('Bạn không có quyền hoàn tiền cho giao dịch này');
       }
 
-      if (payment.status === 'REFUNDED' || payment.status === 'VOIDED') {
-        throw new BadRequestException('Giao dịch này đã được hoàn tiền hoặc hủy trước đó');
+      // Ngăn chặn Double Refund
+      if (payment.status === 'REFUNDED') {
+        throw new BadRequestException('Giao dịch này đã được hoàn tiền trước đó');
       }
 
-      payment.status = 'REFUNDED';
-      if (reason) {
-        payment.note = payment.note
-          ? `${payment.note} | Hoàn tiền: ${reason}`
-          : `Hoàn tiền: ${reason}`;
+      // Ngăn chặn Refund After Void
+      if (payment.status === 'VOIDED') {
+        throw new BadRequestException('Giao dịch này đã bị hủy bỏ trước đó, không thể hoàn tiền');
       }
-      await payRepo.save(payment);
+
+      const originalAmount = Math.round(Number(payment.amount));
+
+      // Kiểm tra giá trị hoàn tiền nếu yêu cầu hoàn một phần
+      if (refundAmount !== undefined) {
+        if (refundAmount <= 0) {
+          throw new BadRequestException('Số tiền hoàn phải lớn hơn 0');
+        }
+        if (refundAmount > originalAmount) {
+          throw new BadRequestException(
+            `Số tiền hoàn (${refundAmount.toLocaleString('vi-VN')} đ) không được vượt quá số tiền đã thanh toán (${originalAmount.toLocaleString('vi-VN')} đ)`,
+          );
+        }
+      }
+
+      const actualRefund = refundAmount !== undefined ? Math.round(refundAmount) : originalAmount;
+
+      if (actualRefund === originalAmount) {
+        // FULL REFUND
+        payment.status = 'REFUNDED';
+        payment.note = payment.note
+          ? `${payment.note} | Hoàn toàn phần: ${reason || 'Không ghi chú'}`
+          : `Hoàn toàn phần: ${reason || 'Không ghi chú'}`;
+        await payRepo.save(payment);
+      } else {
+        // PARTIAL REFUND: Giảm số tiền của giao dịch gốc và ghi nhận giao dịch REFUNDED riêng
+        payment.amount = originalAmount - actualRefund;
+        payment.note = payment.note
+          ? `${payment.note} | Đã hoàn một phần ${actualRefund.toLocaleString('vi-VN')} đ: ${reason || 'Không ghi chú'}`
+          : `Đã hoàn một phần ${actualRefund.toLocaleString('vi-VN')} đ: ${reason || 'Không ghi chú'}`;
+        await payRepo.save(payment);
+
+        const refundTx = payRepo.create({
+          id: `pay-rf-${Date.now()}-${crypto.randomBytes(4).toString('hex')}`,
+          tuitionItemId: payment.tuitionItemId,
+          teacherId,
+          studentId: payment.studentId,
+          amount: actualRefund,
+          paymentDate: new Date().toISOString().substring(0, 10),
+          paymentMethod: payment.paymentMethod,
+          status: 'REFUNDED',
+          note: `Hoàn một phần ${actualRefund.toLocaleString('vi-VN')} đ từ giao dịch ${payment.id}: ${reason || 'Không ghi chú'}`,
+        });
+        await payRepo.save(refundTx);
+      }
 
       const tuition = await manager.findOne(TuitionItemEntity, {
         where: { id: payment.tuitionItemId },

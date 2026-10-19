@@ -316,15 +316,9 @@ export class ScheduleService {
       return createdLessons.length === 1 ? createdLessons[0] : createdLessons;
     });
 
-    // Tự động đồng bộ học phí cho tất cả các tháng bị ảnh hưởng
-    try {
-      const distinctMonths = Array.from(new Set(datesToSchedule.map((d) => d.substring(0, 7))));
-      for (const m of distinctMonths) {
-        await this.tuitionService.syncTuitionData(teacherId, m);
-      }
-    } catch (err) {
-      console.error('Failed to auto-sync tuition after creating lesson:', err);
-    }
+    // Tự động đồng bộ học phí cho tất cả các tháng bị ảnh hưởng với cơ chế retry an toàn
+    const distinctMonths = Array.from(new Set(datesToSchedule.map((d) => d.substring(0, 7))));
+    await this.safeSyncTuition(teacherId, distinctMonths);
 
     return result;
   }
@@ -357,6 +351,13 @@ export class ScheduleService {
     // Check conflict if date or time changed
     if (dto.date || dto.startTime || dto.endTime) {
       await this.checkConflict(teacherId, newDate, newStartTime, newEndTime, lessonId);
+    }
+
+    // Audit log nếu đổi giá buổi học
+    if (dto.feePerLesson !== undefined && dto.feePerLesson !== Number(lesson.feePerLesson || 0)) {
+      console.log(
+        `[AUDIT - FEE CHANGE] Giáo viên ${teacherId} đổi giá buổi học ${lesson.id}: ${lesson.feePerLesson} -> ${dto.feePerLesson} vào lúc ${new Date().toISOString()}`,
+      );
     }
 
     // Bảo vệ ràng buộc tài chính nếu giảm tiền, hủy buổi hoặc đổi tháng
@@ -406,14 +407,9 @@ export class ScheduleService {
     });
 
     // Tự động đồng bộ học phí cho các tháng liên quan
-    try {
-      await this.tuitionService.syncTuitionData(teacherId, newMonth);
-      if (oldMonth !== newMonth) {
-        await this.tuitionService.syncTuitionData(teacherId, oldMonth);
-      }
-    } catch (err) {
-      console.error('Failed to auto-sync tuition after updating lesson:', err);
-    }
+    const monthsToSync = [newMonth];
+    if (oldMonth !== newMonth) monthsToSync.push(oldMonth);
+    await this.safeSyncTuition(teacherId, monthsToSync);
 
     return updated;
   }
@@ -439,13 +435,38 @@ export class ScheduleService {
     await this.lessonRepo.remove(lesson);
 
     // Tự động đồng bộ học phí sau khi xóa buổi học
-    try {
-      await this.tuitionService.syncTuitionData(teacherId, month);
-    } catch (err) {
-      console.error('Failed to auto-sync tuition after deleting lesson:', err);
-    }
+    await this.safeSyncTuition(teacherId, [month]);
 
     return { success: true, message: 'Đã xóa buổi học thành công' };
+  }
+
+  /**
+   * Đồng bộ học phí an toàn có cơ chế thử lại (Retry) khi gặp lỗi kết nối
+   */
+  private async safeSyncTuition(teacherId: string, months: string[]) {
+    for (const m of months) {
+      let attempts = 3;
+      let lastErr: any = null;
+      while (attempts > 0) {
+        try {
+          await this.tuitionService.syncTuitionData(teacherId, m);
+          lastErr = null;
+          break;
+        } catch (err) {
+          lastErr = err;
+          attempts--;
+          if (attempts > 0) {
+            await new Promise((r) => setTimeout(r, 50));
+          }
+        }
+      }
+      if (lastErr) {
+        console.error(
+          `[CRITICAL RECONCILIATION] Không thể tự động đồng bộ học phí tháng ${m} sau 3 lần thử. Dữ liệu sẽ được tự động đối soát trong lần đọc tiếp theo:`,
+          lastErr,
+        );
+      }
+    }
   }
 
   /**

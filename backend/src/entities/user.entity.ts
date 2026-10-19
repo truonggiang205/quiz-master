@@ -1,7 +1,9 @@
-import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable } from 'typeorm';
+import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, ManyToMany, JoinTable, OneToMany } from 'typeorm';
 import { ClassEntity } from './class.entity.js';
 import type { ClassEntity as IClassEntity } from './class.entity.js';
 import type { UserEntity as IUserEntity } from './user.entity.js';
+import { TeacherStudentEntity } from '../modules/students/entities/teacher-student.entity.js';
+import type { TeacherStudentEntity as ITeacherStudentEntity } from '../modules/students/entities/teacher-student.entity.js';
 
 @Entity('users')
 export class UserEntity {
@@ -60,6 +62,12 @@ export class UserEntity {
 
   @ManyToMany(() => UserEntity, (user: IUserEntity) => user.students)
   teachers: IUserEntity[];
+
+  @OneToMany(() => TeacherStudentEntity, (ts: ITeacherStudentEntity) => ts.teacher)
+  studentProfiles: ITeacherStudentEntity[];
+
+  @OneToMany(() => TeacherStudentEntity, (ts: ITeacherStudentEntity) => ts.studentAccount)
+  linkedProfiles: ITeacherStudentEntity[];
 
   @CreateDateColumn()
   createdAt: Date;

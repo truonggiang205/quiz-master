@@ -1546,8 +1546,8 @@ export const TeacherSchedulePage: React.FC = () => {
                       <div className="flex items-center gap-2.5">
                         <UserAvatar user={p.student} size="sm" />
                         <div>
-                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{p.student?.name}</p>
-                          <p className="text-[11px] text-slate-400">{p.student?.email}</p>
+                          <p className="text-xs font-bold text-slate-800 dark:text-slate-200">{p.student?.name || 'Học sinh'}</p>
+                          <p className="text-[11px] text-slate-400">{p.student?.email || 'Học sinh ngoài hệ thống'}</p>
                         </div>
                       </div>
 

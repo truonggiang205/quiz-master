@@ -21,6 +21,7 @@ const TeacherDashboard = React.lazy(() => import('../pages/teacher/TeacherDashbo
 const TeacherClassroomsPage = React.lazy(() => import('../pages/teacher/TeacherClassroomsPage').then(module => ({ default: module.TeacherClassroomsPage })));
 const TeacherClassroomDetailPage = React.lazy(() => import('../pages/teacher/TeacherClassroomDetailPage').then(module => ({ default: module.TeacherClassroomDetailPage })));
 const TeacherStudentsPage = React.lazy(() => import('../pages/teacher/TeacherStudentsPage').then(module => ({ default: module.TeacherStudentsPage })));
+const TeacherStudentDetailPage = React.lazy(() => import('../pages/teacher/TeacherStudentDetailPage').then(module => ({ default: module.TeacherStudentDetailPage })));
 const TeacherQuizListPage = React.lazy(() => import('../pages/teacher/TeacherQuizListPage').then(module => ({ default: module.TeacherQuizListPage })));
 const TeacherQuizCreateEditPage = React.lazy(() => import('../pages/teacher/TeacherQuizCreateEditPage').then(module => ({ default: module.TeacherQuizCreateEditPage })));
 const TeacherQuizResultsPage = React.lazy(() => import('../pages/teacher/TeacherQuizResultsPage').then(module => ({ default: module.TeacherQuizResultsPage })));
@@ -93,6 +94,7 @@ export const AppRoutes: React.FC = () => {
                 <Route path="/teacher/tuition" element={<TeacherTuitionPage />} />
                 <Route path="/teacher/scores" element={<TeacherScoresPage />} />
                 <Route path="/teacher/students" element={<TeacherStudentsPage />} />
+                <Route path="/teacher/students/:id" element={<TeacherStudentDetailPage />} />
                 <Route path="/teacher/classes" element={<TeacherClassroomsPage />} />
                 <Route path="/teacher/classes/:id" element={<TeacherClassroomDetailPage />} />
                 <Route path="/teacher/classrooms" element={<TeacherClassroomsPage />} />

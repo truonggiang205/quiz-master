@@ -548,7 +548,7 @@ export const TeacherScoresPage: React.FC = () => {
               >
                 {currentClassObj?.students?.map((s) => (
                   <option key={s.id} value={s.id}>
-                    {s.name} ({s.email})
+                    {s.name} {s.email ? `(${s.email})` : ''}
                   </option>
                 ))}
               </select>

@@ -10,6 +10,7 @@ import { LearningLogEntity } from '../entities/learning-log.entity.js';
 import { LessonEntity } from '../entities/lesson.entity.js';
 import { ClassEntity } from '../../../entities/class.entity.js';
 import { UserEntity } from '../../../entities/user.entity.js';
+import { TeacherStudentEntity } from '../../students/entities/teacher-student.entity.js';
 import {
   CreateLearningLogDto,
   UpdateLearningLogDto,
@@ -43,6 +44,8 @@ export class LearningLogsService {
     private readonly classRepo: Repository<ClassEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
+    @InjectRepository(TeacherStudentEntity)
+    private readonly teacherStudentRepo?: Repository<TeacherStudentEntity>,
   ) {}
 
   async getLogs(
@@ -121,15 +124,34 @@ export class LearningLogsService {
       throw new ForbiddenException('Bạn không có quyền ghi nhật ký cho buổi học này');
     }
 
-    // Verify student exists
-    const student = await this.userRepo.findOne({ where: { id: dto.studentId } });
-    if (!student) {
-      throw new NotFoundException('Không tìm thấy học sinh');
+    // Verify student exists (supports both TeacherStudent and UserEntity)
+    let studentId = dto.studentId;
+    let studentFound = false;
+
+    if (this.teacherStudentRepo) {
+      const ts = await this.teacherStudentRepo.findOne({
+        where: [{ id: dto.studentId, teacherId }, { studentAccountId: dto.studentId, teacherId }],
+      });
+      if (ts) {
+        studentId = ts.id;
+        studentFound = true;
+      }
+    }
+
+    if (!studentFound) {
+      const student = await this.userRepo.findOne({ where: { id: dto.studentId } });
+      if (student) {
+        studentFound = true;
+      }
+    }
+
+    if (!studentFound) {
+      throw new NotFoundException('Không tìm thấy học sinh hoặc bạn không có quyền ghi nhật ký cho học sinh này');
     }
 
     // Check if log already exists for this lesson and student
     let log = await this.logRepo.findOne({
-      where: { lessonId: dto.lessonId, studentId: dto.studentId },
+      where: { lessonId: dto.lessonId, studentId },
     });
 
     if (log) {
@@ -146,7 +168,7 @@ export class LearningLogsService {
       teacherId,
       classId: lesson.classId,
       lessonId: lesson.id,
-      studentId: student.id,
+      studentId,
       content: dto.content || '',
       homework: dto.homework || '',
       attitude: dto.attitude || 'Tốt',
@@ -212,8 +234,8 @@ export class LearningLogsService {
 
     const metadata: ExcelExportMetadata = {
       teacherName: teacher?.name || 'Giáo viên phụ trách',
-      studentName: student?.name || (logs[0]?.student?.name ?? 'Tất cả học sinh'),
-      studentEmail: student?.email || logs[0]?.student?.email,
+      studentName: (student as any)?.fullName || student?.name || (logs[0]?.student as any)?.fullName || logs[0]?.student?.name || 'Tất cả học sinh',
+      studentEmail: (student?.email || logs[0]?.student?.email) ?? undefined,
       className: classObj?.name || logs[0]?.class?.name || (isSingleStudent ? 'Kèm 1-1' : 'Tổng hợp các lớp'),
       month: query.month,
       totalFee,

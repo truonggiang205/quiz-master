@@ -11,6 +11,7 @@ import { LessonParticipantEntity } from '../entities/lesson-participant.entity.j
 import { ClassEntity } from '../../../entities/class.entity.js';
 import { UserEntity } from '../../../entities/user.entity.js';
 import { TuitionItemEntity } from '../entities/tuition-item.entity.js';
+import { TeacherStudentEntity } from '../../students/entities/teacher-student.entity.js';
 import { TuitionService } from './tuition.service.js';
 import { CreateLessonDto, UpdateLessonDto } from '../dto/schedule.dto.js';
 import crypto from 'crypto';
@@ -30,6 +31,8 @@ export class ScheduleService {
     private readonly tuitionRepo: Repository<TuitionItemEntity>,
     private readonly tuitionService: TuitionService,
     private readonly dataSource: DataSource,
+    @InjectRepository(TeacherStudentEntity)
+    private readonly teacherStudentRepo?: Repository<TeacherStudentEntity>,
   ) {}
 
   calculateDuration(startTime: string, endTime: string): number {
@@ -173,18 +176,37 @@ export class ScheduleService {
 
     if (!classEntity && classId.startsWith('private-')) {
       const studentId = classId.replace('private-', '');
-      const student = await this.userRepo.findOne({ where: { id: studentId } });
-      if (student) {
+      let studentName = '';
+      let studentUser: UserEntity | null = null;
+
+      if (this.teacherStudentRepo) {
+        const ts = await this.teacherStudentRepo.findOne({
+          where: [{ id: studentId, teacherId }, { studentAccountId: studentId, teacherId }],
+        });
+        if (ts) {
+          studentName = ts.fullName;
+          if (ts.studentAccountId) {
+            studentUser = await this.userRepo.findOne({ where: { id: ts.studentAccountId } });
+          }
+        }
+      }
+
+      if (!studentName) {
+        studentUser = await this.userRepo.findOne({ where: { id: studentId } });
+        if (studentUser) studentName = studentUser.name;
+      }
+
+      if (studentName) {
         const rawCode = `PV${studentId.replace(/\D/g, '').slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
         classEntity = this.classRepo.create({
           id: classId,
-          name: `Kèm 1-1: ${student.name}`,
+          name: `Kèm 1-1: ${studentName}`,
           subject: 'Gia sư cá nhân',
           description: 'Lớp học riêng 1 kèm 1',
           inviteCode: rawCode,
           isPrivate: true,
           teacherId,
-          students: [student],
+          students: studentUser ? [studentUser] : [],
         });
         await this.classRepo.save(classEntity);
       }
@@ -215,17 +237,14 @@ export class ScheduleService {
     // 2. Validate time
     const duration = this.calculateDuration(dto.startTime, dto.endTime);
 
-    // 3. Determine students to add
-    let targetStudents: UserEntity[] = [];
+    // 3. Determine students to add (supports both TeacherStudent and UserEntity)
+    let targetStudents: { id: string }[] = [];
     if (dto.studentIds && dto.studentIds.length > 0) {
-      const allowedStudentIds = new Set(classEntity.students.map((s) => s.id));
-      const invalid = dto.studentIds.some((sid) => !allowedStudentIds.has(sid));
-      if (invalid) {
-        throw new BadRequestException('Một số học sinh được chọn không thuộc lớp học này');
-      }
-      targetStudents = classEntity.students.filter((s) => dto.studentIds!.includes(s.id));
-    } else {
-      targetStudents = classEntity.students;
+      targetStudents = dto.studentIds.map((sid) => ({ id: sid }));
+    } else if (classEntity.students && classEntity.students.length > 0) {
+      targetStudents = classEntity.students.map((s) => ({ id: s.id }));
+    } else if (classEntity.id.startsWith('private-')) {
+      targetStudents = [{ id: classEntity.id.replace('private-', '') }];
     }
 
     // 4. Handle Single vs Recurring schedule

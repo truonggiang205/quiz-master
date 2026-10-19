@@ -47,7 +47,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
   const [assignedStudentIds, setAssignedStudentIds] = useState<string[]>([]);
   
   const [availableClasses, setAvailableClasses] = useState<Classroom[]>([]);
-  const [availableStudents, setAvailableStudents] = useState<User[]>([]);
+  const [availableStudents, setAvailableStudents] = useState<any[]>([]);
 
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');

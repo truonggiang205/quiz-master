@@ -11,6 +11,7 @@ import {
 } from './entities/index.js';
 import { ClassEntity } from '../../entities/class.entity.js';
 import { UserEntity } from '../../entities/user.entity.js';
+import { TeacherStudentEntity } from '../students/entities/teacher-student.entity.js';
 import { ScheduleService } from './services/schedule.service.js';
 import { LearningLogsService } from './services/learning-logs.service.js';
 import { TuitionService } from './services/tuition.service.js';
@@ -34,6 +35,7 @@ import { CalendarController } from './controllers/calendar.controller.js';
       TuitionPaymentEntity,
       ClassEntity,
       UserEntity,
+      TeacherStudentEntity,
     ]),
   ],
   controllers: [

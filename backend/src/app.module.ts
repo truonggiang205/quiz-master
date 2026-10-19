@@ -38,6 +38,7 @@ import {
   TuitionAdjustmentEntity,
   TuitionPaymentEntity,
 } from './modules/teaching/entities/index.js';
+import { TeacherStudentEntity } from './modules/students/entities/teacher-student.entity.js';
 import { TeachingModule } from './modules/teaching/teaching.module.js';
 import { LoggerMiddleware } from './common/middleware/logger.middleware.js';
 
@@ -75,6 +76,7 @@ dotenv.config();
         TuitionItemEntity,
         TuitionAdjustmentEntity,
         TuitionPaymentEntity,
+        TeacherStudentEntity,
       ],
       synchronize: true, // Auto creates and syncs tables with Aiven MySQL
       logging: false,

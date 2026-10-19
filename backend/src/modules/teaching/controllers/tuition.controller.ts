@@ -52,6 +52,19 @@ export class TuitionController {
     return createSuccessResponse(data);
   }
 
+  @Get('trend')
+  @ApiOperation({ summary: 'Lấy xu hướng biến động học phí thực tế qua các tháng' })
+  async getTuitionTrend(
+    @CurrentUser() user: any,
+    @Query('month') month?: string,
+  ) {
+    const data = await this.tuitionService.getTuitionTrend(
+      user.id,
+      month || new Date().toISOString().substring(0, 7),
+    );
+    return createSuccessResponse(data);
+  }
+
   @Get('export')
   @ApiOperation({ summary: 'Xuất danh sách học phí ra file Excel' })
   async exportTuition(

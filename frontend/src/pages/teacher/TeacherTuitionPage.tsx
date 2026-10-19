@@ -269,32 +269,28 @@ export const TeacherTuitionPage: React.FC = () => {
     return `01/${month}/${year} - ${daysInMonth}/${month}/${year}`;
   }, [selectedMonth]);
 
-  // Trend Data (mock 6-month historical curve based on current month)
-  const trendData = useMemo(() => {
-    const [currY, currM] = selectedMonth.split('-').map(Number);
-    const months = [];
-    for (let i = 5; i >= 0; i--) {
-      let d = new Date(currY, currM - 1 - i, 1);
-      const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      const label = `T${d.getMonth() + 1}`;
-      // In current month, use actual kpiStats; in earlier months scale realistically
-      const factor = i === 0 ? 1 : Math.max(0.4, 1 - i * 0.12 + ((currM + i) % 3) * 0.08);
-      const total = i === 0 ? kpiStats.total : Math.round(kpiStats.total * factor);
-      const paid = i === 0 ? kpiStats.paid : Math.round(total * 0.85);
-      months.push({ month: mStr, label, total, paid });
-    }
-    return months;
-  }, [selectedMonth, kpiStats]);
+  // Real Trend Data loaded from database
+  const [trendData, setTrendData] = useState<
+    { month: string; label: string; total: number; paid: number; unpaid: number }[]
+  >([]);
+
+  useEffect(() => {
+    TeachingService.getTuitionTrend({ month: selectedMonth })
+      .then((data) => setTrendData(data))
+      .catch((err) => console.error('Failed to load real tuition trend', err));
+  }, [selectedMonth, tuitionList]);
 
   const monthDiffText = useMemo(() => {
     if (trendData.length < 2) return 'Ổn định so với tháng trước';
-    const prev = trendData[trendData.length - 2].total;
-    const curr = trendData[trendData.length - 1].total;
+    const prev = trendData[trendData.length - 2]?.total || 0;
+    const curr = trendData[trendData.length - 1]?.total || 0;
     const diff = curr - prev;
+    if (prev === 0 && curr > 0) return `Tăng ${curr.toLocaleString()} đ so với tháng trước`;
     if (diff > 0) return `Tăng ${diff.toLocaleString()} đ so với tháng trước`;
     if (diff < 0) return `Giảm ${Math.abs(diff).toLocaleString()} đ so với tháng trước`;
     return 'Ổn định so với tháng trước';
   }, [trendData]);
+
 
   // Toggle class accordion
   const toggleClassExpansion = (classId: string) => {
@@ -701,36 +697,42 @@ export const TeacherTuitionPage: React.FC = () => {
               className="px-6 pb-6 pt-2 border-t border-slate-100 dark:border-slate-800"
             >
               <div className="h-44 w-full">
-                <ResponsiveContainer width="100%" height="100%">
-                  <BarChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
-                    <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                    <XAxis dataKey="label" stroke="#94a3b8" fontSize={12} tickLine={false} />
-                    <YAxis
-                      stroke="#94a3b8"
-                      fontSize={11}
-                      tickLine={false}
-                      axisLine={false}
-                      tickFormatter={(val) => `${(val / 1000000).toFixed(1)}M`}
-                    />
-                    <Tooltip
-                      formatter={(val: any) => [`${Number(val).toLocaleString()} đ`, 'Học phí']}
-                      labelFormatter={(label) => `Tháng: ${label}`}
-                      contentStyle={{
-                        borderRadius: '12px',
-                        border: 'none',
-                        boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
-                      }}
-                    />
-                    <Bar dataKey="total" radius={[8, 8, 0, 0]} fill="#4f46e5">
-                      {trendData.map((entry, index) => (
-                        <Cell
-                          key={`cell-${index}`}
-                          fill={index === trendData.length - 1 ? '#4f46e5' : '#cbd5e1'}
-                        />
-                      ))}
-                    </Bar>
-                  </BarChart>
-                </ResponsiveContainer>
+                {trendData.length === 0 || trendData.every((m) => m.total === 0) ? (
+                  <div className="h-full flex items-center justify-center text-xs font-semibold text-slate-400 dark:text-slate-500">
+                    Chưa có học phí phát sinh trong các tháng này.
+                  </div>
+                ) : (
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={trendData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                      <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+                      <XAxis dataKey="label" stroke="#94a3b8" fontSize={12} tickLine={false} />
+                      <YAxis
+                        stroke="#94a3b8"
+                        fontSize={11}
+                        tickLine={false}
+                        axisLine={false}
+                        tickFormatter={(val) => `${(val / 1000000).toFixed(1)}M`}
+                      />
+                      <Tooltip
+                        formatter={(val: any) => [`${Number(val).toLocaleString()} đ`, 'Học phí']}
+                        labelFormatter={(label) => `Tháng: ${label}`}
+                        contentStyle={{
+                          borderRadius: '12px',
+                          border: 'none',
+                          boxShadow: '0 4px 12px rgba(0,0,0,0.1)',
+                        }}
+                      />
+                      <Bar dataKey="total" radius={[8, 8, 0, 0]} fill="#4f46e5">
+                        {trendData.map((entry, index) => (
+                          <Cell
+                            key={`cell-${index}`}
+                            fill={index === trendData.length - 1 ? '#4f46e5' : '#cbd5e1'}
+                          />
+                        ))}
+                      </Bar>
+                    </BarChart>
+                  </ResponsiveContainer>
+                )}
               </div>
             </motion.div>
           )}

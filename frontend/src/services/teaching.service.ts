@@ -148,6 +148,13 @@ export const TeachingService = {
     return res.data;
   },
 
+  getTuitionTrend: async (params?: {
+    month?: string;
+  }): Promise<{ month: string; label: string; total: number; paid: number; unpaid: number }[]> => {
+    const res = await apiClient.get('/teacher/tuition/trend', { params });
+    return res.data.data;
+  },
+
   bulkAdjustment: async (payload: BulkTuitionAdjustmentPayload): Promise<TuitionDetail[]> => {
     const res = await apiClient.post('/teacher/tuition/bulk-adjustment', payload);
     return res.data.data;

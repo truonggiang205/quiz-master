@@ -273,6 +273,40 @@ export class TuitionService {
     });
   }
 
+  async getTuitionTrend(
+    teacherId: string,
+    endMonth: string,
+  ): Promise<{ month: string; label: string; total: number; paid: number; unpaid: number }[]> {
+    const [currY, currM] = (endMonth || new Date().toISOString().substring(0, 7)).split('-').map(Number);
+    const months: { month: string; label: string; total: number; paid: number; unpaid: number }[] = [];
+
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(currY, currM - 1 - i, 1);
+      const mStr = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+      const label = `T${d.getMonth() + 1}`;
+
+      await this.syncTuitionData(teacherId, mStr);
+
+      const items = await this.tuitionRepo.find({
+        where: { teacherId, month: mStr },
+      });
+
+      const total = items.reduce((sum, item) => sum + Number(item.totalAmount || 0), 0);
+      const paid = items.reduce((sum, item) => sum + Number(item.paidAmount || 0), 0);
+      const unpaid = items.reduce((sum, item) => sum + Number(item.remainingAmount || 0), 0);
+
+      months.push({
+        month: mStr,
+        label,
+        total,
+        paid,
+        unpaid,
+      });
+    }
+
+    return months;
+  }
+
   async getTuitionDetail(teacherId: string, tuitionId: string) {
     const item = await this.tuitionRepo.findOne({
       where: { id: tuitionId },

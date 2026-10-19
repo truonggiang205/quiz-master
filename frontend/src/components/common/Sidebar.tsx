@@ -3,6 +3,7 @@ import { NavLink, useLocation, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useAuthStore } from '../../stores/auth.store';
 import { useUiStore } from '../../stores/ui.store';
+import { Logo } from './Logo';
 import {
   LayoutDashboard,
   Calendar,
@@ -233,11 +234,14 @@ export const Sidebar: React.FC = () => {
           onScroll={handleMouseLeave}
           className="flex-1 overflow-y-auto overflow-x-hidden min-h-0 pr-1 -mr-1 space-y-2.5"
         >
-          {/* Mobile close button */}
+          {/* Mobile close button with Brand Logo */}
           <div className="flex items-center justify-between md:hidden mb-2 pb-1.5 border-b border-slate-100 dark:border-slate-800">
-            <span className="text-[11px] font-bold uppercase tracking-wider text-slate-400">
-              Menu điều hướng
-            </span>
+            <div className="flex items-center gap-2">
+              <Logo className="h-6 w-6 shrink-0" alt="QuizMaster" />
+              <span className="text-xs font-bold text-slate-800 dark:text-white">
+                QuizMaster
+              </span>
+            </div>
             <button
               onClick={() => setSidebarOpen(false)}
               className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"

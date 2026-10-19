@@ -6,6 +6,7 @@ import { ThemeToggle } from './ThemeToggle';
 import { NotificationBell } from './NotificationBell';
 import { formatUserName } from '../../utils/user.utils';
 import { UserAvatar } from './UserAvatar';
+import { Logo } from './Logo';
 import {
   Menu,
   GraduationCap,
@@ -51,11 +52,13 @@ export const Navbar: React.FC<NavbarProps> = ({ showSidebarToggle = false }) => 
               showSidebarToggle && !isSidebarOpen ? 'hidden md:hidden' : 'flex'
             }`}
           >
-            <img 
-              src="/logo.png" 
-              alt="QuizMaster Logo" 
-              className="h-9 w-auto max-w-[140px] object-contain transition-transform group-hover:scale-105" 
+            <Logo 
+              className="h-9 w-9 shrink-0 transition-transform group-hover:scale-105" 
+              alt="QuizMaster" 
             />
+            <span className="font-extrabold text-lg tracking-tight text-slate-800 dark:text-white hidden sm:inline">
+              QuizMaster
+            </span>
           </Link>
         </div>
 

@@ -2,18 +2,21 @@ import React from 'react';
 import { Outlet, Link } from 'react-router-dom';
 import { GraduationCap } from 'lucide-react';
 import { ThemeToggle } from '../components/common/ThemeToggle';
+import { Logo } from '../components/common/Logo';
 
 export const AuthLayout: React.FC = () => {
   return (
     <div className="min-h-[100dvh] bg-pastel-mesh dark:bg-slate-950 flex flex-col justify-between p-4 md:p-8 font-sans transition-colors relative overflow-x-hidden w-full">
       {/* Header with logo & theme toggle */}
       <div className="max-w-6xl w-full mx-auto flex items-center justify-between py-2">
-        <Link to="/" className="flex items-center">
-          <img 
-            src="/logo.png" 
-            alt="QuizMaster Logo" 
-            className="h-10 md:h-12 w-auto object-contain transition-transform transform scale-[1.75] origin-left hover:scale-[1.85]" 
+        <Link to="/" className="flex items-center gap-2.5 group">
+          <Logo 
+            className="h-10 w-10 shrink-0 transition-transform group-hover:scale-105" 
+            alt="QuizMaster" 
           />
+          <span className="font-extrabold text-xl tracking-tight text-slate-800 dark:text-white">
+            QuizMaster
+          </span>
         </Link>
         <ThemeToggle />
       </div>

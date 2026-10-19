@@ -4,6 +4,7 @@ import { motion } from 'framer-motion';
 import { useAuthStore } from '../stores/auth.store';
 import { formatUserName } from '../utils/user.utils';
 import { ChevronDown, User, LogOut } from 'lucide-react';
+import { Logo } from '../components/common/Logo';
 
 export const LandingPage: React.FC = () => {
   const { user, logout } = useAuthStore();
@@ -30,12 +31,14 @@ export const LandingPage: React.FC = () => {
 
       {/* Navigation Bar */}
       <nav className="relative z-50 flex items-center justify-between px-6 py-6 md:px-8 max-w-7xl mx-auto w-full">
-        <Link to="/" className="flex items-center">
-          <img 
-            src="/logo.png" 
-            alt="QuizMaster Logo" 
-            className="h-12 md:h-16 w-auto object-contain transition-transform transform scale-[2] origin-left hover:scale-[2.1]" 
+        <Link to="/" className="flex items-center gap-3 group">
+          <Logo 
+            className="h-10 md:h-12 w-auto shrink-0 transition-transform group-hover:scale-105" 
+            alt="QuizMaster" 
           />
+          <span className="font-extrabold text-xl md:text-2xl tracking-tight text-slate-900 font-sans">
+            QuizMaster
+          </span>
         </Link>
         
         <div className="hidden md:flex items-center gap-8 text-sm font-medium">

@@ -22,6 +22,11 @@ export const App: React.FC = () => {
     } else {
       document.documentElement.classList.remove('dark');
     }
+
+    const favicon = document.getElementById('dynamic-favicon') as HTMLLinkElement | null;
+    if (favicon) {
+      favicon.href = theme === 'dark' ? '/logo-dark.svg' : '/logo-light.svg';
+    }
   }, [theme]);
 
   return (

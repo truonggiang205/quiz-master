@@ -2,6 +2,7 @@ import React from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../stores/auth.store';
+import { Logo } from '../components/common/Logo';
 import {
   Users,
   LayoutDashboard,
@@ -36,8 +37,8 @@ export const AdminLayout: React.FC = () => {
       {/* Sidebar */}
       <aside className="w-64 bg-slate-900 text-slate-300 flex flex-col fixed inset-y-0 left-0 z-50">
         <div className="h-16 flex items-center px-6 border-b border-slate-800">
-          <Link to="/admin/dashboard" className="flex items-center gap-2 text-white font-bold text-lg tracking-tight">
-            <Shield className="w-6 h-6 text-sky-500" />
+          <Link to="/admin/dashboard" className="flex items-center gap-2.5 text-white font-bold text-lg tracking-tight group">
+            <Logo forceTheme="dark" className="h-7 w-7 shrink-0 transition-transform group-hover:scale-105" alt="QuizMaster" />
             <span>Admin Panel</span>
           </Link>
         </div>

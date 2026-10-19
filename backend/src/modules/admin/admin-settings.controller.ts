@@ -1,4 +1,6 @@
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
+import { RolesGuard } from '../../common/guards/roles.guard.js';
+import { Roles } from '../../common/decorators/roles.decorator.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
 import {
   Controller,
@@ -6,29 +8,33 @@ import {
   Patch,
   Body,
   Headers,
-  UnauthorizedException,
+  ForbiddenException,
+  UseGuards,
 } from '@nestjs/common';
-import { UseGuards } from '@nestjs/common';
 import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { AdminSettingsService, SystemSettings } from './admin-settings.service.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
 
 @ApiTags('Admin Settings')
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
+@Roles('ADMIN')
 @Controller('admin/settings')
 export class AdminSettingsController {
   constructor(private readonly settingsService: AdminSettingsService) {}
 
-  private checkAdmin(roleHeader?: string) {
-    if (roleHeader !== 'ADMIN') {
-      throw new UnauthorizedException('Bạn không có quyền truy cập');
+  private checkAdmin(user?: any) {
+    if (!user || user.role !== 'ADMIN') {
+      throw new ForbiddenException('Bạn không có quyền truy cập');
     }
   }
 
   @Get()
   @ApiOperation({ summary: 'Lấy cấu hình hệ thống (Admin)' })
-  getSettings(@Headers('x-user-role') roleHeader?: string) {
-    this.checkAdmin(roleHeader);
+  getSettings(
+    @CurrentUser() user: any,
+    @Headers('x-user-role') _roleHeader?: string,
+  ) {
+    this.checkAdmin(user);
     const data = this.settingsService.getSettings();
     return createSuccessResponse(data);
   }
@@ -36,10 +42,11 @@ export class AdminSettingsController {
   @Patch()
   @ApiOperation({ summary: 'Cập nhật cấu hình hệ thống (Admin)' })
   updateSettings(
+    @CurrentUser() user: any,
     @Body() updates: Partial<SystemSettings>,
-    @Headers('x-user-role') roleHeader?: string,
+    @Headers('x-user-role') _roleHeader?: string,
   ) {
-    this.checkAdmin(roleHeader);
+    this.checkAdmin(user);
     const data = this.settingsService.updateSettings(updates);
     return createSuccessResponse(data, 'Cập nhật cấu hình thành công');
   }

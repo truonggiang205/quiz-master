@@ -1,14 +1,16 @@
-import { IsEmail, IsNotEmpty, MinLength, IsOptional, IsEnum, IsDateString } from 'class-validator';
+import { IsEmail, IsNotEmpty, MinLength, MaxLength, IsOptional, IsEnum, IsDateString } from 'class-validator';
 import { ApiProperty } from '@nestjs/swagger';
 
 export class LoginDto {
   @ApiProperty({ example: 'teacher@example.com', description: 'User email' })
   @IsEmail()
+  @MaxLength(255)
   email!: string;
 
   @ApiProperty({ example: '123456', description: 'User password (at least 6 characters)' })
   @IsNotEmpty()
   @MinLength(6)
+  @MaxLength(100)
   password!: string;
 }
 
@@ -19,11 +21,13 @@ export class RegisterDto {
 
   @ApiProperty({ example: 'student@example.com', description: 'User email' })
   @IsEmail()
+  @MaxLength(255)
   email!: string;
 
   @ApiProperty({ example: '123456', description: 'User password' })
   @IsNotEmpty()
   @MinLength(6)
+  @MaxLength(100)
   password!: string;
 
   @ApiProperty({ example: 'STUDENT', enum: ['TEACHER', 'STUDENT'], default: 'STUDENT' })
@@ -33,6 +37,7 @@ export class RegisterDto {
 
   @ApiProperty({ example: 'THPT Chuyên Hà Nội - Amsterdam', required: false })
   @IsOptional()
+  @MaxLength(255)
   school?: string;
 
   @ApiProperty({ example: '2005-11-09', required: false, description: 'Date of birth' })
@@ -49,30 +54,36 @@ export class RegisterDto {
 export class VerifyOtpDto {
   @ApiProperty({ example: 'student@example.com' })
   @IsEmail()
+  @MaxLength(255)
   email!: string;
 
   @ApiProperty({ example: '123456' })
   @IsNotEmpty()
+  @MaxLength(10)
   otp!: string;
 }
 
 export class ForgotPasswordDto {
   @ApiProperty({ example: 'student@example.com' })
   @IsEmail()
+  @MaxLength(255)
   email!: string;
 }
 
 export class ResetPasswordDto {
   @ApiProperty({ example: 'student@example.com' })
   @IsEmail()
+  @MaxLength(255)
   email!: string;
 
   @ApiProperty({ example: '123456' })
   @IsNotEmpty()
+  @MaxLength(10)
   otp!: string;
 
   @ApiProperty({ example: 'newpassword123' })
   @IsNotEmpty()
   @MinLength(6)
+  @MaxLength(100)
   newPassword!: string;
 }

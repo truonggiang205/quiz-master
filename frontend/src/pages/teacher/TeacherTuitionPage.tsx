@@ -16,6 +16,7 @@ import {
   FileSpreadsheet,
   Receipt,
   User,
+  Users,
   BookOpen,
   Calendar,
   ChevronDown,
@@ -103,6 +104,22 @@ export const TeacherTuitionPage: React.FC = () => {
 
   // Status dropdown toggle: active tuition ID
   const [activeStatusDropdownId, setActiveStatusDropdownId] = useState<string | null>(null);
+
+  const classMap = useMemo(() => {
+    const map = new Map<string, Classroom>();
+    classes.forEach((c) => map.set(c.id, c));
+    return map;
+  }, [classes]);
+
+  const isClassOneOnOne = (className?: string, classId?: string): boolean => {
+    if (classId) {
+      const cls = classMap.get(classId);
+      if (cls?.isPrivate !== undefined) return cls.isPrivate;
+    }
+    if (!className) return false;
+    const lower = className.toLowerCase();
+    return lower.includes('kèm 1-1') || lower.includes('kèm 1:1') || lower.includes('1-1') || lower.includes('1:1');
+  };
 
   // Teacher Bank Info (persisted in localStorage)
   const [bankInfo, setBankInfo] = useState<TeacherBankInfo>(() => {
@@ -949,7 +966,7 @@ export const TeacherTuitionPage: React.FC = () => {
                 <tr className="bg-[#F8FAFC] dark:bg-slate-800/50 text-[11px] font-semibold text-[#64748B] dark:text-slate-400 uppercase tracking-wider border-b border-[#E8EDF5] dark:border-slate-800">
                   <th className="py-3.5 px-4 w-12 text-center">STT</th>
                   <th className="py-3.5 px-4">HỌC SINH</th>
-                  <th className="py-3.5 px-4">LỚP</th>
+                  <th className="py-3.5 px-4 whitespace-nowrap">LỚP</th>
                   <th className="py-3.5 px-4 text-center">SỐ BUỔI</th>
                   <th className="py-3.5 px-4 text-center">SỐ GIỜ</th>
                   <th className="py-3.5 px-4 text-right">TỔNG</th>
@@ -1025,8 +1042,24 @@ export const TeacherTuitionPage: React.FC = () => {
                               </td>
 
                               {/* Class */}
-                              <td className="py-3.5 px-4 font-medium text-slate-600 dark:text-slate-300">
-                                {row.className}
+                              <td className="py-3.5 px-4 font-medium text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                                {isClassOneOnOne(row.className, row.classId) ? (
+                                  <span
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-sky-50 text-sky-700 border border-sky-200/80 dark:bg-sky-950/50 dark:text-sky-300 dark:border-sky-800/50 whitespace-nowrap"
+                                    title={row.className}
+                                  >
+                                    <User className="w-3 h-3 shrink-0" />
+                                    <span>Kèm 1-1</span>
+                                  </span>
+                                ) : (
+                                  <span
+                                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-indigo-50 text-indigo-700 border border-indigo-200/80 dark:bg-indigo-950/50 dark:text-indigo-300 dark:border-indigo-800/50 whitespace-nowrap"
+                                    title={row.className}
+                                  >
+                                    <Users className="w-3 h-3 shrink-0" />
+                                    <span>Lớp học chung</span>
+                                  </span>
+                                )}
                               </td>
 
                               {/* Sessions: Clickable Link to Schedule */}
@@ -1785,7 +1818,9 @@ export const TeacherTuitionPage: React.FC = () => {
                           <div className="font-bold text-slate-800 dark:text-slate-200">
                             {row.studentName}
                           </div>
-                          <div className="text-[10px] text-slate-400">{row.className}</div>
+                          <div className="text-[10px] text-slate-400">
+                            {isClassOneOnOne(row.className, row.classId) ? 'Kèm 1-1' : 'Lớp học chung'}
+                          </div>
                         </div>
                       </div>
                       <span className="font-bold text-rose-600 dark:text-rose-400">

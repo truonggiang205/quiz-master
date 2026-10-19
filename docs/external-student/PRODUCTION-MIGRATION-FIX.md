@@ -174,6 +174,9 @@ Thứ tự khởi động chuẩn được cấu hình trong [main.ts](file:///d
 +-------------------------------------------------------------+
 ```
 
+> [!IMPORTANT]
+> **Cơ chế Fail-Fast:** Nếu pre-flight migration thất bại (do dữ liệu mồ côi không thể giải quyết, lỗi kết nối hoặc vi phạm toàn vẹn), tiến trình sẽ xuất log lỗi nghiêm trọng và lập tức thoát (`process.exit(1)`). Ứng dụng **tuyệt đối không bao giờ được phép khởi động** nếu cơ sở dữ liệu chưa được chuẩn hóa và kiểm định an toàn thành công.
+
 ---
 
 ## 8. Foreign Key Strategy: ON DELETE RESTRICT

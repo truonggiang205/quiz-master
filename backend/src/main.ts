@@ -13,7 +13,8 @@ async function bootstrap() {
     );
     await runExternalStudentLegacyBackfill();
   } catch (err: any) {
-    console.error('⚠️ Pre-flight migration error (continuing bootstrap):', err.message);
+    console.error('❌ FATAL: Pre-flight migration failed! Stopping bootstrap to prevent data corruption:', err.message);
+    process.exit(1);
   }
 
   const app = await NestFactory.create(AppModule);

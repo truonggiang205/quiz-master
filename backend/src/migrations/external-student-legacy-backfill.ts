@@ -36,8 +36,7 @@ export async function runExternalStudentLegacyBackfill(
     port: Number(process.env.DB_PORT) || 3306,
     user: process.env.DB_USERNAME || 'root',
     password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_DATABASE || 'quizmaster',
-    ssl: process.env.DB_SSL === 'true' ? { rejectUnauthorized: false } : undefined,
+    ssl: (process.env.DB_SSL === 'true' || (process.env.DB_HOST || '').includes('aivencloud.com')) ? { rejectUnauthorized: false } : undefined,
   };
 
   const connection = await mysql.createConnection(config);

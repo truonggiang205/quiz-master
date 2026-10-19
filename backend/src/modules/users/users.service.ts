@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException } from '@nestjs/common';
+import { Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
 import { UserEntity } from '../../entities/user.entity.js';
@@ -16,6 +16,9 @@ export class UsersService {
     if (!user) {
       throw new NotFoundException('Không tìm thấy người dùng');
     }
+    if (user.isActive === false) {
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa bởi quản trị viên');
+    }
     return user;
   }
 
@@ -23,6 +26,9 @@ export class UsersService {
     const user = await this.userRepo.findOneBy({ id });
     if (!user) {
       throw new NotFoundException('Không tìm thấy người dùng để cập nhật');
+    }
+    if (user.isActive === false) {
+      throw new UnauthorizedException('Tài khoản của bạn đã bị khóa bởi quản trị viên');
     }
 
     const { dob, ...rest } = dto;

@@ -9,6 +9,7 @@ import { Repository } from 'typeorm';
 import { ScoreRecordEntity, AssessmentType } from '../entities/score-record.entity.js';
 import { ClassEntity } from '../../../entities/class.entity.js';
 import { UserEntity } from '../../../entities/user.entity.js';
+import { TeacherStudentEntity } from '../../students/entities/teacher-student.entity.js';
 import { LessonEntity } from '../entities/lesson.entity.js';
 import { CreateScoreDto, UpdateScoreDto } from '../dto/score.dto.js';
 import * as xlsx from 'xlsx';
@@ -42,6 +43,8 @@ export class ScoresService {
     private readonly userRepo: Repository<UserEntity>,
     @InjectRepository(LessonEntity)
     private readonly lessonRepo: Repository<LessonEntity>,
+    @InjectRepository(TeacherStudentEntity)
+    private readonly teacherStudentRepo?: Repository<TeacherStudentEntity>,
   ) {}
 
   private validateScoreRange(score: number, maxScore: number) {
@@ -131,18 +134,37 @@ export class ScoresService {
 
     if (!classEntity && classId.startsWith('private-')) {
       const studentId = classId.replace('private-', '');
-      const student = await this.userRepo.findOne({ where: { id: studentId } });
-      if (student) {
+      let studentName = '';
+      let studentUser: UserEntity | null = null;
+
+      if (this.teacherStudentRepo) {
+        const ts = await this.teacherStudentRepo.findOne({
+          where: [{ id: studentId, teacherId }, { studentAccountId: studentId, teacherId }],
+        });
+        if (ts) {
+          studentName = ts.fullName;
+          if (ts.studentAccountId) {
+            studentUser = await this.userRepo.findOne({ where: { id: ts.studentAccountId } });
+          }
+        }
+      }
+
+      if (!studentName) {
+        studentUser = await this.userRepo.findOne({ where: { id: studentId } });
+        if (studentUser) studentName = studentUser.name;
+      }
+
+      if (studentName) {
         const rawCode = `PV${studentId.replace(/\D/g, '').slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
         classEntity = this.classRepo.create({
           id: classId,
-          name: `Kèm 1-1: ${student.name}`,
+          name: `Kèm 1-1: ${studentName}`,
           subject: 'Gia sư cá nhân',
           description: 'Lớp học riêng 1 kèm 1',
           inviteCode: rawCode,
           isPrivate: true,
           teacherId,
-          students: [student],
+          students: studentUser ? [studentUser] : [],
         });
         await this.classRepo.save(classEntity);
       }
@@ -173,8 +195,17 @@ export class ScoresService {
       throw new ForbiddenException('Bạn không có quyền nhập điểm cho lớp học này');
     }
 
-    // Validate student is enrolled in class
-    const isStudentInClass = classEntity.students.some((s) => s.id === dto.studentId);
+    // Validate student is enrolled in class (supports both TeacherStudent and UserEntity)
+    let isStudentInClass = classEntity.students.some((s) => s.id === dto.studentId);
+    if (!isStudentInClass && classEntity.id.startsWith('private-')) {
+      isStudentInClass = classEntity.id === `private-${dto.studentId}`;
+    }
+    if (!isStudentInClass && this.teacherStudentRepo) {
+      const ts = await this.teacherStudentRepo.findOne({
+        where: [{ id: dto.studentId, teacherId }, { studentAccountId: dto.studentId, teacherId }],
+      });
+      if (ts) isStudentInClass = true;
+    }
     if (!isStudentInClass) {
       throw new BadRequestException('Học sinh này không thuộc lớp học được chọn');
     }

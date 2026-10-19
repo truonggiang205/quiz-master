@@ -13,6 +13,7 @@ import { LessonEntity } from '../entities/lesson.entity.js';
 import { LessonParticipantEntity } from '../entities/lesson-participant.entity.js';
 import { ClassEntity } from '../../../entities/class.entity.js';
 import { UserEntity } from '../../../entities/user.entity.js';
+import { TeacherStudentEntity } from '../../students/entities/teacher-student.entity.js';
 import {
   CreateTuitionAdjustmentDto,
   RecordPaymentDto,
@@ -28,6 +29,7 @@ export interface TuitionRowSummary {
   studentName: string;
   studentEmail: string;
   studentAvatar?: string | null;
+  isExternal?: boolean;
   classId: string;
   className: string;
   month: string;
@@ -62,6 +64,8 @@ export class TuitionService {
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
     private readonly dataSource: DataSource,
+    @InjectRepository(TeacherStudentEntity)
+    private readonly teacherStudentRepo?: Repository<TeacherStudentEntity>,
   ) {}
 
   /**
@@ -346,9 +350,10 @@ export class TuitionService {
       return {
         id: item.id,
         studentId: item.studentId,
-        studentName: item.student?.name || '',
+        studentName: (item.student as any)?.fullName || (item.student as any)?.name || '',
         studentEmail: item.student?.email || '',
         studentAvatar: item.student?.avatar || null,
+        isExternal: (item.student as any)?.studentAccountId === null || (item.student as any)?.studentAccountId === undefined ? true : !(item.student as any)?.studentAccountId,
         classId: item.classId,
         className: item.class?.name || '',
         month: item.month,

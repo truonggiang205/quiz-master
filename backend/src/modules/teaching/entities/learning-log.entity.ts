@@ -10,6 +10,8 @@ import {
 } from 'typeorm';
 import { UserEntity } from '../../../entities/user.entity.js';
 import type { UserEntity as IUserEntity } from '../../../entities/user.entity.js';
+import { TeacherStudentEntity } from '../../students/entities/teacher-student.entity.js';
+import type { TeacherStudentEntity as ITeacherStudentEntity } from '../../students/entities/teacher-student.entity.js';
 import { ClassEntity } from '../../../entities/class.entity.js';
 import type { ClassEntity as IClassEntity } from '../../../entities/class.entity.js';
 import { LessonEntity } from './lesson.entity.js';
@@ -65,9 +67,9 @@ export class LearningLogEntity {
   @JoinColumn({ name: 'lessonId' })
   lesson: ILessonEntity;
 
-  @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
+  @ManyToOne(() => TeacherStudentEntity, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'studentId' })
-  student: IUserEntity;
+  student: ITeacherStudentEntity;
 
   @CreateDateColumn()
   createdAt: Date;

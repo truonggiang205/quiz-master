@@ -9,8 +9,8 @@ import {
 } from 'typeorm';
 import { TuitionItemEntity } from './tuition-item.entity.js';
 import type { TuitionItemEntity as ITuitionItemEntity } from './tuition-item.entity.js';
-import { UserEntity } from '../../../entities/user.entity.js';
-import type { UserEntity as IUserEntity } from '../../../entities/user.entity.js';
+import { TeacherStudentEntity } from '../../students/entities/teacher-student.entity.js';
+import type { TeacherStudentEntity as ITeacherStudentEntity } from '../../students/entities/teacher-student.entity.js';
 
 export type PaymentMethod = 'CASH' | 'BANK_TRANSFER' | 'MOMO' | 'OTHER';
 
@@ -50,9 +50,9 @@ export class TuitionPaymentEntity {
   @JoinColumn({ name: 'tuitionItemId' })
   tuitionItem: ITuitionItemEntity;
 
-  @ManyToOne(() => UserEntity, { onDelete: 'CASCADE' })
+  @ManyToOne(() => TeacherStudentEntity, { onDelete: 'CASCADE', nullable: true })
   @JoinColumn({ name: 'studentId' })
-  student: IUserEntity;
+  student: ITeacherStudentEntity;
 
   @CreateDateColumn()
   createdAt: Date;

@@ -12,8 +12,18 @@ async function bootstrap() {
       './migrations/external-student-legacy-backfill.js'
     );
     await runExternalStudentLegacyBackfill();
-  } catch (err: any) {
-    console.error('❌ FATAL: Pre-flight migration failed! Stopping bootstrap to prevent data corruption:', err.message);
+  } catch (err: unknown) {
+    console.error('❌ FATAL: Pre-flight migration failed!');
+    console.error('Error type:', typeof err);
+
+    if (err instanceof Error) {
+      console.error('Error name:', err.name);
+      console.error('Error message:', err.message);
+      console.error('Error stack:', err.stack);
+    } else {
+      console.error('Raw error:', err);
+    }
+
     process.exit(1);
   }
 

@@ -31,15 +31,22 @@ export interface MigrationResult {
 export async function runExternalStudentLegacyBackfill(
   customConfig?: mysql.ConnectionOptions,
 ): Promise<MigrationResult> {
-  const config: mysql.ConnectionOptions = customConfig || {
-    host: process.env.DB_HOST || 'localhost',
-    port: Number(process.env.DB_PORT) || 3306,
-    user: process.env.DB_USERNAME || 'root',
-    password: process.env.DB_PASSWORD || '',
-    ssl: (process.env.DB_SSL === 'true' || (process.env.DB_HOST || '').includes('aivencloud.com')) ? { rejectUnauthorized: false } : undefined,
-  };
+  const dbHost = process.env.DB_HOST || 'csm-db-truonggiang-205.l.aivencloud.com';
+  const dbPort = Number(process.env.DB_PORT) || 25532;
+  const dbUser = process.env.DB_USERNAME || 'avnadmin';
+  const dbPassword = process.env.DB_PASSWORD || 'AVNS__ZUD3CAQkiIrycmV2VH';
+  const dbDatabase = process.env.DB_DATABASE || 'quizmaster';
+  const isAiven = dbHost.includes('aivencloud.com');
+  const dbSsl = (process.env.DB_SSL === 'true' || isAiven) ? { rejectUnauthorized: false } : undefined;
 
-  const connection = await mysql.createConnection(config);
+  const config: mysql.ConnectionOptions = customConfig || {
+    host: dbHost,
+    port: dbPort,
+    user: dbUser,
+    password: dbPassword,
+    database: dbDatabase,
+    ssl: dbSsl,
+  };
 
   const result: MigrationResult = {
     success: false,
@@ -64,15 +71,27 @@ export async function runExternalStudentLegacyBackfill(
     unresolvedRecords: [],
   };
 
+  let connection: mysql.Connection | null = null;
+  let inTransaction = false;
+
   try {
     console.log('[Migration] Starting External Student Legacy Backfill Migration...');
+    console.log('[Migration] Phase 1: Connecting to database...');
+    console.log('[Migration] Database connection options (safe diagnostics):', {
+      host: config.host,
+      port: config.port,
+      user: config.user,
+      database: config.database,
+      ssl: config.ssl ? 'ENABLED (rejectUnauthorized: false)' : 'DISABLED',
+    });
+
+    connection = await mysql.createConnection(config);
+    console.log('[Migration] Connected to database successfully.');
 
     // 1. Check existing tables
+    console.log('[Migration] Phase 2: Ensuring teacher_student_profiles schema...');
     const [tablesRaw] = await connection.query(`SHOW TABLES;`);
     const tables = (tablesRaw as any[]).map((r) => Object.values(r)[0] as string);
-
-    // 2. Ensure teacher_student_profiles table exists with canonical schema
-    console.log('[Migration] Step 1: Ensuring teacher_student_profiles table exists...');
     await connection.query(`
       CREATE TABLE IF NOT EXISTS \`teacher_student_profiles\` (
         \`id\` varchar(64) NOT NULL,
@@ -136,8 +155,9 @@ export async function runExternalStudentLegacyBackfill(
     }
 
     // START TRANSACTION FOR DATA MIGRATION
-    console.log('[Migration] Step 2: Beginning transactional data reconciliation...');
+    console.log('[Migration] Phase 3: Starting transaction & discovering relationships from 7 sources...');
     await connection.beginTransaction();
+    inTransaction = true;
 
     // Load existing profiles into memory
     const [profiles] = await connection.query(`
@@ -293,7 +313,8 @@ export async function runExternalStudentLegacyBackfill(
       }
     }
 
-    console.log(`[Migration] Step 3: Discovered ${candidatePairs.size} candidate teacher-student pairs.`);
+    console.log(`[Migration] Discovered ${candidatePairs.size} candidate teacher-student pairs.`);
+    console.log('[Migration] Phase 4: Backfilling / resolving profiles...');
 
     // Mapping: "teacherId__rawStudentId" -> targetProfileId
     const pairToProfileMap = new Map<string, string>();
@@ -365,11 +386,11 @@ export async function runExternalStudentLegacyBackfill(
     }
 
     console.log(
-      `[Migration] Step 4: Backfilled ${result.profilesCreated} profiles, reused ${result.profilesReused} existing profiles.`,
+      `[Migration] Backfilled ${result.profilesCreated} profiles, reused ${result.profilesReused} existing profiles.`,
     );
 
     // 5. Rewrite legacy references in all 5 teaching tables
-    console.log('[Migration] Step 5: Rewriting legacy studentId references in teaching tables...');
+    console.log('[Migration] Phase 5: Rewriting teaching references across 5 tables...');
 
     // A. teaching_lesson_participants
     if (tables.includes('teaching_lesson_participants') && tables.includes('teaching_lessons')) {
@@ -463,7 +484,7 @@ export async function runExternalStudentLegacyBackfill(
     }
 
     // 6. Validation step before commit
-    console.log('[Migration] Step 6: Performing integrity validation across all 5 tables...');
+    console.log('[Migration] Phase 6: Validating integrity across all 5 tables...');
 
     if (tables.includes('teaching_lesson_participants')) {
       const [res]: any = await connection.query(`
@@ -541,14 +562,16 @@ export async function runExternalStudentLegacyBackfill(
     }
 
     // COMMIT DATA CHANGES
+    console.log('[Migration] Phase 7: Committing data reconciliation transaction...');
     await connection.commit();
-    console.log('[Migration] Step 7: Data reconciliation committed successfully!');
+    inTransaction = false;
+    console.log('[Migration] Data reconciliation committed successfully!');
 
     // 7. Enforce Foreign Key Constraints safely
-    console.log('[Migration] Step 8: Aligning foreign key constraints to teacher_student_profiles...');
+    console.log('[Migration] Phase 8: Updating and aligning foreign key constraints to teacher_student_profiles...');
 
     const alignForeignKey = async (tableName: string, constraintName: string) => {
-      if (!tables.includes(tableName)) return;
+      if (!tables.includes(tableName) || !connection) return;
 
       // Find existing constraints on studentId
       const [existingFKs]: any = await connection.query(`
@@ -596,20 +619,24 @@ export async function runExternalStudentLegacyBackfill(
     await alignForeignKey('teaching_scores', 'FK_teaching_scores_student');
 
     result.success = true;
-    console.log('[Migration] External Student Legacy Backfill COMPLETED SUCCESSFULLY.');
+    console.log('[Migration] Phase 9: External Student Legacy Backfill COMPLETED SUCCESSFULLY.');
     return result;
   } catch (err: any) {
-    try {
-      await connection.rollback();
-      console.error('[Migration] Transaction rolled back due to error.');
-    } catch (rbErr: any) {
-      console.error('[Migration] Rollback error:', rbErr.message);
+    if (inTransaction && connection) {
+      try {
+        await connection.rollback();
+        console.error('[Migration] Transaction rolled back due to error.');
+      } catch (rbErr: any) {
+        console.error('[Migration] Rollback error:', rbErr.message);
+      }
     }
     result.error = err.message;
-    console.error('[Migration] Migration failed:', err.message);
+    console.error('[Migration] Migration failed with error:', err.message);
     throw err;
   } finally {
-    await connection.end();
+    if (connection) {
+      await connection.end();
+    }
   }
 }
 

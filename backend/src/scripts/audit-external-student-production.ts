@@ -1,6 +1,5 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-import path from 'path';
 
 dotenv.config();
 
@@ -39,12 +38,21 @@ export interface AuditReport {
 }
 
 export async function auditProductionDatabase(connectionConfig?: mysql.ConnectionOptions): Promise<AuditReport> {
+  const dbHost = process.env.DB_HOST || 'csm-db-truonggiang-205.l.aivencloud.com';
+  const dbPort = Number(process.env.DB_PORT) || 25532;
+  const dbUser = process.env.DB_USERNAME || 'avnadmin';
+  const dbPassword = process.env.DB_PASSWORD || 'AVNS__ZUD3CAQkiIrycmV2VH';
+  const dbDatabase = process.env.DB_DATABASE || 'quizmaster';
+  const isAiven = dbHost.includes('aivencloud.com');
+  const dbSsl = (process.env.DB_SSL === 'true' || isAiven) ? { rejectUnauthorized: false } : undefined;
+
   const config: mysql.ConnectionOptions = connectionConfig || {
-    host: process.env.DB_HOST || 'localhost',
-    port: Number(process.env.DB_PORT) || 3306,
-    user: process.env.DB_USERNAME || 'root',
-    password: process.env.DB_PASSWORD || '',
-    ssl: (process.env.DB_SSL === 'true' || (process.env.DB_HOST || '').includes('aivencloud.com')) ? { rejectUnauthorized: false } : undefined,
+    host: dbHost,
+    port: dbPort,
+    user: dbUser,
+    password: dbPassword,
+    database: dbDatabase,
+    ssl: dbSsl,
   };
 
   const connection = await mysql.createConnection(config);

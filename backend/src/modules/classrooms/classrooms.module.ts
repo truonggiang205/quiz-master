@@ -4,11 +4,12 @@ import { ClassEntity } from '../../entities/class.entity.js';
 import { UserEntity } from '../../entities/user.entity.js';
 import { QuizEntity } from '../../entities/quiz.entity.js';
 import { SubmissionEntity } from '../../entities/submission.entity.js';
+import { TeacherStudentEntity } from '../students/entities/teacher-student.entity.js';
 import { ClassroomsController } from './classrooms.controller.js';
 import { ClassroomsService } from './classrooms.service.js';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([ClassEntity, UserEntity, QuizEntity, SubmissionEntity])],
+  imports: [TypeOrmModule.forFeature([ClassEntity, UserEntity, QuizEntity, SubmissionEntity, TeacherStudentEntity])],
   controllers: [ClassroomsController],
   providers: [ClassroomsService],
   exports: [ClassroomsService],

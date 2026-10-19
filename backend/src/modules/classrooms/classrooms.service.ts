@@ -6,6 +6,7 @@ import { UserEntity } from '../../entities/user.entity.js';
 import { QuizEntity } from '../../entities/quiz.entity.js';
 import { SubmissionEntity } from '../../entities/submission.entity.js';
 import { CreateClassDto, JoinClassDto } from './dto/classroom.dto.js';
+import { TeacherStudentEntity } from '../students/entities/teacher-student.entity.js';
 import * as bcrypt from 'bcrypt';
 import * as xlsx from 'xlsx';
 
@@ -46,6 +47,8 @@ export class ClassroomsService {
     private readonly quizRepo: Repository<QuizEntity>,
     @InjectRepository(SubmissionEntity)
     private readonly submissionRepo: Repository<SubmissionEntity>,
+    @InjectRepository(TeacherStudentEntity)
+    private readonly teacherStudentRepo: Repository<TeacherStudentEntity>,
   ) {}
 
   // Sinh mã lớp ngẫu nhiên dạng: SUBJECT-XXXX (Ví dụ: MATH-A8F2)
@@ -710,25 +713,63 @@ export class ClassroomsService {
       // Kiểm tra học sinh trong hệ thống
       let student = await this.userRepo.findOneBy({ email });
       if (!student) {
-        // Tạo tài khoản học sinh mới
-        const hashedPassword = await bcrypt.hash('123456', 10);
-        student = this.userRepo.create({
-          id: `std-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
-          name,
-          email,
-          password: hashedPassword,
-          role: 'STUDENT',
-          isActive: true,
-          isVerified: true,
-          phone: item.phone || '',
-          school: item.school || '',
+        // NGHIỆP VỤ EXTERNAL STUDENT:
+        // TUYỆT ĐỐI KHÔNG tạo User giả, KHÔNG tạo password mặc định "123456".
+        // Tạo hồ sơ TeacherStudent với studentAccountId = null.
+        let teacherStudent = await this.teacherStudentRepo.findOne({
+          where: {
+            teacherId,
+            fullName: name,
+          },
         });
-        student = await this.userRepo.save(student);
+        if (!teacherStudent) {
+          teacherStudent = this.teacherStudentRepo.create({
+            id: `ts-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+            teacherId,
+            fullName: name,
+            phone: item.phone || null,
+            school: item.school || null,
+            note: `Imported từ Excel lớp ${classDetails.name} (Email: ${email})`,
+            status: 'ACTIVE',
+            studentAccountId: null,
+          });
+          await this.teacherStudentRepo.save(teacherStudent);
+        }
+        successCount++;
+      } else {
+        if (student.role === 'STUDENT') {
+          // Học sinh có tài khoản: liên kết hoặc bảo đảm hồ sơ TeacherStudent tồn tại
+          let teacherStudent = await this.teacherStudentRepo.findOne({
+            where: {
+              teacherId,
+              studentAccountId: student.id,
+            },
+          });
+          if (!teacherStudent) {
+            teacherStudent = this.teacherStudentRepo.create({
+              id: `ts-${Date.now()}-${Math.random().toString(36).substring(2, 7)}`,
+              teacherId,
+              fullName: student.name || name,
+              phone: student.phone || item.phone || null,
+              school: student.school || item.school || null,
+              note: `Imported từ Excel lớp ${classDetails.name}`,
+              status: 'ACTIVE',
+              studentAccountId: student.id,
+            });
+            await this.teacherStudentRepo.save(teacherStudent);
+          }
+          studentsToAdd.push(student);
+          existingClassEmails.add(email);
+          successCount++;
+        } else {
+          errors.push({
+            row: rowNum,
+            name,
+            email,
+            message: `Tài khoản với email "${email}" không phải học sinh (Role: ${student.role})`,
+          });
+        }
       }
-
-      studentsToAdd.push(student);
-      existingClassEmails.add(email);
-      successCount++;
     }
 
     if (studentsToAdd.length > 0) {

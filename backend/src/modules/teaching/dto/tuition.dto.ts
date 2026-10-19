@@ -31,3 +31,42 @@ export class RecordPaymentDto {
   @IsOptional()
   note?: string;
 }
+
+export class BulkTuitionAdjustmentDto {
+  @IsEnum(['SURCHARGE', 'DISCOUNT'])
+  type: 'SURCHARGE' | 'DISCOUNT';
+
+  @IsNumber()
+  @Min(0.01)
+  amount: number;
+
+  @IsString()
+  @IsNotEmpty()
+  reason: string;
+
+  @IsNotEmpty()
+  tuitionIds: string[];
+}
+
+export class BulkPaymentDto {
+  @IsNotEmpty()
+  tuitionIds: string[];
+
+  @IsString()
+  @IsNotEmpty()
+  paymentDate: string;
+
+  @IsEnum(['CASH', 'BANK_TRANSFER', 'MOMO', 'OTHER'])
+  @IsOptional()
+  paymentMethod?: PaymentMethod;
+
+  @IsString()
+  @IsOptional()
+  note?: string;
+}
+
+export class UpdateTuitionStatusDto {
+  @IsEnum(['PAID', 'UNPAID', 'PARTIALLY_PAID'])
+  status: 'PAID' | 'UNPAID' | 'PARTIALLY_PAID';
+}
+

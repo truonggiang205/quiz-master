@@ -40,6 +40,9 @@ export class TuitionPaymentEntity {
   @Column({ type: 'varchar', length: 50, default: 'CASH' })
   paymentMethod: PaymentMethod;
 
+  @Column({ type: 'varchar', length: 20, default: 'COMPLETED' })
+  status: 'COMPLETED' | 'REFUNDED' | 'VOIDED';
+
   @Column({ type: 'text', nullable: true })
   note: string;
 

@@ -114,11 +114,13 @@ Tập test suite chấp nhận: `src/modules/students/tests/external-student-acc
 ✓ EXT-ACCEPT-12: Từ chối liên kết tài khoản không hợp lệ (ADMIN, TEACHER, hoặc tài khoản đã liên kết)
 ✓ EXT-ACCEPT-13: Hủy liên kết tài khoản chuyển về External Student; toàn bộ lịch sử giữ nguyên 100%
 ✓ EXT-ACCEPT-14: Chống IDOR tuyệt đối — Teacher A không được xem, sửa, xóa, hoặc thao tác trên học sinh của Teacher B
-✓ EXT-ACCEPT-15: Tương thích hoàn hảo với học sinh legacy và import Excel không tạo fake User
-✓ EXT-ACCEPT-16: Chống xóa vĩnh viễn (hard delete) khi học sinh đã có dữ liệu lịch sử (học phí/buổi học/điểm số)
+✓ EXT-ACCEPT-15: Chống xóa vĩnh viễn (hard delete) khi học sinh đã có dữ liệu lịch sử; cho phép xóa khi chưa có lịch sử
+✓ EXT-ACCEPT-16: Import Excel học sinh mới chỉ tạo TeacherStudent (studentAccountId = null), KHÔNG tạo User mới, KHÔNG có pass "123456"
+✓ EXT-ACCEPT-17: Tương thích hoàn hảo với học sinh legacy — resolve 2 chiều ID và bảo toàn toàn bộ lịch sử đa phân hệ
+✓ EXT-ACCEPT-18: Cách ly dữ liệu chéo tài khoản — Teacher B đăng nhập không thấy bất kỳ dữ liệu nào của Teacher A
 
-Tổng số test case E2E Acceptance: 16/16 PASSED (100%)
-Toàn bộ test suite backend: 20/20 files passed, 245/245 tests passed (100%)
+Tổng số test case E2E Acceptance: 18/18 PASSED (100%)
+Toàn bộ test suite backend: 20/20 files passed, 247/247 tests passed (100%)
 Backend build (`nest build`): PASSED (Code 0)
 Frontend build (`vite build`): PASSED (Code 0)
 ```
@@ -182,4 +184,4 @@ Frontend build (`vite build`): PASSED (Code 0)
 ### Căn cứ kết luận:
 1. **Đáp ứng 100% nghiệp vụ:** Giáo viên có thể quản lý một học sinh hoàn toàn bên ngoài hệ thống (từ tạo hồ sơ, xếp lịch, điểm danh, viết nhận xét, chấm điểm, tính học phí, thu tiền mặt/chuyển khoản, phụ thu/giảm trừ cho đến liên kết và hủy liên kết tài khoản) mà không cần tạo tài khoản `User` cho học sinh.
 2. **Bảo toàn dữ liệu & An toàn bảo mật:** Chống IDOR triệt để, không rò rỉ dữ liệu giữa các giáo viên, bảo vệ toàn vẹn lịch sử thanh toán và chống overpayment.
-3. **Độ ổn định cao:** 16/16 test case Acceptance E2E đạt chuẩn; 245/245 test case backend regression vượt qua; cả backend và frontend biên dịch thành công 100%.
+3. **Độ ổn định cao:** 18/18 test case Acceptance E2E đạt chuẩn; 247/247 test case backend regression vượt qua; cả backend và frontend biên dịch thành công 100%.

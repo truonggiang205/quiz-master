@@ -2029,7 +2029,7 @@ export const TeacherTuitionPage: React.FC = () => {
                       handleOpenPayment({
                         id: selectedTuition.id,
                         studentId: selectedTuition.studentId,
-                        studentName: selectedTuition.student?.name || '',
+                        studentName: selectedTuition.student?.name || (selectedTuition.student as any)?.fullName || 'Học sinh',
                         studentEmail: selectedTuition.student?.email || '',
                         studentAvatar: selectedTuition.student?.avatar,
                         classId: selectedTuition.classId,

@@ -303,10 +303,10 @@ export const TeacherLearningLogsPage: React.FC = () => {
       }
       if (searchKeyword.trim()) {
         const query = searchKeyword.toLowerCase();
-        const matchesName = student.name.toLowerCase().includes(query);
-        const matchesEmail = student.email?.toLowerCase().includes(query);
-        const matchesSubject = student.subject?.toLowerCase().includes(query);
-        const matchesClass = student.className.toLowerCase().includes(query);
+        const matchesName = (student.name || '').toLowerCase().includes(query);
+        const matchesEmail = student.email ? student.email.toLowerCase().includes(query) : false;
+        const matchesSubject = student.subject ? student.subject.toLowerCase().includes(query) : false;
+        const matchesClass = (student.className || '').toLowerCase().includes(query);
         const matchesLog = logs.some(
           (l) =>
             l.studentId === student.id &&

@@ -6,6 +6,16 @@ import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter.js';
 
 async function bootstrap() {
+  // Pre-flight legacy data reconciliation before TypeORM initializes schema
+  try {
+    const { runExternalStudentLegacyBackfill } = await import(
+      './migrations/external-student-legacy-backfill.js'
+    );
+    await runExternalStudentLegacyBackfill();
+  } catch (err: any) {
+    console.error('⚠️ Pre-flight migration error (continuing bootstrap):', err.message);
+  }
+
   const app = await NestFactory.create(AppModule);
 
   // Global prefix

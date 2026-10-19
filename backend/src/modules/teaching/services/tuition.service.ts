@@ -27,6 +27,7 @@ export interface TuitionRowSummary {
   studentId: string;
   studentName: string;
   studentEmail: string;
+  studentAvatar?: string | null;
   classId: string;
   className: string;
   month: string;
@@ -347,6 +348,7 @@ export class TuitionService {
         studentId: item.studentId,
         studentName: item.student?.name || '',
         studentEmail: item.student?.email || '',
+        studentAvatar: item.student?.avatar || null,
         classId: item.classId,
         className: item.class?.name || '',
         month: item.month,

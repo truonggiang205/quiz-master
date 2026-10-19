@@ -951,7 +951,7 @@ export const TeacherTuitionPage: React.FC = () => {
                                   <UserAvatar
                                     user={{
                                       name: row.studentName,
-                                      avatar: (row as any).studentAvatar,
+                                      avatar: row.studentAvatar,
                                     }}
                                     name={row.studentName}
                                     size="sm"
@@ -1572,6 +1572,14 @@ export const TeacherTuitionPage: React.FC = () => {
                             }}
                             className="rounded text-indigo-600 focus:ring-indigo-500"
                           />
+                          <UserAvatar
+                            user={{
+                              name: row.studentName,
+                              avatar: row.studentAvatar,
+                            }}
+                            name={row.studentName}
+                            size="xs"
+                          />
                           <span className="font-bold text-slate-800 dark:text-slate-200">
                             {row.studentName}
                           </span>
@@ -1706,6 +1714,14 @@ export const TeacherTuitionPage: React.FC = () => {
                           }}
                           className="rounded text-emerald-600 focus:ring-emerald-500"
                         />
+                        <UserAvatar
+                          user={{
+                            name: row.studentName,
+                            avatar: row.studentAvatar,
+                          }}
+                          name={row.studentName}
+                          size="xs"
+                        />
                         <div>
                           <div className="font-bold text-slate-800 dark:text-slate-200">
                             {row.studentName}
@@ -1760,11 +1776,18 @@ export const TeacherTuitionPage: React.FC = () => {
             )}
 
             <div className="p-3.5 bg-slate-50 dark:bg-slate-800 rounded-2xl space-y-1">
-              <div>
-                <span className="text-slate-400 font-medium">Học sinh:</span>{' '}
-                <span className="font-bold text-slate-800 dark:text-slate-200">
-                  {selectedTuition.student?.name}
-                </span>
+              <div className="flex items-center justify-between">
+                <span className="text-slate-400 font-medium">Học sinh:</span>
+                <div className="flex items-center gap-2">
+                  <UserAvatar
+                    user={selectedTuition.student}
+                    name={selectedTuition.student?.name}
+                    size="xs"
+                  />
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    {selectedTuition.student?.name}
+                  </span>
+                </div>
               </div>
               <div>
                 <span className="text-slate-400 font-medium">Lớp học:</span>{' '}
@@ -1863,9 +1886,14 @@ export const TeacherTuitionPage: React.FC = () => {
             <div className="p-4 bg-slate-50 dark:bg-slate-800/80 rounded-2xl space-y-1.5 border border-slate-100 dark:border-slate-700/80">
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-medium">Học sinh:</span>
-                <span className="font-bold text-slate-900 dark:text-white text-sm">
-                  {selectedTuition.student?.name}
-                </span>
+                <div className="flex items-center gap-2 font-bold text-slate-900 dark:text-white text-sm">
+                  <UserAvatar
+                    user={selectedTuition.student}
+                    name={selectedTuition.student?.name}
+                    size="xs"
+                  />
+                  <span>{selectedTuition.student?.name}</span>
+                </div>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-slate-400 font-medium">Lớp:</span>
@@ -1908,6 +1936,7 @@ export const TeacherTuitionPage: React.FC = () => {
                         studentId: selectedTuition.studentId,
                         studentName: selectedTuition.student?.name || '',
                         studentEmail: selectedTuition.student?.email || '',
+                        studentAvatar: selectedTuition.student?.avatar,
                         classId: selectedTuition.classId,
                         className: selectedTuition.class?.name || '',
                         month: selectedTuition.month,

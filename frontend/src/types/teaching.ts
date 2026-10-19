@@ -129,6 +129,7 @@ export interface TuitionRow {
   studentId: string;
   studentName: string;
   studentEmail: string;
+  studentAvatar?: string | null;
   classId: string;
   className: string;
   month: string;

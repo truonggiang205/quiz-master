@@ -2231,4 +2231,222 @@ describe('Tuition Payment Workflow Audit - TC-PAY Suite (Section 13)', () => {
     expect(lessonSnapshot.status).toBe('SCHEDULED');
     expect(lessonSnapshot.title).toBe('Toán 12 - Tích phân');
   });
+
+  describe('Tuition Student Avatar Synchronization', () => {
+    it('TC-Avatar-01: Học sinh có avatar thật -> getTuitionList trả về đúng avatar của học sinh', async () => {
+      const studentItems = [
+        {
+          id: 'tui-1',
+          teacherId: 'teacher-1',
+          classId: 'class-1',
+          studentId: 'student-avatar-1',
+          month: '2026-10',
+          baseAmount: 200000,
+          surcharge: 0,
+          discount: 0,
+          totalAmount: 200000,
+          paidAmount: 200000,
+          remainingAmount: 0,
+          status: 'PAID',
+          student: {
+            id: 'student-avatar-1',
+            name: 'Nguyễn Văn Real Avatar',
+            email: 'real.avatar@quizmaster.edu.vn',
+            avatar: 'https://res.cloudinary.com/demo/image/upload/v12345/student-avatar.jpg',
+          },
+          class: { id: 'class-1', name: 'Toán 12A' },
+          adjustments: [],
+          payments: [],
+        },
+      ];
+
+      const mockQb = {
+        leftJoinAndSelect: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue(studentItems),
+      };
+
+      const fakeTuitionRepo = {
+        find: vi.fn().mockResolvedValue([]),
+        createQueryBuilder: vi.fn().mockReturnValue(mockQb),
+      };
+
+      const fakeLessonRepo = {
+        find: vi.fn().mockResolvedValue([]),
+      };
+
+      const fakeParticipantRepo = {
+        find: vi.fn().mockResolvedValue([]),
+      };
+
+      const service = new TuitionService(
+        fakeTuitionRepo as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        fakeLessonRepo as any,
+        fakeParticipantRepo as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+
+      // Mock syncTuitionData để không gọi lessonRepo phức tạp
+      vi.spyOn(service, 'syncTuitionData').mockResolvedValue(undefined);
+
+      const result = await service.getTuitionList('teacher-1', { month: '2026-10' });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].studentName).toBe('Nguyễn Văn Real Avatar');
+      expect(result[0].studentAvatar).toBe(
+        'https://res.cloudinary.com/demo/image/upload/v12345/student-avatar.jpg',
+      );
+    });
+
+    it('TC-Avatar-02: Học sinh không có avatar (null) -> getTuitionList trả về null để frontend fallback initials', async () => {
+      const studentItems = [
+        {
+          id: 'tui-2',
+          teacherId: 'teacher-1',
+          classId: 'class-1',
+          studentId: 'student-no-avatar',
+          month: '2026-10',
+          baseAmount: 150000,
+          surcharge: 0,
+          discount: 0,
+          totalAmount: 150000,
+          paidAmount: 0,
+          remainingAmount: 150000,
+          status: 'UNPAID',
+          student: {
+            id: 'student-no-avatar',
+            name: 'Trần Thị No Avatar',
+            email: 'no.avatar@quizmaster.edu.vn',
+            avatar: null,
+          },
+          class: { id: 'class-1', name: 'Lý 11' },
+          adjustments: [],
+          payments: [],
+        },
+      ];
+
+      const mockQb = {
+        leftJoinAndSelect: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue(studentItems),
+      };
+
+      const fakeTuitionRepo = {
+        find: vi.fn().mockResolvedValue([]),
+        createQueryBuilder: vi.fn().mockReturnValue(mockQb),
+      };
+
+      const service = new TuitionService(
+        fakeTuitionRepo as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+
+      vi.spyOn(service, 'syncTuitionData').mockResolvedValue(undefined);
+
+      const result = await service.getTuitionList('teacher-1', { month: '2026-10' });
+
+      expect(result).toHaveLength(1);
+      expect(result[0].studentName).toBe('Trần Thị No Avatar');
+      expect(result[0].studentAvatar).toBeNull();
+    });
+
+    it('TC-Avatar-03: Nhiều học sinh với avatar khác nhau -> Không bị nhầm lẫn giữa các học sinh hoặc với teacher', async () => {
+      const studentItems = [
+        {
+          id: 'tui-a',
+          teacherId: 'teacher-main',
+          classId: 'class-1',
+          studentId: 'student-a',
+          month: '2026-10',
+          baseAmount: 100000,
+          surcharge: 0,
+          discount: 0,
+          totalAmount: 100000,
+          paidAmount: 0,
+          remainingAmount: 100000,
+          status: 'UNPAID',
+          student: {
+            id: 'student-a',
+            name: 'Học sinh A',
+            email: 'a@quizmaster.edu.vn',
+            avatar: 'https://images.example.com/avatar-a.png',
+          },
+          class: { id: 'class-1', name: 'Hóa 10' },
+          adjustments: [],
+          payments: [],
+        },
+        {
+          id: 'tui-b',
+          teacherId: 'teacher-main',
+          classId: 'class-1',
+          studentId: 'student-b',
+          month: '2026-10',
+          baseAmount: 100000,
+          surcharge: 0,
+          discount: 0,
+          totalAmount: 100000,
+          paidAmount: 0,
+          remainingAmount: 100000,
+          status: 'UNPAID',
+          student: {
+            id: 'student-b',
+            name: 'Học sinh B',
+            email: 'b@quizmaster.edu.vn',
+            avatar: 'https://images.example.com/avatar-b.png',
+          },
+          class: { id: 'class-1', name: 'Hóa 10' },
+          adjustments: [],
+          payments: [],
+        },
+      ];
+
+      const mockQb = {
+        leftJoinAndSelect: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue(studentItems),
+      };
+
+      const fakeTuitionRepo = {
+        find: vi.fn().mockResolvedValue([]),
+        createQueryBuilder: vi.fn().mockReturnValue(mockQb),
+      };
+
+      const service = new TuitionService(
+        fakeTuitionRepo as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+
+      vi.spyOn(service, 'syncTuitionData').mockResolvedValue(undefined);
+
+      const result = await service.getTuitionList('teacher-main', { month: '2026-10' });
+
+      expect(result).toHaveLength(2);
+      expect(result[0].studentAvatar).toBe('https://images.example.com/avatar-a.png');
+      expect(result[1].studentAvatar).toBe('https://images.example.com/avatar-b.png');
+      expect(result[0].studentAvatar).not.toBe(result[1].studentAvatar);
+    });
+  });
 });
+

@@ -453,14 +453,14 @@ export class TuitionService {
       const simulatedTotal = Math.max(
         0,
         Math.round(
-          Number(tuition.baseAmount) +
-            Number(tuition.surcharge) -
-            (Number(tuition.discount) + Number(dto.amount)),
+          Number(tuition.baseAmount || 0) +
+            Number(tuition.surcharge || 0) -
+            (Number(tuition.discount || 0) + Number(dto.amount)),
         ),
       );
-      if (simulatedTotal < Number(tuition.paidAmount)) {
+      if (simulatedTotal < Number(tuition.paidAmount || 0)) {
         throw new BadRequestException(
-          `Không thể áp dụng giảm trừ: Số tiền giảm trừ (${dto.amount.toLocaleString('vi-VN')} đ) khiến tổng học phí (${simulatedTotal.toLocaleString('vi-VN')} đ) thấp hơn số tiền học sinh đã thanh toán (${Number(tuition.paidAmount).toLocaleString('vi-VN')} đ). Vui lòng hoàn tiền trước.`,
+          `Không thể áp dụng giảm trừ: Số tiền giảm trừ (${dto.amount.toLocaleString('vi-VN')} đ) khiến tổng học phí (${simulatedTotal.toLocaleString('vi-VN')} đ) thấp hơn số tiền học sinh đã thanh toán (${Number(tuition.paidAmount || 0).toLocaleString('vi-VN')} đ). Vui lòng hoàn tiền trước.`,
         );
       }
     }
@@ -543,14 +543,14 @@ export class TuitionService {
       const simulatedTotal = Math.max(
         0,
         Math.round(
-          Number(tuitionItem.baseAmount) +
-            (Number(tuitionItem.surcharge) - Number(adj.amount)) -
-            Number(tuitionItem.discount),
+          Number(tuitionItem.baseAmount || 0) +
+            (Number(tuitionItem.surcharge || 0) - Number(adj.amount)) -
+            Number(tuitionItem.discount || 0),
         ),
       );
-      if (simulatedTotal < Number(tuitionItem.paidAmount)) {
+      if (simulatedTotal < Number(tuitionItem.paidAmount || 0)) {
         throw new BadRequestException(
-          `Không thể xóa phụ thu: Thao tác này khiến tổng học phí (${simulatedTotal.toLocaleString('vi-VN')} đ) thấp hơn số tiền học sinh đã thanh toán (${Number(tuitionItem.paidAmount).toLocaleString('vi-VN')} đ). Vui lòng hoàn tiền trước.`,
+          `Không thể xóa phụ thu: Thao tác này khiến tổng học phí (${simulatedTotal.toLocaleString('vi-VN')} đ) thấp hơn số tiền học sinh đã thanh toán (${Number(tuitionItem.paidAmount || 0).toLocaleString('vi-VN')} đ). Vui lòng hoàn tiền trước.`,
         );
       }
     }
@@ -574,12 +574,12 @@ export class TuitionService {
         const simulatedTotal = Math.max(
           0,
           Math.round(
-            Number(tuition.baseAmount) +
-              Number(tuition.surcharge) -
-              (Number(tuition.discount) + Number(dto.amount)),
+            Number(tuition.baseAmount || 0) +
+              Number(tuition.surcharge || 0) -
+              (Number(tuition.discount || 0) + Number(dto.amount)),
           ),
         );
-        if (simulatedTotal < Number(tuition.paidAmount)) {
+        if (simulatedTotal < Number(tuition.paidAmount || 0)) {
           continue;
         }
       }

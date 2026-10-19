@@ -268,6 +268,33 @@ export class StudentsService {
         ? Number((scores.reduce((acc, s) => acc + Number(s.score || 0), 0) / scores.length).toFixed(1))
         : null;
 
+    const stats = {
+      totalLessons,
+      attendedLessons,
+      absentLessons,
+      totalTuition,
+      paidTuition,
+      remainingTuition,
+      avgScore: avgScore !== null ? avgScore : 0,
+      scoresCount: scores.length,
+      logsCount: learningLogs.length,
+    };
+
+    const attendanceList = validParticipants.map((p) => ({
+      id: p.id,
+      lessonId: p.lesson?.id,
+      lesson: {
+        id: p.lesson?.id,
+        title: p.lesson?.title,
+        date: p.lesson?.date,
+        startTime: p.lesson?.startTime,
+        endTime: p.lesson?.endTime,
+      },
+      attendanceStatus: p.attendanceStatus,
+      attendanceNote: (p as any).note || (p as any).attendanceNote || null,
+      feeAmount: p.feeAmount,
+    }));
+
     return {
       student: {
         id: student.id,
@@ -288,20 +315,25 @@ export class StudentsService {
         createdAt: student.createdAt,
         updatedAt: student.updatedAt,
       },
-      stats: {
-        totalLessons,
-        attendedLessons,
-        absentLessons,
-        totalTuition,
-        paidTuition,
-        remainingTuition,
-        avgScore,
-        scoresCount: scores.length,
-        logsCount: learningLogs.length,
-      },
+      account: student.studentAccount
+        ? {
+            id: student.studentAccount.id,
+            name: student.studentAccount.name,
+            email: student.studentAccount.email,
+            avatar: student.studentAccount.avatar,
+            role: student.studentAccount.role,
+            isActive: student.studentAccount.isActive,
+          }
+        : null,
+      isExternal: !student.studentAccountId,
+      summary: stats,
+      stats,
+      schedules: lessons,
       lessons,
+      attendance: attendanceList,
       learningLogs,
       scores,
+      tuitions: tuitionItems,
       tuition: tuitionItems,
       payments: allPayments,
     };
@@ -334,10 +366,45 @@ export class StudentsService {
   }
 
   /**
-   * Xóa học sinh khỏi danh bạ giáo viên.
+   * Xóa học sinh khỏi danh bạ giáo viên (Bảo vệ toàn vẹn dữ liệu lịch sử).
+   * Nếu học sinh đã có lịch học, học phí, thanh toán, điểm số hoặc nhật ký,
+   * từ chối xóa vĩnh viễn và yêu cầu chuyển trạng thái sang NGHỈ HỌC (INACTIVE).
    */
   async deleteStudent(teacherId: string, studentId: string) {
     const student = await this.resolveStudent(teacherId, studentId);
+
+    const targetIds = [student.id];
+    if (student.studentAccountId) {
+      targetIds.push(student.studentAccountId);
+    }
+
+    // Kiểm tra toàn vẹn dữ liệu lịch sử
+    const safeCount = async (repo: any, where: any) => {
+      if (!repo) return 0;
+      if (typeof repo.count === 'function') {
+        return await repo.count({ where });
+      }
+      if (typeof repo.find === 'function') {
+        const res = await repo.find({ where });
+        return Array.isArray(res) ? res.length : 0;
+      }
+      return 0;
+    };
+
+    const [partCount, tuiCount, payCount, scoreCount, logCount] = await Promise.all([
+      safeCount(this.participantRepo, { studentId: In(targetIds) }),
+      safeCount(this.tuitionRepo, { studentId: In(targetIds), teacherId }),
+      safeCount(this.paymentRepo, { studentId: In(targetIds), teacherId }),
+      safeCount(this.scoreRepo, { studentId: In(targetIds), teacherId }),
+      safeCount(this.logRepo, { studentId: In(targetIds), teacherId }),
+    ]);
+
+    const hasHistory = partCount > 0 || tuiCount > 0 || payCount > 0 || scoreCount > 0 || logCount > 0;
+    if (hasHistory) {
+      throw new BadRequestException(
+        'Không thể xóa học sinh đã có lịch sử học tập hoặc học phí/thanh toán. Vui lòng chuyển trạng thái học sinh sang NGHỈ HỌC (INACTIVE) để lưu trữ.',
+      );
+    }
 
     // Đồng bộ gỡ khỏi bảng join legacy nếu có
     if (student.studentAccountId) {

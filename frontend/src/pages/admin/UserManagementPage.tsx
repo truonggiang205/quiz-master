@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { adminService } from '../../services/admin.service';
 import { User } from '../../types/user';
 import { useUiStore } from '../../stores/ui.store';
+import { withNotification } from '../../utils/notification.util';
 import { Badge } from '../../components/common/Badge';
 import { Search, Lock, Unlock, KeyRound } from 'lucide-react';
 import { formatUserName } from '../../utils/user.utils';
@@ -42,18 +43,27 @@ export const UserManagementPage: React.FC = () => {
     const action = currentStatus ? 'Khóa' : 'Mở khóa';
     const confirmed = await confirm({
       title: `${action} tài khoản`,
-      description: `Bạn có chắc muốn ${action} tài khoản này?`,
+      description: `Bạn có chắc muốn ${action.toLowerCase()} tài khoản này?`,
       variant: currentStatus ? 'danger' : 'success',
-      confirmText: action
+      confirmText: action,
     });
     if (!confirmed) return;
 
     try {
-      await adminService.toggleUserStatus(id);
-      addToast({ type: 'success', title: `Đã ${action} tài khoản thành công` });
-      loadUsers();
+      await withNotification(
+        {
+          actionKey: `admin-toggle-user-${id}`,
+          loadingTitle: `Đang ${action.toLowerCase()} tài khoản...`,
+          successTitle: `Đã ${action.toLowerCase()} tài khoản thành công`,
+          errorTitle: `Lỗi khi ${action.toLowerCase()} tài khoản`,
+        },
+        async () => {
+          await adminService.toggleUserStatus(id);
+          await loadUsers();
+        }
+      );
     } catch {
-      addToast({ type: 'error', title: `Lỗi khi ${action} tài khoản` });
+      // Handled by withNotification
     }
   };
 
@@ -66,10 +76,19 @@ export const UserManagementPage: React.FC = () => {
     if (newPass === null) return; // Cancelled
 
     try {
-      await adminService.resetUserPassword(id, newPass);
-      addToast({ type: 'success', title: 'Đã đặt lại mật khẩu thành công' });
+      await withNotification(
+        {
+          actionKey: `admin-reset-pass-${id}`,
+          loadingTitle: 'Đang đặt lại mật khẩu...',
+          successTitle: 'Đã đặt lại mật khẩu thành công',
+          errorTitle: 'Lỗi khi đặt lại mật khẩu',
+        },
+        async () => {
+          await adminService.resetUserPassword(id, newPass);
+        }
+      );
     } catch {
-      addToast({ type: 'error', title: 'Lỗi khi đặt lại mật khẩu' });
+      // Handled by withNotification
     }
   };
 

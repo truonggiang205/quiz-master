@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { quizService } from '../../services/quiz.service';
 import { Quiz } from '../../types/quiz';
 import { useUiStore } from '../../stores/ui.store';
+import { withNotification } from '../../utils/notification.util';
 import { Badge } from '../../components/common/Badge';
 import { ConfirmationModal } from '../../components/common/ConfirmationModal';
 import {
@@ -40,30 +41,49 @@ export const TeacherQuizListPage: React.FC = () => {
   }, []);
 
   const handleTogglePublish = async (quiz: Quiz) => {
+    const isPublished = quiz.status === 'PUBLISHED';
     try {
-      if (quiz.status === 'PUBLISHED') {
-        await quizService.unpublishQuiz(quiz.id);
-        addToast({ type: 'info', title: 'Đã chuyển đề thi về bản thảo' });
-      } else {
-        await quizService.publishQuiz(quiz.id);
-        addToast({ type: 'success', title: 'Đã xuất bản đề thi thành công' });
-      }
-      loadQuizzes();
+      await withNotification(
+        {
+          actionKey: `quiz-toggle-status-${quiz.id}`,
+          loadingTitle: isPublished ? 'Đang chuyển về bản thảo...' : 'Đang xuất bản đề thi...',
+          successTitle: isPublished ? 'Đã chuyển đề thi về bản thảo' : 'Đã xuất bản đề thi thành công',
+          errorTitle: 'Thao tác thất bại',
+        },
+        async () => {
+          if (isPublished) {
+            await quizService.unpublishQuiz(quiz.id);
+          } else {
+            await quizService.publishQuiz(quiz.id);
+          }
+          await loadQuizzes();
+        }
+      );
     } catch {
-      addToast({ type: 'error', title: 'Thao tác thất bại' });
+      // Handled by withNotification
     }
   };
 
   const handleDelete = async () => {
     if (!deleteQuizId) return;
-    addToast({ type: 'info', title: 'Đang xóa bài thi...', message: 'Hệ thống đang xử lý, vui lòng chờ trong giây lát' });
+    const targetId = deleteQuizId;
+    setDeleteQuizId(null);
     try {
-      await quizService.deleteQuiz(deleteQuizId);
-      addToast({ type: 'success', title: 'Đã xóa đề thi thành công' });
-      setDeleteQuizId(null);
-      loadQuizzes();
+      await withNotification(
+        {
+          actionKey: `quiz-delete-${targetId}`,
+          loadingTitle: 'Đang xóa bài thi...',
+          loadingMessage: 'Hệ thống đang xử lý, vui lòng chờ trong giây lát',
+          successTitle: 'Đã xóa đề thi thành công',
+          errorTitle: 'Xóa bài thi thất bại',
+        },
+        async () => {
+          await quizService.deleteQuiz(targetId);
+          await loadQuizzes();
+        }
+      );
     } catch {
-      addToast({ type: 'error', title: 'Xóa bài thi thất bại' });
+      // Handled by withNotification
     }
   };
 

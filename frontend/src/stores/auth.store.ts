@@ -2,6 +2,8 @@ import { create } from 'zustand';
 import { apiClient } from '../services/api';
 import { User, UserRole } from '../types/user';
 
+import { useUiStore } from './ui.store';
+
 interface AuthState {
   user: User | null;
   token: string | null;
@@ -66,6 +68,7 @@ export const useAuthStore = create<AuthState>((set) => ({
     } catch {
       // Ignore
     }
+    useUiStore.getState().clearToasts();
     set({
       user: null,
       token: null,

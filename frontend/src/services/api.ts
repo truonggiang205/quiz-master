@@ -1,4 +1,5 @@
 import axios from 'axios';
+import { useUiStore } from '../stores/ui.store';
 
 const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
 const API_BASE_URL = rawApiUrl.replace(/\/+$/, '');
@@ -47,6 +48,11 @@ apiClient.interceptors.response.use(
       localStorage.removeItem('quizmaster_auth_user');
       try {
         localStorage.removeItem('quiz-master-taking-storage');
+      } catch {
+        // Ignore
+      }
+      try {
+        useUiStore.getState().clearToasts();
       } catch {
         // Ignore
       }

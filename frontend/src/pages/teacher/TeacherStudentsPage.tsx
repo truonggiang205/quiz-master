@@ -3,6 +3,7 @@ import { StudentService } from '../../services/student.service';
 import { User } from '../../types/user';
 import { Mail, UserMinus, UserPlus, Search, GraduationCap } from 'lucide-react';
 import { useUiStore } from '../../stores/ui.store';
+import { withNotification } from '../../utils/notification.util';
 import { Modal } from '../../components/common/Modal';
 import { UserAvatar } from '../../components/common/UserAvatar';
 
@@ -31,16 +32,28 @@ export const TeacherStudentsPage: React.FC = () => {
 
   const handleInviteSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!inviteEmail.trim()) return;
-    
+    if (!inviteEmail.trim() || isSubmitting) return;
+    const emailToInvite = inviteEmail.trim();
+
     setIsSubmitting(true);
     try {
-      await StudentService.inviteStudent(inviteEmail.trim());
-      addToast({ type: 'success', title: 'Thành công', message: `Đã gửi lời mời đến ${inviteEmail}` });
-      setShowInviteModal(false);
-      setInviteEmail('');
-    } catch (error: any) {
-      addToast({ type: 'error', title: 'Lỗi', message: error.response?.data?.message || 'Không thể gửi lời mời. Hãy thử lại.' });
+      await withNotification(
+        {
+          actionKey: `invite-student-${emailToInvite}`,
+          loadingTitle: 'Đang gửi lời mời...',
+          loadingMessage: `Đang gửi email mời tới ${emailToInvite}`,
+          successTitle: 'Thành công',
+          successMessage: `Đã gửi lời mời đến ${emailToInvite}`,
+          errorTitle: 'Lỗi gửi lời mời',
+        },
+        async () => {
+          await StudentService.inviteStudent(emailToInvite);
+          setShowInviteModal(false);
+          setInviteEmail('');
+        }
+      );
+    } catch {
+      // Handled by withNotification
     } finally {
       setIsSubmitting(false);
     }
@@ -51,16 +64,27 @@ export const TeacherStudentsPage: React.FC = () => {
       title: 'Xóa học sinh',
       description: `Bạn có chắc chắn muốn xóa học sinh ${studentName} khỏi danh bạ?`,
       variant: 'danger',
-      confirmText: 'Xóa'
+      confirmText: 'Xóa',
     });
     if (!confirmed) return;
-    
+
     try {
-      await StudentService.removeStudent(studentId);
-      addToast({ type: 'success', title: 'Thành công', message: `Đã xóa học sinh ${studentName}` });
-      setStudents(prev => prev.filter(s => s.id !== studentId));
-    } catch (error) {
-      addToast({ type: 'error', title: 'Lỗi', message: 'Không thể xóa học sinh' });
+      await withNotification(
+        {
+          actionKey: `remove-student-${studentId}`,
+          loadingTitle: 'Đang xóa học sinh...',
+          successTitle: 'Thành công',
+          successMessage: `Đã xóa học sinh ${studentName}`,
+          errorTitle: 'Lỗi',
+          errorMessage: 'Không thể xóa học sinh',
+        },
+        async () => {
+          await StudentService.removeStudent(studentId);
+          setStudents((prev) => prev.filter((s) => s.id !== studentId));
+        }
+      );
+    } catch {
+      // Handled by withNotification
     }
   };
 

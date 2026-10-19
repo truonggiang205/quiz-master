@@ -1,12 +1,13 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { useUiStore } from '../../stores/ui.store';
-import { CheckCircle2, AlertCircle, AlertTriangle, Info, X } from 'lucide-react';
+import { useUiStore, ToastType } from '../../stores/ui.store';
+import { CheckCircle2, AlertCircle, AlertTriangle, Info, X, Loader2 } from 'lucide-react';
 
 export const ToastContainer: React.FC = () => {
   const { toasts, removeToast } = useUiStore();
 
-  const iconMap = {
+  const iconMap: Record<ToastType, React.ReactNode> = {
+    loading: <Loader2 className="w-5 h-5 text-sky-500 animate-spin flex-shrink-0" />,
     success: <CheckCircle2 className="w-5 h-5 text-emerald-500 flex-shrink-0" />,
     error: <AlertCircle className="w-5 h-5 text-rose-500 flex-shrink-0" />,
     warning: <AlertTriangle className="w-5 h-5 text-amber-500 flex-shrink-0" />,
@@ -14,7 +15,8 @@ export const ToastContainer: React.FC = () => {
     message: null, // Custom handled below
   };
 
-  const borderMap = {
+  const borderMap: Record<ToastType, string> = {
+    loading: 'border-sky-300 dark:border-sky-700/60 bg-sky-50/95 dark:bg-slate-900/95 shadow-sky-100/40 dark:shadow-sky-950/40',
     success: 'border-emerald-200 dark:border-emerald-800/60 bg-emerald-50/95 dark:bg-slate-900/95',
     error: 'border-rose-200 dark:border-rose-800/60 bg-rose-50/95 dark:bg-slate-900/95',
     warning: 'border-amber-200 dark:border-amber-800/60 bg-amber-50/95 dark:bg-slate-900/95',
@@ -34,14 +36,24 @@ export const ToastContainer: React.FC = () => {
           animate={{ opacity: 1, y: 0, scale: 1 }}
           exit={{ opacity: 0, scale: 0.8 }}
           transition={{ type: 'spring', damping: 20, stiffness: 400, mass: 0.8 }}
-          className={`pointer-events-auto p-3 sm:p-4 rounded-2xl border shadow-xl backdrop-blur-md flex items-start gap-3 relative overflow-hidden group cursor-pointer ${borderMap[toast.type]} hover:-translate-y-1 hover:shadow-2xl transition-all duration-300`}
+          className={`pointer-events-auto p-3 sm:p-4 rounded-2xl border shadow-xl backdrop-blur-md flex items-start gap-3 relative overflow-hidden group ${
+            toast.type === 'loading' ? 'cursor-default' : 'cursor-pointer hover:-translate-y-1 hover:shadow-2xl'
+          } ${borderMap[toast.type] || borderMap.info} transition-all duration-300`}
           onClick={() => {
+            if (toast.type === 'loading') return;
             if (toast.type === 'message' && toast.payload) {
               window.dispatchEvent(new CustomEvent('openChat', { detail: { user: toast.payload } }));
             }
             removeToast(toast.id);
           }}
         >
+          {/* Animated bottom progress line for loading state */}
+          {toast.type === 'loading' && (
+            <div className="absolute bottom-0 left-0 right-0 h-0.5 bg-sky-200/60 dark:bg-sky-900/60 overflow-hidden">
+              <div className="h-full bg-sky-500 dark:bg-sky-400 w-full animate-pulse" />
+            </div>
+          )}
+
           {/* Animated glow effect for message toast */}
           {toast.type === 'message' && (
             <div className="absolute inset-0 bg-gradient-to-r from-sky-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
@@ -53,7 +65,11 @@ export const ToastContainer: React.FC = () => {
               <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
             </div>
           ) : (
-            toast.type !== 'message' && iconMap[toast.type]
+            toast.type !== 'message' && (
+              <div className="transition-all duration-200 shrink-0">
+                {iconMap[toast.type] || iconMap.info}
+              </div>
+            )
           )}
           
           <div className="flex-1 min-w-0 pt-0.5">
@@ -67,13 +83,17 @@ export const ToastContainer: React.FC = () => {
               </p>
             )}
           </div>
-          <button
-            type="button"
-            onClick={(e) => { e.stopPropagation(); removeToast(toast.id); }}
-            className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors absolute top-2 right-2 shrink-0"
-          >
-            <X className="w-3.5 h-3.5" />
-          </button>
+
+          {toast.type !== 'loading' && (
+            <button
+              type="button"
+              onClick={(e) => { e.stopPropagation(); removeToast(toast.id); }}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors absolute top-2 right-2 shrink-0"
+              aria-label="Đóng thông báo"
+            >
+              <X className="w-3.5 h-3.5" />
+            </button>
+          )}
         </motion.div>
       ))}
       </AnimatePresence>

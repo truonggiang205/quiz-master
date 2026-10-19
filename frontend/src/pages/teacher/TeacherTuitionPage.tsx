@@ -31,6 +31,7 @@ import {
   Sparkles,
   CheckCheck,
   Search,
+  Loader2,
 } from 'lucide-react';
 import {
   ResponsiveContainer,
@@ -49,6 +50,7 @@ import { Modal } from '../../components/common/Modal';
 import { UserAvatar } from '../../components/common/UserAvatar';
 import { useAuthStore } from '../../stores/auth.store';
 import { useUiStore } from '../../stores/ui.store';
+import { withNotification } from '../../utils/notification.util';
 import type {
   TuitionRow,
   TuitionDetail,
@@ -313,15 +315,20 @@ export const TeacherTuitionPage: React.FC = () => {
   const handleQuickStatusChange = async (tuitionId: string, status: TuitionStatus) => {
     setActiveStatusDropdownId(null);
     try {
-      await TeachingService.updateTuitionStatus(tuitionId, status);
-      addToast({ type: 'success', title: 'Cập nhật trạng thái thành công' });
-      fetchTuitionList();
+      await withNotification(
+        {
+          actionKey: `tuition-status-${tuitionId}`,
+          loadingTitle: 'Đang cập nhật trạng thái...',
+          successTitle: 'Cập nhật trạng thái thành công',
+          errorTitle: 'Không thể cập nhật trạng thái',
+        },
+        async () => {
+          await TeachingService.updateTuitionStatus(tuitionId, status);
+          await fetchTuitionList();
+        }
+      );
     } catch (err: any) {
-      addToast({
-        type: 'error',
-        title: 'Lỗi cập nhật',
-        message: err.response?.data?.message || 'Không thể cập nhật trạng thái',
-      });
+      // Error handled by withNotification
     }
   };
 
@@ -358,15 +365,25 @@ export const TeacherTuitionPage: React.FC = () => {
   // Submit Payment
   const handleSubmitPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!selectedTuition) return;
+    if (!selectedTuition || submitting) return;
     setFormError(null);
     setSubmitting(true);
 
     try {
-      await TeachingService.recordPayment(selectedTuition.id, paymentForm);
-      addToast({ type: 'success', title: 'Ghi nhận thanh toán thành công' });
-      setIsPaymentModalOpen(false);
-      fetchTuitionList();
+      await withNotification(
+        {
+          actionKey: `tuition-payment-${selectedTuition.id}`,
+          loadingTitle: 'Đang ghi nhận thanh toán...',
+          loadingMessage: 'Hệ thống đang xử lý giao dịch, vui lòng chờ trong giây lát',
+          successTitle: 'Ghi nhận thanh toán thành công',
+          errorTitle: 'Không thể ghi nhận thanh toán',
+        },
+        async () => {
+          await TeachingService.recordPayment(selectedTuition.id, paymentForm);
+          setIsPaymentModalOpen(false);
+          await fetchTuitionList();
+        }
+      );
     } catch (err: any) {
       setFormError(err.response?.data?.message || 'Có lỗi xảy ra khi ghi nhận thanh toán');
     } finally {
@@ -403,6 +420,7 @@ export const TeacherTuitionPage: React.FC = () => {
   // Submit Adjustment
   const handleSubmitAdjustment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (adjustmentForm.selectedTuitionIds.length === 0) {
       setFormError('Vui lòng chọn ít nhất một học sinh');
       return;
@@ -411,15 +429,25 @@ export const TeacherTuitionPage: React.FC = () => {
     setSubmitting(true);
 
     try {
-      await TeachingService.bulkAdjustment({
-        tuitionIds: adjustmentForm.selectedTuitionIds,
-        type: adjustmentForm.type,
-        amount: adjustmentForm.amount,
-        reason: adjustmentForm.reason || (adjustmentForm.type === 'SURCHARGE' ? 'Phụ thu' : 'Giảm trừ'),
-      });
-      addToast({ type: 'success', title: 'Đã áp dụng điều chỉnh học phí thành công' });
-      setIsAdjustmentModalOpen(false);
-      fetchTuitionList();
+      await withNotification(
+        {
+          actionKey: 'tuition-adjustment-submit',
+          loadingTitle: 'Đang lưu điều chỉnh học phí...',
+          loadingMessage: 'Vui lòng chờ trong giây lát',
+          successTitle: 'Đã áp dụng điều chỉnh học phí thành công',
+          errorTitle: 'Có lỗi xảy ra khi lưu điều chỉnh',
+        },
+        async () => {
+          await TeachingService.bulkAdjustment({
+            tuitionIds: adjustmentForm.selectedTuitionIds,
+            type: adjustmentForm.type,
+            amount: adjustmentForm.amount,
+            reason: adjustmentForm.reason || (adjustmentForm.type === 'SURCHARGE' ? 'Phụ thu' : 'Giảm trừ'),
+          });
+          setIsAdjustmentModalOpen(false);
+          await fetchTuitionList();
+        }
+      );
     } catch (err: any) {
       setFormError(err.response?.data?.message || 'Có lỗi xảy ra khi lưu điều chỉnh');
     } finally {
@@ -431,15 +459,24 @@ export const TeacherTuitionPage: React.FC = () => {
   const handleDeleteAdjustment = async (adjustmentId: string) => {
     if (!window.confirm('Bạn có chắc muốn xóa khoản điều chỉnh này không?')) return;
     try {
-      await TeachingService.deleteAdjustment(adjustmentId);
-      addToast({ type: 'success', title: 'Đã xóa khoản điều chỉnh' });
-      if (selectedTuition) {
-        const updated = await TeachingService.getTuitionDetail(selectedTuition.id);
-        setSelectedTuition(updated);
-      }
-      fetchTuitionList();
+      await withNotification(
+        {
+          actionKey: `tuition-delete-adjustment-${adjustmentId}`,
+          loadingTitle: 'Đang xóa khoản điều chỉnh...',
+          successTitle: 'Đã xóa khoản điều chỉnh',
+          errorTitle: 'Không thể xóa khoản điều chỉnh',
+        },
+        async () => {
+          await TeachingService.deleteAdjustment(adjustmentId);
+          if (selectedTuition) {
+            const updated = await TeachingService.getTuitionDetail(selectedTuition.id);
+            setSelectedTuition(updated);
+          }
+          await fetchTuitionList();
+        }
+      );
     } catch (err) {
-      addToast({ type: 'error', title: 'Không thể xóa khoản điều chỉnh' });
+      // Error handled by withNotification
     }
   };
 
@@ -456,21 +493,32 @@ export const TeacherTuitionPage: React.FC = () => {
   // Submit Bulk Payment
   const handleSubmitBulkPayment = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (submitting) return;
     if (bulkPaymentSelectedIds.length === 0) {
       setFormError('Vui lòng chọn ít nhất một học sinh');
       return;
     }
     setSubmitting(true);
     try {
-      await TeachingService.bulkPayment({
-        tuitionIds: bulkPaymentSelectedIds,
-        paymentDate: bulkPaymentDate,
-        paymentMethod: bulkPaymentMethod,
-        note: bulkPaymentNote,
-      });
-      addToast({ type: 'success', title: 'Đã ghi nhận thanh toán hàng loạt thành công' });
-      setIsBulkPaymentModalOpen(false);
-      fetchTuitionList();
+      await withNotification(
+        {
+          actionKey: 'tuition-bulk-payment-submit',
+          loadingTitle: 'Đang ghi nhận thanh toán hàng loạt...',
+          loadingMessage: `Đang xử lý ${bulkPaymentSelectedIds.length} học sinh, vui lòng chờ trong giây lát`,
+          successTitle: 'Đã ghi nhận thanh toán hàng loạt thành công',
+          errorTitle: 'Có lỗi xảy ra khi ghi nhận thanh toán hàng loạt',
+        },
+        async () => {
+          await TeachingService.bulkPayment({
+            tuitionIds: bulkPaymentSelectedIds,
+            paymentDate: bulkPaymentDate,
+            paymentMethod: bulkPaymentMethod,
+            note: bulkPaymentNote,
+          });
+          setIsBulkPaymentModalOpen(false);
+          await fetchTuitionList();
+        }
+      );
     } catch (err: any) {
       setFormError(err.response?.data?.message || 'Có lỗi xảy ra khi ghi nhận thanh toán hàng loạt');
     } finally {
@@ -557,23 +605,32 @@ export const TeacherTuitionPage: React.FC = () => {
   // Export Excel
   const handleExportExcel = async () => {
     try {
-      const blob = await TeachingService.exportTuition({
-        month: selectedMonth,
-        classId: selectedClassId !== 'ALL' ? selectedClassId : undefined,
-        status: selectedStatus !== 'ALL' ? (selectedStatus as TuitionStatus) : undefined,
-      });
-      const url = window.URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `BaoCao_HocPhi_${selectedMonth}.xlsx`;
-      document.body.appendChild(a);
-      a.click();
-      window.URL.revokeObjectURL(url);
-      document.body.removeChild(a);
-      addToast({ type: 'success', title: 'Xuất file Excel thành công!' });
+      await withNotification(
+        {
+          actionKey: `tuition-export-excel-${selectedMonth}`,
+          loadingTitle: 'Đang xuất file Excel...',
+          loadingMessage: 'Hệ thống đang tổng hợp dữ liệu học phí, vui lòng chờ trong giây lát',
+          successTitle: 'Xuất file Excel thành công!',
+          errorTitle: 'Không thể xuất file Excel',
+        },
+        async () => {
+          const blob = await TeachingService.exportTuition({
+            month: selectedMonth,
+            classId: selectedClassId !== 'ALL' ? selectedClassId : undefined,
+            status: selectedStatus !== 'ALL' ? (selectedStatus as TuitionStatus) : undefined,
+          });
+          const url = window.URL.createObjectURL(blob);
+          const a = document.createElement('a');
+          a.href = url;
+          a.download = `BaoCao_HocPhi_${selectedMonth}.xlsx`;
+          document.body.appendChild(a);
+          a.click();
+          window.URL.revokeObjectURL(url);
+          document.body.removeChild(a);
+        }
+      );
     } catch (err) {
       console.error('Failed to export tuition', err);
-      addToast({ type: 'error', title: 'Không thể xuất file Excel' });
     }
   };
 
@@ -1437,12 +1494,13 @@ export const TeacherTuitionPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className={`px-5 py-2 rounded-xl text-xs font-semibold text-white transition-colors shadow-xs ${
+              className={`px-5 py-2 rounded-xl text-xs font-semibold text-white transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed ${
                 adjustmentForm.type === 'SURCHARGE'
                   ? 'bg-[#4F46E5] hover:bg-[#4338CA]'
                   : 'bg-[#DC2626] hover:bg-[#B91C1C]'
               }`}
             >
+              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {submitting ? 'Đang lưu...' : 'Lưu Khoản Điều Chỉnh'}
             </button>
           </div>
@@ -1616,8 +1674,9 @@ export const TeacherTuitionPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-[#059669] hover:bg-[#047857] transition-colors shadow-xs"
+              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-[#059669] hover:bg-[#047857] transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {submitting ? 'Đang lưu...' : 'Xác Nhận Thu Tiền'}
             </button>
           </div>
@@ -1759,8 +1818,9 @@ export const TeacherTuitionPage: React.FC = () => {
             <button
               type="submit"
               disabled={submitting}
-              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-[#059669] hover:bg-[#047857] transition-colors shadow-xs"
+              className="px-5 py-2 rounded-xl text-xs font-semibold text-white bg-[#059669] hover:bg-[#047857] transition-colors shadow-xs flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
             >
+              {submitting && <Loader2 className="w-3.5 h-3.5 animate-spin" />}
               {submitting ? 'Đang lưu...' : 'Xác Nhận Nộp Tiền'}
             </button>
           </div>

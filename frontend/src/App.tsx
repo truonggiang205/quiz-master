@@ -23,10 +23,17 @@ export const App: React.FC = () => {
       document.documentElement.classList.remove('dark');
     }
 
-    const favicon = document.getElementById('dynamic-favicon') as HTMLLinkElement | null;
-    if (favicon) {
-      favicon.href = theme === 'dark' ? '/logo-dark.svg' : '/logo-light.svg';
-    }
+    // Force Chromium/Chrome browser tab to immediately re-render favicon
+    const href = theme === 'dark' ? '/logo-dark.svg' : '/logo-light.svg';
+    const oldFavicons = document.querySelectorAll("link[rel*='icon']");
+    oldFavicons.forEach((el) => el.remove());
+
+    const newFavicon = document.createElement('link');
+    newFavicon.id = 'dynamic-favicon';
+    newFavicon.rel = 'icon';
+    newFavicon.type = 'image/svg+xml';
+    newFavicon.href = `${href}?v=${Date.now()}`;
+    document.head.appendChild(newFavicon);
   }, [theme]);
 
   return (

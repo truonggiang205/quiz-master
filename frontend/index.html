@@ -2,8 +2,23 @@
 <html lang="vi">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" id="dynamic-favicon" type="image/svg+xml" href="/logo-light.svg" />
-    <link rel="alternate icon" type="image/png" href="/logo.png" />
+    <link rel="icon" id="dynamic-favicon" type="image/svg+xml" href="/logo-light.svg?v=4" />
+    <script>
+      (function() {
+        try {
+          var saved = localStorage.getItem('quizmaster_theme');
+          var isDark = saved === 'dark' || (!saved && window.matchMedia('(prefers-color-scheme: dark)').matches);
+          var fav = document.getElementById('dynamic-favicon');
+          if (isDark) {
+            document.documentElement.classList.add('dark');
+            if (fav) fav.href = '/logo-dark.svg?v=4';
+          } else {
+            document.documentElement.classList.remove('dark');
+            if (fav) fav.href = '/logo-light.svg?v=4';
+          }
+        } catch(e) {}
+      })();
+    </script>
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=0, viewport-fit=cover" />
     <title>QuizMaster - Hệ Thống Kiểm Tra Trực Tuyến Thông Minh</title>
     <meta name="description" content="Nền tảng kiểm tra trắc nghiệm trực tuyến dành cho Giáo viên và Học sinh. Tạo đề thi, hẹn giờ công bố đáp án và thi trực tuyến với đồng hồ đếm ngược thông minh." />

@@ -228,6 +228,12 @@ describe('External Student Acceptance & Integration Audit Suite (EXT-ACCEPT-01 -
             res = res.filter((p) => p.lessonId === lId);
           }
         }
+        if (opts?.relations?.lesson) {
+          res = res.map((p) => ({
+            ...p,
+            lesson: p.lesson || lessonStore.find((l) => l.id === p.lessonId) || null,
+          }));
+        }
         return res;
       },
       findOne: async (opts?: any) => {
@@ -258,6 +264,18 @@ describe('External Student Acceptance & Integration Audit Suite (EXT-ACCEPT-01 -
         let res = [...tuitionStore];
         if (opts?.where?.teacherId) res = res.filter((t) => t.teacherId === opts.where.teacherId);
         if (opts?.where?.studentId) res = res.filter((t) => matchIn(t.studentId, opts.where.studentId));
+        if (opts?.relations?.payments) {
+          res = res.map((t) => ({
+            ...t,
+            payments: t.payments || paymentStore.filter((p) => p.tuitionItemId === t.id),
+          }));
+        }
+        if (opts?.relations?.adjustments) {
+          res = res.map((t) => ({
+            ...t,
+            adjustments: t.adjustments || adjustmentStore.filter((a) => a.tuitionItemId === t.id),
+          }));
+        }
         return res;
       },
       findOne: async (opts?: any) => {
@@ -899,40 +917,8 @@ describe('External Student Acceptance & Integration Audit Suite (EXT-ACCEPT-01 -
     await expect(studentsService.unlinkAccount('teacher-a', extB.id)).rejects.toThrow();
   });
 
-  // EXT-ACCEPT-15: Legacy Compatibility
-  it('EXT-ACCEPT-15: Tương thích hoàn hảo với học sinh legacy và import Excel không tạo fake User', async () => {
-    // 1. Excel import không tạo fake user với password 123456
-    const userCountBefore = userStore.length;
-    const importResult = await classroomsService.importStudents(
-      'class-teacher-a',
-      'teacher-a',
-      undefined,
-      [{ name: 'Học Sinh Mới Từ File', email: 'file_student@gmail.com' }],
-    );
-
-    expect(importResult.successCount).toBe(1);
-    expect(userStore.length).toBe(userCountBefore); // Không tạo User
-    const createdProfile = studentStore.find((s) => s.fullName === 'Học Sinh Mới Từ File');
-    expect(createdProfile).toBeDefined();
-    expect(createdProfile.studentAccountId).toBeNull();
-
-    // 2. Legacy student mapping
-    await fakeTeacherStudentRepo.save({
-      id: 'ts-legacy-test',
-      teacherId: 'teacher-a',
-      fullName: 'Em Nam Cũ',
-      studentAccountId: 'student-account-a',
-      status: 'ACTIVE',
-    });
-
-    const resolved = await studentsService.resolveStudent('teacher-a', 'student-account-a');
-    expect(resolved).toBeDefined();
-    expect(resolved.id).toBe('ts-legacy-test');
-    expect(resolved.fullName).toBe('Em Nam Cũ');
-  });
-
-  // EXT-ACCEPT-16: Historical Data Protection on Delete
-  it('EXT-ACCEPT-16: Chống xóa vĩnh viễn (hard delete) khi học sinh đã có dữ liệu lịch sử (học phí/buổi học/điểm số)', async () => {
+  // EXT-ACCEPT-15: Delete / Historical Data Protection on Delete
+  it('EXT-ACCEPT-15: Chống xóa vĩnh viễn (hard delete) khi học sinh đã có dữ liệu lịch sử; cho phép xóa khi chưa có lịch sử', async () => {
     // 1. Học sinh chưa có lịch sử -> Cho phép xóa
     const extFresh = await studentsService.createExternalStudent('teacher-a', {
       fullName: 'Học Sinh Mới Chưa Học',
@@ -966,5 +952,183 @@ describe('External Student Acceptance & Integration Audit Suite (EXT-ACCEPT-01 -
       status: 'INACTIVE',
     });
     expect(updated.status).toBe('INACTIVE');
+  });
+
+  // EXT-ACCEPT-16: Excel Import
+  it('EXT-ACCEPT-16: Import Excel học sinh mới chỉ tạo TeacherStudent (studentAccountId = null), KHÔNG tạo User mới, KHÔNG có pass "123456"', async () => {
+    const userCountBefore = userStore.length;
+    const importResult = await classroomsService.importStudents(
+      'class-teacher-a',
+      'teacher-a',
+      undefined,
+      [{ name: 'Học Sinh Mới Từ File', email: 'file_student@gmail.com' }],
+    );
+
+    expect(importResult.successCount).toBe(1);
+    expect(userStore.length).toBe(userCountBefore); // Tuyệt đối không tạo User mới
+
+    const createdProfile = studentStore.find((s) => s.fullName === 'Học Sinh Mới Từ File');
+    expect(createdProfile).toBeDefined();
+    expect(createdProfile.studentAccountId).toBeNull();
+    expect((createdProfile as any).password).toBeUndefined();
+  });
+
+  // EXT-ACCEPT-17: Legacy Compatibility
+  it('EXT-ACCEPT-17: Tương thích hoàn hảo với học sinh legacy — resolve 2 chiều ID và bảo toàn toàn bộ lịch sử đa phân hệ', async () => {
+    // 1. Tạo học sinh legacy đã tồn tại trước migration (gắn với student-account-a)
+    const legacyProfile = await fakeTeacherStudentRepo.save({
+      id: 'ts-legacy-student-01',
+      teacherId: 'teacher-a',
+      fullName: 'Em Lê Hoàng Nam (Legacy)',
+      studentAccountId: 'student-account-a',
+      status: 'ACTIVE',
+    });
+
+    // 2. Tạo lịch sử đa phân hệ cho học sinh legacy này
+    lessonStore.push({
+      id: 'l-legacy-01',
+      teacherId: 'teacher-a',
+      classId: 'class-teacher-a',
+      date: '2026-10-15',
+      feePerLesson: 150000,
+    });
+    participantStore.push({
+      id: 'p-legacy-01',
+      lessonId: 'l-legacy-01',
+      studentId: legacyProfile.id,
+      attendanceStatus: 'ATTENDED',
+      feeAmount: 150000,
+    });
+    tuitionStore.push({
+      id: 't-legacy-01',
+      teacherId: 'teacher-a',
+      classId: 'class-teacher-a',
+      studentId: legacyProfile.id,
+      month: '2026-10',
+      totalAmount: 150000,
+      paidAmount: 150000,
+      remainingAmount: 0,
+      status: 'PAID',
+    });
+    paymentStore.push({
+      id: 'pay-legacy-01',
+      tuitionItemId: 't-legacy-01',
+      teacherId: 'teacher-a',
+      studentId: legacyProfile.id,
+      amount: 150000,
+      paymentDate: '2026-10-20',
+      status: 'COMPLETED',
+    });
+    logStore.push({
+      id: 'log-legacy-01',
+      teacherId: 'teacher-a',
+      classId: 'class-teacher-a',
+      lessonId: 'l-legacy-01',
+      studentId: legacyProfile.id,
+      content: 'Ôn tập kiến thức cũ',
+    });
+    scoreStore.push({
+      id: 'score-legacy-01',
+      teacherId: 'teacher-a',
+      classId: 'class-teacher-a',
+      studentId: legacyProfile.id,
+      score: 9.5,
+      assessmentName: 'Kiểm tra 15p',
+    });
+
+    // 3. Verify resolveStudent bằng TeacherStudent.id
+    const resolvedById = await studentsService.resolveStudent('teacher-a', 'ts-legacy-student-01');
+    expect(resolvedById.id).toBe('ts-legacy-student-01');
+    expect(resolvedById.fullName).toBe('Em Lê Hoàng Nam (Legacy)');
+
+    // 4. Verify resolveStudent bằng studentAccountId (ID tài khoản User cũ)
+    const resolvedByAccount = await studentsService.resolveStudent('teacher-a', 'student-account-a');
+    expect(resolvedByAccount.id).toBe('ts-legacy-student-01');
+
+    // 5. Verify getStudentDetail tổng hợp đầy đủ lịch sử của legacy student
+    const detail = (await studentsService.getStudentDetail('teacher-a', 'ts-legacy-student-01')) as any;
+    expect(detail.student.isExternal).toBe(false);
+    expect(detail.student.studentAccountId).toBe('student-account-a');
+    expect(detail.schedules.length).toBe(1);
+    expect(detail.tuitions.length).toBe(1);
+    expect(detail.payments.length).toBe(1);
+    expect(detail.learningLogs.length).toBe(1);
+    expect(detail.scores.length).toBe(1);
+  });
+
+  // EXT-ACCEPT-18: Cross Account Consistency & Teacher Isolation
+  it('EXT-ACCEPT-18: Cách ly dữ liệu chéo tài khoản — Teacher B đăng nhập không thấy bất kỳ dữ liệu nào của Teacher A', async () => {
+    // 1. Setup dữ liệu đầy đủ cho Teacher A
+    const extA = await studentsService.createExternalStudent('teacher-a', {
+      fullName: 'Học Sinh Độc Quyền A',
+      phone: '0901111111',
+    });
+    lessonStore.push({
+      id: 'l-iso-a',
+      teacherId: 'teacher-a',
+      classId: `private-${extA.id}`,
+      date: '2026-11-01',
+    });
+    participantStore.push({
+      id: 'p-iso-a',
+      lessonId: 'l-iso-a',
+      studentId: extA.id,
+      attendanceStatus: 'ATTENDED',
+    });
+    tuitionStore.push({
+      id: 't-iso-a',
+      teacherId: 'teacher-a',
+      studentId: extA.id,
+      month: '2026-11',
+      totalAmount: 500000,
+    });
+    paymentStore.push({
+      id: 'pay-iso-a',
+      tuitionItemId: 't-iso-a',
+      teacherId: 'teacher-a',
+      studentId: extA.id,
+      amount: 500000,
+      paymentDate: '2026-11-05',
+    });
+    logStore.push({
+      id: 'log-iso-a',
+      teacherId: 'teacher-a',
+      studentId: extA.id,
+      content: 'Nhật ký bảo mật A',
+    });
+    scoreStore.push({
+      id: 'score-iso-a',
+      teacherId: 'teacher-a',
+      studentId: extA.id,
+      score: 10,
+    });
+
+    // 2. Setup dữ liệu riêng cho Teacher B
+    const extB = await studentsService.createExternalStudent('teacher-b', {
+      fullName: 'Học Sinh Độc Quyền B',
+      phone: '0902222222',
+    });
+
+    // 3. Teacher B truy vấn danh sách học sinh: CHỈ thấy Student B, TUYỆT ĐỐI không có Student A
+    const teacherBStudents = await studentsService.getTeacherStudents('teacher-b');
+    expect(teacherBStudents.some((s) => s.id === extA.id)).toBe(false);
+    expect(teacherBStudents.some((s) => s.fullName === 'Học Sinh Độc Quyền A')).toBe(false);
+    expect(teacherBStudents.some((s) => s.id === extB.id)).toBe(true);
+
+    // 4. Teacher B truy vấn chi tiết học sinh A -> Bị từ chối (404/403)
+    await expect(studentsService.getStudentDetail('teacher-b', extA.id)).rejects.toThrow();
+
+    // 5. Teacher B truy vấn học phí học sinh A -> Bị từ chối
+    await expect(tuitionService.getTuitionDetail('teacher-b', 't-iso-a')).rejects.toThrow();
+
+    // 6. Teacher B truy vấn học phí, nhật ký, điểm số theo teacherId của mình -> Không leak dữ liệu của A
+    const teacherBTuitions = await fakeTuitionRepo.find({ where: { teacherId: 'teacher-b' } });
+    expect(teacherBTuitions.some((t: any) => t.id === 't-iso-a')).toBe(false);
+
+    const teacherBLogs = await fakeLogRepo.find({ where: { teacherId: 'teacher-b' } });
+    expect(teacherBLogs.some((l: any) => l.id === 'log-iso-a')).toBe(false);
+
+    const teacherBScores = await fakeScoreRepo.find({ where: { teacherId: 'teacher-b' } });
+    expect(teacherBScores.some((s: any) => s.id === 'score-iso-a')).toBe(false);
   });
 });

@@ -92,6 +92,14 @@ export async function runExternalStudentLegacyBackfill(
     connection = await mysql.createConnection(config);
     console.log('[Migration] Connected to database successfully.');
 
+    // Safe session lock wait timeouts (fail fast instead of hanging on lock waits)
+    try {
+      await connection.query('SET SESSION innodb_lock_wait_timeout = 15;');
+      await connection.query('SET SESSION lock_wait_timeout = 15;');
+    } catch {
+      // Non-blocking if DB user has restricted session privileges
+    }
+
     // 1. Check existing tables
     console.log('[Migration] Phase 2: Ensuring teacher_student_profiles schema...');
     const [tablesRaw] = await connection.query(`SHOW TABLES;`);
@@ -188,19 +196,37 @@ export async function runExternalStudentLegacyBackfill(
     }
 
     // Collect all candidate (teacherId, rawStudentId) relations across all tables
-    const candidatePairs = new Map<string, { teacherId: string; rawStudentId: string; sourceTable: string; recordId: string }>();
+    const candidatePairs = new Map<
+      string,
+      { teacherId: string; rawStudentId: string; sourceTables: Set<string>; recordId: string }
+    >();
+
+    const registerCandidate = (
+      teacherId: string,
+      rawStudentId: string,
+      sourceTable: string,
+      recordId: string,
+    ) => {
+      const key = `${teacherId}__${rawStudentId}`;
+      const existing = candidatePairs.get(key);
+      if (existing) {
+        existing.sourceTables.add(sourceTable);
+      } else {
+        candidatePairs.set(key, {
+          teacherId,
+          rawStudentId,
+          sourceTables: new Set([sourceTable]),
+          recordId,
+        });
+      }
+    };
 
     // Source 1: teacher_students join table
     if (tables.includes('teacher_students')) {
       const [tsRows] = await connection.query(`SELECT teacherId, studentId FROM teacher_students;`);
       for (const r of tsRows as any[]) {
         if (r.teacherId && r.studentId) {
-          candidatePairs.set(`${r.teacherId}__${r.studentId}`, {
-            teacherId: r.teacherId,
-            rawStudentId: r.studentId,
-            sourceTable: 'teacher_students',
-            recordId: `${r.teacherId}:${r.studentId}`,
-          });
+          registerCandidate(r.teacherId, r.studentId, 'teacher_students', `${r.teacherId}:${r.studentId}`);
         }
       }
     }
@@ -214,12 +240,7 @@ export async function runExternalStudentLegacyBackfill(
       `);
       for (const r of csRows as any[]) {
         if (r.teacherId && r.studentId) {
-          candidatePairs.set(`${r.teacherId}__${r.studentId}`, {
-            teacherId: r.teacherId,
-            rawStudentId: r.studentId,
-            sourceTable: 'class_students',
-            recordId: `${r.teacherId}:${r.studentId}`,
-          });
+          registerCandidate(r.teacherId, r.studentId, 'class_students', `${r.teacherId}:${r.studentId}`);
         }
       }
     }
@@ -233,12 +254,7 @@ export async function runExternalStudentLegacyBackfill(
       `);
       for (const r of lpRows as any[]) {
         if (r.teacherId && r.studentId) {
-          candidatePairs.set(`${r.teacherId}__${r.studentId}`, {
-            teacherId: r.teacherId,
-            rawStudentId: r.studentId,
-            sourceTable: 'teaching_lesson_participants',
-            recordId: r.participantId,
-          });
+          registerCandidate(r.teacherId, r.studentId, 'teaching_lesson_participants', r.participantId);
         } else if (!r.teacherId && r.studentId) {
           result.unresolvedRecords.push({
             table: 'teaching_lesson_participants',
@@ -255,12 +271,7 @@ export async function runExternalStudentLegacyBackfill(
       const [tiRows] = await connection.query(`SELECT id, teacherId, studentId FROM teaching_tuition_items;`);
       for (const r of tiRows as any[]) {
         if (r.teacherId && r.studentId) {
-          candidatePairs.set(`${r.teacherId}__${r.studentId}`, {
-            teacherId: r.teacherId,
-            rawStudentId: r.studentId,
-            sourceTable: 'teaching_tuition_items',
-            recordId: r.id,
-          });
+          registerCandidate(r.teacherId, r.studentId, 'teaching_tuition_items', r.id);
         } else if (!r.teacherId && r.studentId) {
           result.unresolvedRecords.push({
             table: 'teaching_tuition_items',
@@ -277,12 +288,7 @@ export async function runExternalStudentLegacyBackfill(
       const [tpRows] = await connection.query(`SELECT id, teacherId, studentId FROM teaching_tuition_payments;`);
       for (const r of tpRows as any[]) {
         if (r.teacherId && r.studentId) {
-          candidatePairs.set(`${r.teacherId}__${r.studentId}`, {
-            teacherId: r.teacherId,
-            rawStudentId: r.studentId,
-            sourceTable: 'teaching_tuition_payments',
-            recordId: r.id,
-          });
+          registerCandidate(r.teacherId, r.studentId, 'teaching_tuition_payments', r.id);
         }
       }
     }
@@ -292,12 +298,7 @@ export async function runExternalStudentLegacyBackfill(
       const [llRows] = await connection.query(`SELECT id, teacherId, studentId FROM teaching_learning_logs;`);
       for (const r of llRows as any[]) {
         if (r.teacherId && r.studentId) {
-          candidatePairs.set(`${r.teacherId}__${r.studentId}`, {
-            teacherId: r.teacherId,
-            rawStudentId: r.studentId,
-            sourceTable: 'teaching_learning_logs',
-            recordId: r.id,
-          });
+          registerCandidate(r.teacherId, r.studentId, 'teaching_learning_logs', r.id);
         }
       }
     }
@@ -307,12 +308,7 @@ export async function runExternalStudentLegacyBackfill(
       const [scRows] = await connection.query(`SELECT id, teacherId, studentId FROM teaching_scores;`);
       for (const r of scRows as any[]) {
         if (r.teacherId && r.studentId) {
-          candidatePairs.set(`${r.teacherId}__${r.studentId}`, {
-            teacherId: r.teacherId,
-            rawStudentId: r.studentId,
-            sourceTable: 'teaching_scores',
-            recordId: r.id,
-          });
+          registerCandidate(r.teacherId, r.studentId, 'teaching_scores', r.id);
         }
       }
     }
@@ -320,17 +316,17 @@ export async function runExternalStudentLegacyBackfill(
     console.log(`[Migration] Discovered ${candidatePairs.size} candidate teacher-student pairs.`);
     console.log('[Migration] Phase 4: Backfilling / resolving profiles...');
 
-    // Mapping: "teacherId__rawStudentId" -> targetProfileId
-    const pairToProfileMap = new Map<string, string>();
+    // Mapping: "teacherId__rawStudentId" -> { targetProfileId, sourceTables }
+    const pairToProfileMap = new Map<string, { targetProfileId: string; sourceTables: Set<string> }>();
 
     // Process all candidate pairs
     for (const [pairKey, item] of candidatePairs.entries()) {
-      const { teacherId, rawStudentId, sourceTable, recordId } = item;
+      const { teacherId, rawStudentId, sourceTables, recordId } = item;
 
       // 1. Is rawStudentId ALREADY an existing TeacherStudent.id?
       if (profileIdSet.has(rawStudentId)) {
         // Valid existing profile. Reuse it directly.
-        pairToProfileMap.set(pairKey, rawStudentId);
+        pairToProfileMap.set(pairKey, { targetProfileId: rawStudentId, sourceTables });
         result.profilesReused++;
         continue;
       }
@@ -338,7 +334,7 @@ export async function runExternalStudentLegacyBackfill(
       // 2. Does a profile exist for this (teacherId, studentAccountId = rawStudentId)?
       const existingProfileId = profileByTeacherAndAccount.get(`${teacherId}__${rawStudentId}`);
       if (existingProfileId) {
-        pairToProfileMap.set(pairKey, existingProfileId);
+        pairToProfileMap.set(pairKey, { targetProfileId: existingProfileId, sourceTables });
         result.profilesReused++;
         continue;
       }
@@ -367,14 +363,14 @@ export async function runExternalStudentLegacyBackfill(
 
         profileIdSet.add(newProfileId);
         profileByTeacherAndAccount.set(`${teacherId}__${user.id}`, newProfileId);
-        pairToProfileMap.set(pairKey, newProfileId);
+        pairToProfileMap.set(pairKey, { targetProfileId: newProfileId, sourceTables });
         result.profilesCreated++;
         continue;
       }
 
       // 4. If neither profile nor user, this is UNRESOLVABLE!
       result.unresolvedRecords.push({
-        table: sourceTable,
+        table: Array.from(sourceTables).join(', '),
         recordId,
         teacherId,
         studentId: rawStudentId,
@@ -397,10 +393,12 @@ export async function runExternalStudentLegacyBackfill(
     console.log('[Migration] Phase 5: Rewriting teaching references across 5 tables...');
 
     // A. teaching_lesson_participants
+    console.log('[Migration] Phase 5.1: Updating teaching_lesson_participants...');
     if (tables.includes('teaching_lesson_participants') && tables.includes('teaching_lessons')) {
-      for (const [pairKey, targetProfileId] of pairToProfileMap.entries()) {
+      for (const [pairKey, info] of pairToProfileMap.entries()) {
+        if (!info.sourceTables.has('teaching_lesson_participants')) continue;
         const [teacherId, rawStudentId] = pairKey.split('__');
-        if (rawStudentId === targetProfileId) continue;
+        if (rawStudentId === info.targetProfileId) continue;
 
         const [updateRes]: any = await connection.query(
           `
@@ -409,17 +407,22 @@ export async function runExternalStudentLegacyBackfill(
           SET lp.studentId = ?
           WHERE l.teacherId = ? AND lp.studentId = ?;
         `,
-          [targetProfileId, teacherId, rawStudentId],
+          [info.targetProfileId, teacherId, rawStudentId],
         );
         result.referencesUpdated.teaching_lesson_participants += updateRes.affectedRows || 0;
       }
     }
+    console.log(
+      `[Migration] Phase 5.1 completed. affectedRows=${result.referencesUpdated.teaching_lesson_participants}`,
+    );
 
     // B. teaching_tuition_items
+    console.log('[Migration] Phase 5.2: Updating teaching_tuition_items...');
     if (tables.includes('teaching_tuition_items')) {
-      for (const [pairKey, targetProfileId] of pairToProfileMap.entries()) {
+      for (const [pairKey, info] of pairToProfileMap.entries()) {
+        if (!info.sourceTables.has('teaching_tuition_items')) continue;
         const [teacherId, rawStudentId] = pairKey.split('__');
-        if (rawStudentId === targetProfileId) continue;
+        if (rawStudentId === info.targetProfileId) continue;
 
         const [updateRes]: any = await connection.query(
           `
@@ -427,17 +430,22 @@ export async function runExternalStudentLegacyBackfill(
           SET studentId = ?
           WHERE teacherId = ? AND studentId = ?;
         `,
-          [targetProfileId, teacherId, rawStudentId],
+          [info.targetProfileId, teacherId, rawStudentId],
         );
         result.referencesUpdated.teaching_tuition_items += updateRes.affectedRows || 0;
       }
     }
+    console.log(
+      `[Migration] Phase 5.2 completed. affectedRows=${result.referencesUpdated.teaching_tuition_items}`,
+    );
 
     // C. teaching_tuition_payments
+    console.log('[Migration] Phase 5.3: Updating teaching_tuition_payments...');
     if (tables.includes('teaching_tuition_payments')) {
-      for (const [pairKey, targetProfileId] of pairToProfileMap.entries()) {
+      for (const [pairKey, info] of pairToProfileMap.entries()) {
+        if (!info.sourceTables.has('teaching_tuition_payments')) continue;
         const [teacherId, rawStudentId] = pairKey.split('__');
-        if (rawStudentId === targetProfileId) continue;
+        if (rawStudentId === info.targetProfileId) continue;
 
         const [updateRes]: any = await connection.query(
           `
@@ -445,17 +453,22 @@ export async function runExternalStudentLegacyBackfill(
           SET studentId = ?
           WHERE teacherId = ? AND studentId = ?;
         `,
-          [targetProfileId, teacherId, rawStudentId],
+          [info.targetProfileId, teacherId, rawStudentId],
         );
         result.referencesUpdated.teaching_tuition_payments += updateRes.affectedRows || 0;
       }
     }
+    console.log(
+      `[Migration] Phase 5.3 completed. affectedRows=${result.referencesUpdated.teaching_tuition_payments}`,
+    );
 
     // D. teaching_learning_logs
+    console.log('[Migration] Phase 5.4: Updating teaching_learning_logs...');
     if (tables.includes('teaching_learning_logs')) {
-      for (const [pairKey, targetProfileId] of pairToProfileMap.entries()) {
+      for (const [pairKey, info] of pairToProfileMap.entries()) {
+        if (!info.sourceTables.has('teaching_learning_logs')) continue;
         const [teacherId, rawStudentId] = pairKey.split('__');
-        if (rawStudentId === targetProfileId) continue;
+        if (rawStudentId === info.targetProfileId) continue;
 
         const [updateRes]: any = await connection.query(
           `
@@ -463,17 +476,22 @@ export async function runExternalStudentLegacyBackfill(
           SET studentId = ?
           WHERE teacherId = ? AND studentId = ?;
         `,
-          [targetProfileId, teacherId, rawStudentId],
+          [info.targetProfileId, teacherId, rawStudentId],
         );
         result.referencesUpdated.teaching_learning_logs += updateRes.affectedRows || 0;
       }
     }
+    console.log(
+      `[Migration] Phase 5.4 completed. affectedRows=${result.referencesUpdated.teaching_learning_logs}`,
+    );
 
     // E. teaching_scores
+    console.log('[Migration] Phase 5.5: Updating teaching_scores...');
     if (tables.includes('teaching_scores')) {
-      for (const [pairKey, targetProfileId] of pairToProfileMap.entries()) {
+      for (const [pairKey, info] of pairToProfileMap.entries()) {
+        if (!info.sourceTables.has('teaching_scores')) continue;
         const [teacherId, rawStudentId] = pairKey.split('__');
-        if (rawStudentId === targetProfileId) continue;
+        if (rawStudentId === info.targetProfileId) continue;
 
         const [updateRes]: any = await connection.query(
           `
@@ -481,11 +499,14 @@ export async function runExternalStudentLegacyBackfill(
           SET studentId = ?
           WHERE teacherId = ? AND studentId = ?;
         `,
-          [targetProfileId, teacherId, rawStudentId],
+          [info.targetProfileId, teacherId, rawStudentId],
         );
         result.referencesUpdated.teaching_scores += updateRes.affectedRows || 0;
       }
     }
+    console.log(
+      `[Migration] Phase 5.5 completed. affectedRows=${result.referencesUpdated.teaching_scores}`,
+    );
 
     // 6. Validation step before commit
     console.log('[Migration] Phase 6: Validating integrity across all 5 tables...');

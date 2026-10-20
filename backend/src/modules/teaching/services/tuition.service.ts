@@ -23,6 +23,7 @@ import {
 } from '../dto/tuition.dto.js';
 import { generateTuitionExcelReport } from '../utils/tuition-excel.util.js';
 import crypto from 'crypto';
+import sharp from 'sharp';
 
 export interface TuitionRowSummary {
   id: string;
@@ -899,15 +900,24 @@ export class TuitionService {
       const buffer = Buffer.from(arrayBuffer);
       const textSample = buffer.subarray(0, 500).toString('utf-8');
 
-      // Check if VietQR returned SVG containing embedded base64 PNG
-      if (textSample.includes('<svg') || textSample.includes('data:image/png;base64,')) {
-        const fullText = buffer.toString('utf-8');
-        const match = fullText.match(/data:image\/png;base64,([A-Za-z0-9+/=]+)/);
-        if (match && match[1]) {
-          const pngBuffer = Buffer.from(match[1], 'base64');
-          return { buffer: pngBuffer, contentType: 'image/png' };
+      // If VietQR returned SVG (which contains both the frame template and the QR vector path)
+      if (textSample.includes('<svg') || textSample.includes('<?xml')) {
+        const pngBuffer = await sharp(buffer)
+          .png({ compressionLevel: 9 })
+          .toBuffer();
+
+        // Validate rendered PNG magic bytes
+        if (
+          pngBuffer.length < 8 ||
+          pngBuffer[0] !== 0x89 ||
+          pngBuffer[1] !== 0x50 ||
+          pngBuffer[2] !== 0x4e ||
+          pngBuffer[3] !== 0x47
+        ) {
+          throw new BadGatewayException('Không thể chuyển đổi mã VietQR sang định dạng hình ảnh chuẩn');
         }
-        return { buffer, contentType: 'image/svg+xml' };
+
+        return { buffer: pngBuffer, contentType: 'image/png' };
       }
 
       // Check if already raw PNG header (magic bytes: 89 50 4E 47)
@@ -921,8 +931,14 @@ export class TuitionService {
         return { buffer, contentType: 'image/png' };
       }
 
-      const rawContentType = response.headers.get('content-type') || 'image/png';
-      return { buffer, contentType: rawContentType.split(';')[0].trim() };
+      // Fallback conversion for any other image format
+      try {
+        const pngBuffer = await sharp(buffer).png().toBuffer();
+        return { buffer: pngBuffer, contentType: 'image/png' };
+      } catch {
+        const rawContentType = response.headers.get('content-type') || 'image/png';
+        return { buffer, contentType: rawContentType.split(';')[0].trim() };
+      }
     } catch (err: any) {
       if (err instanceof BadRequestException || err instanceof BadGatewayException) {
         throw err;

@@ -48,11 +48,9 @@ describe('Tuition QR Service Regression Suite (QR-01 to QR-09)', () => {
     expect(result.buffer[1]).toBe(0x50);
   });
 
-  // QR-02 & QR-03: Handles VietQR SVG containing embedded base64 PNG
-  it('QR-02 & QR-03: Extracts clean PNG buffer from VietQR SVG response without broken icons', async () => {
-    const rawPngBytes = new Uint8Array([0x89, 0x50, 0x4e, 0x47, 0x01, 0x02, 0x03]);
-    const b64 = Buffer.from(rawPngBytes).toString('base64');
-    const svgResponse = `<svg xmlns="http://www.w3.org/2000/svg"><image href="data:image/png;base64,${b64}"/></svg>`;
+  // QR-02 & QR-03: Renders VietQR SVG to clean PNG buffer without broken icons
+  it('QR-02 & QR-03: Renders clean PNG buffer from VietQR SVG response without broken icons', async () => {
+    const svgResponse = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100"><rect width="100" height="100" fill="#fff"/><circle cx="50" cy="50" r="40" fill="#000"/></svg>`;
     const svgBytes = new TextEncoder().encode(svgResponse);
 
     globalThis.fetch = vi.fn().mockResolvedValue({
@@ -69,7 +67,73 @@ describe('Tuition QR Service Regression Suite (QR-01 to QR-09)', () => {
     });
 
     expect(result.contentType).toBe('image/png');
-    expect(result.buffer).toEqual(Buffer.from(rawPngBytes));
+    expect(result.buffer[0]).toBe(0x89);
+    expect(result.buffer[1]).toBe(0x50);
+    expect(result.buffer[2]).toBe(0x4e);
+    expect(result.buffer[3]).toBe(0x47);
+  });
+
+  // QR-10: Complete QR Matrix Preservation using production VietQR SVG fixture
+  it('QR-10: Complete QR Matrix Preservation - verifies rendered PNG contains real QR visual data, not a blank box', async () => {
+    const fs = await import('fs');
+    const path = await import('path');
+    const sharp = (await import('sharp')).default;
+
+    const fixturePath = path.resolve(__dirname, 'fixtures/vietqr-sample.svg');
+    const fixtureSvg = fs.readFileSync(fixturePath);
+
+    globalThis.fetch = vi.fn().mockResolvedValue({
+      ok: true,
+      status: 200,
+      headers: new Headers({ 'content-type': 'image/svg+xml; charset=utf-8' }),
+      arrayBuffer: async () => fixtureSvg.buffer.slice(fixtureSvg.byteOffset, fixtureSvg.byteOffset + fixtureSvg.byteLength),
+    });
+
+    const result = await service.generateOrProxyPaymentQr({
+      bankCode: 'mb',
+      accountNumber: '713072005',
+      amount: 200000,
+      addInfo: 'HP Dang Thi Hong Xuan 202610',
+      accountName: 'TRAN THI PHUONG ANH',
+    });
+
+    // 1. Output is PNG
+    expect(result.contentType).toBe('image/png');
+
+    // 2. Output is valid PNG magic bytes
+    expect(result.buffer[0]).toBe(0x89);
+    expect(result.buffer[1]).toBe(0x50);
+    expect(result.buffer[2]).toBe(0x4e);
+    expect(result.buffer[3]).toBe(0x47);
+
+    // 3. Dimensions match VietQR standard template (540 x 640)
+    const meta = await sharp(result.buffer).metadata();
+    expect(meta.width).toBe(540);
+    expect(meta.height).toBe(640);
+
+    // 4. Inspect pixel data in the central QR matrix area (x: 160-380, y: 190-450)
+    // The previous bug extracted only the frame template which had 0 dark pixels (completely blank white box)
+    const { data, info } = await sharp(result.buffer).raw().toBuffer({ resolveWithObject: true });
+    let darkPixelCount = 0;
+    const startX = Math.floor(info.width * 0.3);
+    const endX = Math.floor(info.width * 0.7);
+    const startY = Math.floor(info.height * 0.3);
+    const endY = Math.floor(info.height * 0.7);
+
+    for (let y = startY; y < endY; y++) {
+      for (let x = startX; x < endX; x++) {
+        const idx = (y * info.width + x) * info.channels;
+        const r = data[idx];
+        const g = data[idx + 1];
+        const b = data[idx + 2];
+        if (r < 60 && g < 60 && b < 60) {
+          darkPixelCount++;
+        }
+      }
+    }
+
+    // The central QR matrix MUST contain substantial dark pixels (VietQR matrix has > 20,000 dark pixels in center)
+    expect(darkPixelCount).toBeGreaterThan(10000);
   });
 
   // QR-07: Vietnamese transfer content is encoded correctly

@@ -73,68 +73,124 @@ describe('Tuition QR Service Regression Suite (QR-01 to QR-09)', () => {
     expect(result.buffer[3]).toBe(0x47);
   });
 
-  // QR-10: Complete QR Matrix Preservation using production VietQR SVG fixture
-  it('QR-10: Complete QR Matrix Preservation - verifies rendered PNG contains real QR visual data, not a blank box', async () => {
-    const fs = await import('fs');
-    const path = await import('path');
-    const sharp = (await import('sharp')).default;
-
-    const fixturePath = path.resolve(__dirname, 'fixtures/vietqr-sample.svg');
-    const fixtureSvg = fs.readFileSync(fixturePath);
-
-    globalThis.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      status: 200,
-      headers: new Headers({ 'content-type': 'image/svg+xml; charset=utf-8' }),
-      arrayBuffer: async () => fixtureSvg.buffer.slice(fixtureSvg.byteOffset, fixtureSvg.byteOffset + fixtureSvg.byteLength),
-    });
-
-    const result = await service.generateOrProxyPaymentQr({
+  // Bank-Specific Test Matrix (QR-MB, QR-VCB, QR-TCB, QR-ACB)
+  const bankTestCases = [
+    {
+      testId: 'QR-MB',
+      bankName: 'MBBank (MB)',
       bankCode: 'mb',
       accountNumber: '713072005',
-      amount: 200000,
-      addInfo: 'HP Dang Thi Hong Xuan 202610',
-      accountName: 'TRAN THI PHUONG ANH',
-    });
+      expectedBin: '970422',
+      fixtureFile: 'vietqr-mb.svg',
+    },
+    {
+      testId: 'QR-VCB',
+      bankName: 'Vietcombank (VCB)',
+      bankCode: 'vcb',
+      accountNumber: '0011001234567',
+      expectedBin: '970436',
+      fixtureFile: 'vietqr-vcb.svg',
+    },
+    {
+      testId: 'QR-TCB',
+      bankName: 'Techcombank (TCB)',
+      bankCode: 'tcb',
+      accountNumber: '19020012345678',
+      expectedBin: '970407',
+      fixtureFile: 'vietqr-tcb.svg',
+    },
+    {
+      testId: 'QR-ACB',
+      bankName: 'ACB (Working Bank)',
+      bankCode: 'acb',
+      accountNumber: '12345678',
+      expectedBin: '970416',
+      fixtureFile: 'vietqr-acb.svg',
+    },
+  ];
 
-    // 1. Output is PNG
-    expect(result.contentType).toBe('image/png');
+  for (const tc of bankTestCases) {
+    it(`${tc.testId}: ${tc.bankName} - renders complete QR matrix and decodes valid EMVCo payload`, async () => {
+      const fs = await import('fs');
+      const path = await import('path');
+      const sharp = (await import('sharp')).default;
+      const jsQRModule: any = await import('jsqr');
+      const jsQR = jsQRModule.default || jsQRModule;
 
-    // 2. Output is valid PNG magic bytes
-    expect(result.buffer[0]).toBe(0x89);
-    expect(result.buffer[1]).toBe(0x50);
-    expect(result.buffer[2]).toBe(0x4e);
-    expect(result.buffer[3]).toBe(0x47);
+      const fixturePath = path.resolve(__dirname, `fixtures/${tc.fixtureFile}`);
+      const fixtureSvg = fs.readFileSync(fixturePath);
 
-    // 3. Dimensions match VietQR standard template (540 x 640)
-    const meta = await sharp(result.buffer).metadata();
-    expect(meta.width).toBe(540);
-    expect(meta.height).toBe(640);
+      globalThis.fetch = vi.fn().mockResolvedValue({
+        ok: true,
+        status: 200,
+        headers: new Headers({ 'content-type': 'image/svg+xml; charset=utf-8' }),
+        arrayBuffer: async () => fixtureSvg.buffer.slice(fixtureSvg.byteOffset, fixtureSvg.byteOffset + fixtureSvg.byteLength),
+      });
 
-    // 4. Inspect pixel data in the central QR matrix area (x: 160-380, y: 190-450)
-    // The previous bug extracted only the frame template which had 0 dark pixels (completely blank white box)
-    const { data, info } = await sharp(result.buffer).raw().toBuffer({ resolveWithObject: true });
-    let darkPixelCount = 0;
-    const startX = Math.floor(info.width * 0.3);
-    const endX = Math.floor(info.width * 0.7);
-    const startY = Math.floor(info.height * 0.3);
-    const endY = Math.floor(info.height * 0.7);
+      const result = await service.generateOrProxyPaymentQr({
+        bankCode: tc.bankCode,
+        accountNumber: tc.accountNumber,
+        amount: 200000,
+        addInfo: 'HP Test 202610',
+        accountName: 'TRAN THI PHUONG ANH',
+        v: '2',
+      });
 
-    for (let y = startY; y < endY; y++) {
-      for (let x = startX; x < endX; x++) {
-        const idx = (y * info.width + x) * info.channels;
-        const r = data[idx];
-        const g = data[idx + 1];
-        const b = data[idx + 2];
-        if (r < 60 && g < 60 && b < 60) {
-          darkPixelCount++;
+      // 1. HTTP Content-Type
+      expect(result.contentType).toBe('image/png');
+
+      // 2. PNG Magic bytes (89 50 4E 47)
+      expect(result.buffer[0]).toBe(0x89);
+      expect(result.buffer[1]).toBe(0x50);
+      expect(result.buffer[2]).toBe(0x4e);
+      expect(result.buffer[3]).toBe(0x47);
+
+      // 3. Image Dimensions (VietQR standard 540 x 640)
+      const meta = await sharp(result.buffer).metadata();
+      expect(meta.width).toBe(540);
+      expect(meta.height).toBe(640);
+
+      // 4. QR region pixel analysis: inspect central area (x: 120-420, y: 120-420)
+      // Must contain actual QR matrix dark pixels (> 30,000 pixels, ~45-48%), NOT a blank white box
+      const { data, info } = await sharp(result.buffer).ensureAlpha().raw().toBuffer({ resolveWithObject: true });
+      let centralDarkCount = 0;
+      let totalCentralPixels = 0;
+
+      for (let y = 120; y < 420; y++) {
+        for (let x = 120; x < 420; x++) {
+          totalCentralPixels++;
+          const idx = (y * info.width + x) * 4;
+          const r = data[idx];
+          const g = data[idx + 1];
+          const b = data[idx + 2];
+          if (r < 50 && g < 50 && b < 50) {
+            centralDarkCount++;
+          }
         }
       }
-    }
 
-    // The central QR matrix MUST contain substantial dark pixels (VietQR matrix has > 20,000 dark pixels in center)
-    expect(darkPixelCount).toBeGreaterThan(10000);
-  });
+      const darkRatio = centralDarkCount / totalCentralPixels;
+      expect(centralDarkCount).toBeGreaterThan(25000);
+      expect(darkRatio).toBeGreaterThan(0.35);
+
+      // 5. QR Code Decoder verification
+      const clamped = new Uint8ClampedArray(data.buffer, data.byteOffset, data.byteLength);
+      const decoded = jsQR(clamped, info.width, info.height);
+
+      expect(decoded).not.toBeNull();
+      expect(decoded?.data).toBeDefined();
+
+      // Verify decoded EMVCo payload attributes:
+      // - Bank BIN code
+      // - Account Number
+      // - Currency VND (704)
+      // - Amount 200000
+      expect(decoded!.data).toContain(tc.expectedBin);
+      expect(decoded!.data).toContain(tc.accountNumber);
+      expect(decoded!.data).toContain('704');
+      expect(decoded!.data).toContain('200000');
+    });
+  }
 
   // QR-07: Vietnamese transfer content is encoded correctly
   it('QR-07: Vietnamese transfer content is encoded correctly without corruption', async () => {
@@ -312,6 +368,7 @@ describe('Tuition QR Controller and Guard Security Suite', () => {
       'HP Dang Thi Hong Xuan',
       'TRAN THI PHUONG ANH',
       'compact2',
+      '2',
       mockRes,
     );
 
@@ -322,12 +379,13 @@ describe('Tuition QR Controller and Guard Security Suite', () => {
       addInfo: 'HP Dang Thi Hong Xuan',
       accountName: 'TRAN THI PHUONG ANH',
       template: 'compact2',
+      v: '2',
     });
 
     expect(headersSet['Content-Type']).toBe('image/png');
     expect(headersSet['Access-Control-Allow-Origin']).toBe('*');
     expect(headersSet['Cross-Origin-Resource-Policy']).toBe('cross-origin');
-    expect(headersSet['Cache-Control']).toContain('public');
+    expect(headersSet['Cache-Control']).toBe('public, max-age=3600, must-revalidate');
     expect(endedBuffer).toEqual(fakeBuffer);
   });
 });

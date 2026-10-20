@@ -141,7 +141,18 @@ export class ScheduleService {
 
     qb.orderBy('lesson.date', 'ASC').addOrderBy('lesson.startTime', 'ASC');
 
-    return await qb.getMany();
+    const lessons = await qb.getMany();
+    for (const l of lessons) {
+      if (l.participants) {
+        for (const p of l.participants) {
+          if (p.student && (p.student as any).fullName) {
+            (p.student as any).name = (p.student as any).fullName;
+          }
+        }
+      }
+    }
+
+    return lessons;
   }
 
   async getLessonById(teacherId: string, lessonId: string) {
@@ -163,6 +174,14 @@ export class ScheduleService {
 
     if (lesson.teacherId !== teacherId) {
       throw new ForbiddenException('Bạn không có quyền truy cập buổi học này');
+    }
+
+    if (lesson.participants) {
+      for (const p of lesson.participants) {
+        if (p.student && (p.student as any).fullName) {
+          (p.student as any).name = (p.student as any).fullName;
+        }
+      }
     }
 
     return lesson;

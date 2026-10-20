@@ -34,7 +34,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   ringColor = 'ring-blue-100 dark:ring-blue-900',
 }) => {
   const resolvedUrl = src || resolveAvatarUrl(user);
-  const displayName = name || user?.name || '';
+  const displayName = name || user?.name || (user as any)?.fullName || '';
   const initials = resolveInitials(displayName);
   const colorScheme = getAvatarColor(displayName || initials);
 

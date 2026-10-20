@@ -251,7 +251,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
           if (p.student && !studentMap.has(p.student.id)) {
             studentMap.set(p.student.id, {
               id: p.student.id,
-              name: p.student.name,
+              name: p.student.name || p.student.fullName || 'Học sinh',
               email: p.student.email,
               avatar: p.student.avatar,
               className: l.class?.name || 'Lớp học',

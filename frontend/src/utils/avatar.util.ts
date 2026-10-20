@@ -11,6 +11,7 @@ export interface AvatarSource {
   image?: string | null;
   studentAvatar?: string | null;
   name?: string | null;
+  fullName?: string | null;
 }
 
 /**

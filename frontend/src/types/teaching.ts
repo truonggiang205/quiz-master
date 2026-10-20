@@ -12,8 +12,9 @@ export interface LessonParticipant {
   feeAmount: number;
   student?: {
     id: string;
-    name: string;
-    email: string;
+    name?: string;
+    fullName?: string;
+    email?: string;
     avatar?: string;
   };
 }

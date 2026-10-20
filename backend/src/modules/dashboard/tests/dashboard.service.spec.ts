@@ -64,9 +64,13 @@ describe('DashboardService', () => {
           range4: '2', // 8.0 - 9.0
           range5: '1', // 9.0 - 10
         }),
-        getRawMany: vi.fn().mockResolvedValue([
-          { dateStr: new Date().toISOString().slice(0, 10), count: '5', avgScore: '80.0' },
-        ]),
+        getRawMany: vi.fn().mockImplementation(() => {
+          const now = new Date();
+          const localToday = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+          return Promise.resolve([
+            { dateStr: localToday, count: '5', avgScore: '80.0' },
+          ]);
+        }),
         take: vi.fn().mockReturnThis(),
         getMany: vi.fn().mockResolvedValue([]),
       };

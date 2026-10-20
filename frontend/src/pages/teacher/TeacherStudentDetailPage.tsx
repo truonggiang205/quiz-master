@@ -132,7 +132,7 @@ export const TeacherStudentDetailPage: React.FC = () => {
           actionKey: `unlink-account-${id}`,
           loadingTitle: 'Đang hủy liên kết...',
           successTitle: 'Thành công',
-          successMessage: 'Đã chuyển học sinh về chế độ ngoài hệ thống',
+          successMessage: 'Đã chuyển học sinh về chế độ học sinh thủ công',
           errorTitle: 'Lỗi',
           errorMessage: 'Không thể hủy liên kết tài khoản',
         },
@@ -254,7 +254,7 @@ export const TeacherStudentDetailPage: React.FC = () => {
                 {/* Badge External / Linked */}
                 {isExternal ? (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
-                    <UserX className="w-3.5 h-3.5" /> NGOÀI HỆ THỐNG
+                    <UserX className="w-3.5 h-3.5" /> HỌC SINH THỦ CÔNG
                   </span>
                 ) : (
                   <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">

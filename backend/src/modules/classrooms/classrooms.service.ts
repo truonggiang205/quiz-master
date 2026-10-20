@@ -291,14 +291,47 @@ export class ClassroomsService {
       }),
     );
 
-    // 2. Get private 1-on-1 students from teacher_students join table
+    // 2. Get private 1-on-1 tutoring classes from teacher_student_profiles (supporting both manual/external and linked students)
+    const teacherProfiles = await this.teacherStudentRepo.find({
+      where: { teacherId },
+      relations: { studentAccount: true },
+      order: { createdAt: 'DESC' },
+    });
+
     const teacher = await this.userRepo.findOne({
       where: { id: teacherId },
       relations: { students: true },
     });
 
+    // Build unified unique students for 1-1 private classes
+    const uniqueStudentsMap = new Map<string, { id: string; name: string; email?: string; isExternal: boolean; isActive: boolean }>();
+
+    for (const p of teacherProfiles) {
+      // Prioritize studentAccountId if exists for linked accounts, otherwise p.id for manual/external students
+      const studentId = p.studentAccountId || p.id;
+      uniqueStudentsMap.set(studentId, {
+        id: studentId,
+        name: p.fullName,
+        email: p.email || p.studentAccount?.email || undefined,
+        isExternal: !p.studentAccountId,
+        isActive: p.status === 'ACTIVE',
+      });
+    }
+
+    for (const s of (teacher?.students ?? [])) {
+      if (!Array.from(uniqueStudentsMap.values()).some((item) => item.id === s.id || (s.email && item.email === s.email))) {
+        uniqueStudentsMap.set(s.id, {
+          id: s.id,
+          name: s.name,
+          email: s.email,
+          isExternal: false,
+          isActive: s.isActive !== false,
+        });
+      }
+    }
+
     const privateClasses = await Promise.all(
-      (teacher?.students ?? []).map(async (student) => {
+      Array.from(uniqueStudentsMap.values()).map(async (student) => {
         const classId = `private-${student.id}`;
         let privateClass = await this.classRepo.findOne({
           where: { id: classId },
@@ -315,17 +348,25 @@ export class ClassroomsService {
             inviteCode: rawCode,
             teacherId,
             isPrivate: true,
-            students: [student],
+            students: [],
           });
           await this.classRepo.save(privateClass);
         } else if (!privateClass.students || privateClass.students.length === 0) {
-          privateClass.students = [student];
-          await this.classRepo.save(privateClass);
+          // Keep students populated
         }
 
-        const stats = await this.calculateClassStats(classId, [student]);
+        const stats = await this.calculateClassStats(classId, [{
+          id: student.id,
+          isActive: student.isActive,
+        } as any]);
+
         return {
           ...privateClass,
+          students: [{
+            id: student.id,
+            name: student.name,
+            email: student.email,
+          } as any],
           stats,
         };
       }),

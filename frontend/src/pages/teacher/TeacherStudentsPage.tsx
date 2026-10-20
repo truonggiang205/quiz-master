@@ -77,12 +77,12 @@ export const TeacherStudentsPage: React.FC = () => {
     try {
       await withNotification(
         {
-          actionKey: `create-external-student-${Date.now()}`,
+          actionKey: `create-manual-student-${Date.now()}`,
           loadingTitle: 'Đang tạo hồ sơ...',
-          loadingMessage: `Đang lưu học sinh ${studentName} ngoài hệ thống`,
+          loadingMessage: `Đang lưu học sinh thủ công ${studentName}...`,
           successTitle: 'Thành công',
-          successMessage: `Đã thêm học sinh ${studentName} vào danh bạ`,
-          errorTitle: 'Lỗi thêm học sinh',
+          successMessage: `Đã thêm học sinh thủ công ${studentName} thành công`,
+          errorTitle: 'Lỗi thêm học sinh thủ công',
         },
         async () => {
           const newStudent = await StudentService.createExternalStudent({
@@ -206,7 +206,7 @@ export const TeacherStudentsPage: React.FC = () => {
             Hồ sơ & Danh bạ Học sinh
           </h1>
           <p className="text-slate-500 dark:text-slate-400 text-sm mt-0.5">
-            Quản lý toàn diện học sinh ngoài hệ thống và học sinh liên kết QuizMaster
+            Quản lý toàn diện học sinh thủ công và học sinh liên kết QuizMaster
           </p>
         </div>
 
@@ -215,10 +215,11 @@ export const TeacherStudentsPage: React.FC = () => {
             setModalTab('EXTERNAL');
             setShowAddModal(true);
           }}
+          aria-label="Thêm học sinh thủ công"
           className="flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-4 py-2.5 rounded-xl transition-all font-semibold shadow-sm shadow-sky-200 dark:shadow-none active:scale-[0.98]"
         >
           <UserPlus className="w-5 h-5" />
-          + Thêm học sinh
+          + Thêm học sinh thủ công
         </button>
       </div>
 
@@ -239,7 +240,7 @@ export const TeacherStudentsPage: React.FC = () => {
             <UserX className="w-5 h-5" />
           </div>
           <div>
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Ngoài hệ thống</p>
+            <p className="text-xs font-medium text-slate-500 dark:text-slate-400">Học sinh thủ công</p>
             <p className="text-xl font-bold text-slate-800 dark:text-white">{externalCount}</p>
           </div>
         </div>
@@ -288,7 +289,7 @@ export const TeacherStudentsPage: React.FC = () => {
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
             }`}
           >
-            Ngoài hệ thống ({externalCount})
+            Học sinh thủ công ({externalCount})
           </button>
           <button
             onClick={() => setStatusFilter('LINKED')}
@@ -319,17 +320,18 @@ export const TeacherStudentsPage: React.FC = () => {
           <p className="text-slate-500 dark:text-slate-400 mb-6 max-w-md mx-auto text-sm">
             {searchQuery
               ? 'Thử điều chỉnh từ khóa tìm kiếm hoặc bộ lọc trạng thái.'
-              : 'Thêm học sinh ngoài hệ thống để quản lý lịch dạy kèm 1-1, điểm danh, nhật ký học tập và học phí.'}
+              : 'Chưa có học sinh? Thêm học sinh thủ công để bắt đầu lên lịch dạy kèm 1-1, theo dõi học phí, điểm danh và nhật ký học tập.'}
           </p>
           <button
             onClick={() => {
               setModalTab('EXTERNAL');
               setShowAddModal(true);
             }}
-            className="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-6 py-3 rounded-xl transition-colors font-semibold shadow-sm"
+            aria-label="Thêm học sinh thủ công"
+            className="inline-flex items-center gap-2 bg-sky-600 hover:bg-sky-700 text-white px-6 py-3 rounded-xl transition-colors font-semibold shadow-sm active:scale-[0.98]"
           >
             <UserPlus className="w-5 h-5" />
-            + Thêm học sinh ngay
+            + Thêm học sinh thủ công
           </button>
         </div>
       ) : (
@@ -367,7 +369,7 @@ export const TeacherStudentsPage: React.FC = () => {
                         {/* Status Badges */}
                         {student.isExternal ? (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 border border-amber-200 dark:border-amber-800/60">
-                            NGOÀI HỆ THỐNG
+                            <UserX className="w-3 h-3" /> HỌC SINH THỦ CÔNG
                           </span>
                         ) : (
                           <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-400 border border-emerald-200 dark:border-emerald-800/60">
@@ -431,11 +433,11 @@ export const TeacherStudentsPage: React.FC = () => {
         </div>
       )}
 
-      {/* Modal: + Thêm học sinh (Tab Học sinh ngoài hệ thống & Mời học sinh có tài khoản) */}
+      {/* Modal: + Thêm học sinh (Tab Thêm học sinh thủ công & Mời học sinh có tài khoản) */}
       <Modal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        title="+ Thêm học sinh vào danh bạ"
+        title={modalTab === 'EXTERNAL' ? 'Thêm học sinh thủ công' : 'Mời học sinh có tài khoản'}
         icon={
           <div className="p-2 bg-sky-50 dark:bg-sky-950/60 text-sky-600 dark:text-sky-400 rounded-xl">
             <UserPlus className="w-5 h-5" />
@@ -456,11 +458,12 @@ export const TeacherStudentsPage: React.FC = () => {
               type="submit"
               disabled={isSubmitting || (modalTab === 'EXTERNAL' ? !externalForm.fullName.trim() : !inviteEmail.trim())}
               className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-sky-600 hover:bg-sky-700 text-white disabled:opacity-50 transition-colors shadow-sm"
+              aria-label={modalTab === 'EXTERNAL' ? 'Thêm học sinh thủ công' : 'Gửi lời mời'}
             >
               {isSubmitting
                 ? 'Đang xử lý...'
                 : modalTab === 'EXTERNAL'
-                ? 'Tạo học sinh ngoài hệ thống'
+                ? 'Thêm học sinh thủ công'
                 : 'Gửi lời mời'}
             </button>
           </>
@@ -478,8 +481,8 @@ export const TeacherStudentsPage: React.FC = () => {
                   : 'border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
               }`}
             >
-              <UserX className="w-4 h-4" />
-              Học sinh ngoài hệ thống
+              <UserPlus className="w-4 h-4" />
+              Thêm học sinh thủ công
             </button>
             <button
               type="button"
@@ -497,8 +500,8 @@ export const TeacherStudentsPage: React.FC = () => {
 
           {modalTab === 'EXTERNAL' ? (
             <div className="space-y-3.5 max-h-[60vh] overflow-y-auto pr-1">
-              <div className="bg-amber-50 dark:bg-amber-950/30 p-3 rounded-xl border border-amber-200 dark:border-amber-800/40 text-xs text-amber-800 dark:text-amber-300">
-                <strong>Học sinh ngoài hệ thống:</strong> Không yêu cầu email/mật khẩu. Bạn có thể lên lịch dạy kèm, tính học phí, điểm danh và ghi nhận xét ngay lập tức. Sau này có thể liên kết tài khoản QuizMaster nếu học sinh đăng ký.
+              <div className="bg-amber-50 dark:bg-amber-950/30 p-3.5 rounded-xl border border-amber-200 dark:border-amber-800/40 text-xs text-amber-800 dark:text-amber-300 leading-relaxed">
+                Học sinh này chưa có tài khoản trên hệ thống. Bạn vẫn có thể tạo lịch dạy, theo dõi học phí, nhật ký học tập và điểm số cho học sinh này.
               </div>
 
               <div>

@@ -38,13 +38,17 @@ export interface AuditReport {
 }
 
 export async function auditProductionDatabase(connectionConfig?: mysql.ConnectionOptions): Promise<AuditReport> {
-  const dbHost = process.env.DB_HOST || 'csm-db-truonggiang-205.l.aivencloud.com';
-  const dbPort = Number(process.env.DB_PORT) || 25532;
-  const dbUser = process.env.DB_USERNAME || 'avnadmin';
-  const dbPassword = process.env.DB_PASSWORD || 'AVNS__ZUD3CAQkiIrycmV2VH';
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbPort = Number(process.env.DB_PORT || 3306);
+  const dbUser = process.env.DB_USERNAME || 'root';
+  const dbPassword = process.env.DB_PASSWORD || '';
   const dbDatabase = process.env.DB_DATABASE || 'quizmaster';
   const isAiven = dbHost.includes('aivencloud.com');
   const dbSsl = (process.env.DB_SSL === 'true' || isAiven) ? { rejectUnauthorized: false } : undefined;
+
+  if (isAiven && !process.env.DB_PASSWORD) {
+    throw new Error('[Audit] Missing required DB_PASSWORD environment variable for cloud database.');
+  }
 
   const config: mysql.ConnectionOptions = connectionConfig || {
     host: dbHost,

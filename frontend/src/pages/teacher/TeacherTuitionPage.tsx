@@ -565,6 +565,7 @@ export const TeacherTuitionPage: React.FC = () => {
       amount: String(amount),
       addInfo,
       accountName: bankInfo.accountHolder || '',
+      v: '2',
     });
     return `${API_BASE_URL}/teacher/tuition/qr?${params.toString()}`;
   }, [invoiceStudent, bankInfo, selectedMonth]);

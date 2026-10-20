@@ -834,6 +834,7 @@ export class TuitionService {
     addInfo?: string;
     accountName?: string;
     template?: string;
+    v?: string;
   }): Promise<{ buffer: Buffer; contentType: string }> {
     const rawBank = (query.bankCode || '').trim().toLowerCase();
     const rawAccount = (query.accountNumber || '').trim();
@@ -898,10 +899,15 @@ export class TuitionService {
 
       const arrayBuffer = await response.arrayBuffer();
       const buffer = Buffer.from(arrayBuffer);
-      const textSample = buffer.subarray(0, 500).toString('utf-8');
+      const textSample = buffer.subarray(0, 2048).toString('utf-8');
+      const responseContentType = (response.headers.get('content-type') || '').toLowerCase();
 
       // If VietQR returned SVG (which contains both the frame template and the QR vector path)
-      if (textSample.includes('<svg') || textSample.includes('<?xml')) {
+      if (
+        responseContentType.includes('svg') ||
+        textSample.includes('<svg') ||
+        textSample.includes('<?xml')
+      ) {
         const pngBuffer = await sharp(buffer)
           .png({ compressionLevel: 9 })
           .toBuffer();

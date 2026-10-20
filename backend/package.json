@@ -87,6 +87,7 @@
     "@types/word-extractor": "^1.0.6",
     "@types/xml2js": "^0.4.14",
     "@vitest/coverage-v8": "^4.1.2",
+    "jsqr": "^1.4.0",
     "oxlint": "^1.58.0",
     "prettier": "^3.4.2",
     "source-map-support": "^0.5.21",

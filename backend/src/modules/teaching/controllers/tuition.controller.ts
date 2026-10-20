@@ -100,6 +100,7 @@ export class TuitionController {
     @Query('addInfo') addInfo: string,
     @Query('accountName') accountName: string,
     @Query('template') template: string,
+    @Query('v') v: string,
     @Res() res: Response,
   ) {
     const { buffer, contentType } = await this.tuitionService.generateOrProxyPaymentQr({
@@ -109,12 +110,13 @@ export class TuitionController {
       addInfo,
       accountName,
       template,
+      v,
     });
 
     res.set({
       'Content-Type': contentType,
       'Content-Length': String(buffer.length),
-      'Cache-Control': 'public, max-age=86400, immutable',
+      'Cache-Control': 'public, max-age=3600, must-revalidate',
       'Access-Control-Allow-Origin': '*',
       'Cross-Origin-Resource-Policy': 'cross-origin',
     });

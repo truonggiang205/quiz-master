@@ -3,6 +3,7 @@ import {
   NotFoundException,
   BadRequestException,
   ForbiddenException,
+  BadGatewayException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, DataSource, In, EntityManager } from 'typeorm';
@@ -819,5 +820,118 @@ export class TuitionService {
       month: query.month,
       className,
     });
+  }
+
+  /**
+   * Proxy VietQR image generation server-side to guarantee same-origin CORS headers,
+   * avoiding browser crossOrigin net::ERR_FAILED errors and HTML5 canvas tainting.
+   */
+  async generateOrProxyPaymentQr(query: {
+    bankCode?: string;
+    accountNumber?: string;
+    amount?: string | number;
+    addInfo?: string;
+    accountName?: string;
+    template?: string;
+  }): Promise<{ buffer: Buffer; contentType: string }> {
+    const rawBank = (query.bankCode || '').trim().toLowerCase();
+    const rawAccount = (query.accountNumber || '').trim();
+
+    if (!rawBank || !/^[a-z0-9_-]{2,20}$/.test(rawBank)) {
+      throw new BadRequestException('Mã ngân hàng không hợp lệ');
+    }
+
+    if (!rawAccount || !/^[a-zA-Z0-9]{3,30}$/.test(rawAccount)) {
+      throw new BadRequestException('Số tài khoản không hợp lệ');
+    }
+
+    const numAmount = Math.max(0, Math.round(Number(query.amount) || 0));
+    if (numAmount > 1_000_000_000) {
+      throw new BadRequestException('Số tiền thanh toán vượt quá giới hạn cho phép');
+    }
+
+    const sanitizedAddInfo = (query.addInfo || '')
+      .replace(/[\r\n\t]/g, ' ')
+      .trim()
+      .slice(0, 50);
+
+    const sanitizedAccountName = (query.accountName || '')
+      .replace(/[\r\n\t]/g, ' ')
+      .trim()
+      .slice(0, 50);
+
+    const template = (query.template || 'compact2').trim().toLowerCase();
+    const safeTemplate = /^[a-z0-9_-]{1,20}$/.test(template) ? template : 'compact2';
+
+    // Strict URL targeting official VietQR endpoint only
+    const targetUrl = new URL(
+      `https://img.vietqr.io/image/${rawBank}-${rawAccount}-${safeTemplate}.png`
+    );
+    if (numAmount > 0) {
+      targetUrl.searchParams.set('amount', String(numAmount));
+    }
+    if (sanitizedAddInfo) {
+      targetUrl.searchParams.set('addInfo', sanitizedAddInfo);
+    }
+    if (sanitizedAccountName) {
+      targetUrl.searchParams.set('accountName', sanitizedAccountName);
+    }
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 10000);
+
+    try {
+      const response = await fetch(targetUrl.toString(), {
+        signal: controller.signal,
+        headers: {
+          'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) QuizMaster/1.0',
+          Accept: 'image/png,image/*,*/*',
+        },
+      });
+
+      if (!response.ok) {
+        throw new BadGatewayException(
+          `VietQR phản hồi lỗi (${response.status}): Không thể tạo mã QR`
+        );
+      }
+
+      const arrayBuffer = await response.arrayBuffer();
+      const buffer = Buffer.from(arrayBuffer);
+      const textSample = buffer.subarray(0, 500).toString('utf-8');
+
+      // Check if VietQR returned SVG containing embedded base64 PNG
+      if (textSample.includes('<svg') || textSample.includes('data:image/png;base64,')) {
+        const fullText = buffer.toString('utf-8');
+        const match = fullText.match(/data:image\/png;base64,([A-Za-z0-9+/=]+)/);
+        if (match && match[1]) {
+          const pngBuffer = Buffer.from(match[1], 'base64');
+          return { buffer: pngBuffer, contentType: 'image/png' };
+        }
+        return { buffer, contentType: 'image/svg+xml' };
+      }
+
+      // Check if already raw PNG header (magic bytes: 89 50 4E 47)
+      if (
+        buffer.length >= 8 &&
+        buffer[0] === 0x89 &&
+        buffer[1] === 0x50 &&
+        buffer[2] === 0x4e &&
+        buffer[3] === 0x47
+      ) {
+        return { buffer, contentType: 'image/png' };
+      }
+
+      const rawContentType = response.headers.get('content-type') || 'image/png';
+      return { buffer, contentType: rawContentType.split(';')[0].trim() };
+    } catch (err: any) {
+      if (err instanceof BadRequestException || err instanceof BadGatewayException) {
+        throw err;
+      }
+      throw new BadGatewayException(
+        'Không thể kết nối đến máy chủ VietQR: ' + (err.message || 'Lỗi mạng')
+      );
+    } finally {
+      clearTimeout(timeoutId);
+    }
   }
 }

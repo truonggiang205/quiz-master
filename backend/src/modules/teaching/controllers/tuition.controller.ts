@@ -14,6 +14,7 @@ import { ApiTags, ApiOperation } from '@nestjs/swagger';
 import { JwtAuthGuard } from '../../../common/guards/jwt-auth.guard.js';
 import { RolesGuard } from '../../../common/guards/roles.guard.js';
 import { Roles } from '../../../common/decorators/roles.decorator.js';
+import { Public } from '../../../common/decorators/public.decorator.js';
 import { CurrentUser } from '../../../common/decorators/current-user.decorator.js';
 import { TuitionService } from '../services/tuition.service.js';
 import {
@@ -86,6 +87,37 @@ export class TuitionController {
       'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
     );
     res.setHeader('Content-Disposition', `attachment; filename="${filename}"`);
+    return res.end(buffer);
+  }
+
+  @Public()
+  @Get('qr')
+  @ApiOperation({ summary: 'Proxy VietQR image to ensure same-origin CORS and canvas exportability' })
+  async getPaymentQr(
+    @Query('bankCode') bankCode: string,
+    @Query('accountNumber') accountNumber: string,
+    @Query('amount') amount: string,
+    @Query('addInfo') addInfo: string,
+    @Query('accountName') accountName: string,
+    @Query('template') template: string,
+    @Res() res: Response,
+  ) {
+    const { buffer, contentType } = await this.tuitionService.generateOrProxyPaymentQr({
+      bankCode,
+      accountNumber,
+      amount,
+      addInfo,
+      accountName,
+      template,
+    });
+
+    res.set({
+      'Content-Type': contentType,
+      'Content-Length': String(buffer.length),
+      'Cache-Control': 'public, max-age=86400, immutable',
+      'Access-Control-Allow-Origin': '*',
+      'Cross-Origin-Resource-Policy': 'cross-origin',
+    });
     return res.end(buffer);
   }
 

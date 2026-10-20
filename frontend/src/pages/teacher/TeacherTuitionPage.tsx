@@ -45,6 +45,7 @@ import {
   Cell,
 } from 'recharts';
 import html2canvas from 'html2canvas';
+import { API_BASE_URL } from '../../services/api';
 import { TeachingService } from '../../services/teaching.service';
 import { ClassroomService } from '../../services/classroom.service';
 import { Modal } from '../../components/common/Modal';
@@ -553,14 +554,19 @@ export const TeacherTuitionPage: React.FC = () => {
     setIsInvoiceModalOpen(true);
   };
 
-  // VietQR generation url for current receipt
+  // VietQR generation url via backend proxy for same-origin CORS & clean canvas export
   const receiptQrUrl = useMemo(() => {
     if (!invoiceStudent || !bankInfo.bankCode || !bankInfo.accountNumber) return '';
     const amount = invoiceStudent.remainingAmount > 0 ? invoiceStudent.remainingAmount : invoiceStudent.totalAmount;
     const addInfo = `HP ${invoiceStudent.studentName} ${selectedMonth.replace('-', '')}`.substring(0, 25);
-    return `https://img.vietqr.io/image/${bankInfo.bankCode}-${bankInfo.accountNumber}-compact2.png?amount=${amount}&addInfo=${encodeURIComponent(
-      addInfo
-    )}&accountName=${encodeURIComponent(bankInfo.accountHolder || '')}`;
+    const params = new URLSearchParams({
+      bankCode: bankInfo.bankCode,
+      accountNumber: bankInfo.accountNumber,
+      amount: String(amount),
+      addInfo,
+      accountName: bankInfo.accountHolder || '',
+    });
+    return `${API_BASE_URL}/teacher/tuition/qr?${params.toString()}`;
   }, [invoiceStudent, bankInfo, selectedMonth]);
 
   // Export Receipt as PNG
@@ -571,7 +577,6 @@ export const TeacherTuitionPage: React.FC = () => {
       const canvas = await html2canvas(receiptCardRef.current, {
         scale: 2,
         useCORS: true,
-        allowTaint: true,
         backgroundColor: '#ffffff',
       });
       const dataUrl = canvas.toDataURL('image/png');
@@ -598,7 +603,6 @@ export const TeacherTuitionPage: React.FC = () => {
       const canvas = await html2canvas(receiptCardRef.current, {
         scale: 2,
         useCORS: true,
-        allowTaint: true,
         backgroundColor: '#ffffff',
       });
       canvas.toBlob(async (blob) => {

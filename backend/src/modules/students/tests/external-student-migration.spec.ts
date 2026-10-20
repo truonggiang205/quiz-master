@@ -491,4 +491,39 @@ describe('External Student Production Migration Suite (MySQL 8.0 Real Database)'
     expect(lp[0].studentId).toBe(studentProfileId);
     expect(scr[0].studentId).toBe(studentProfileId);
   });
+
+  it('MIG-16: Calling runExternalStudentLegacyBackfill without customConfig must read DB_DATABASE from env and succeed without ER_NO_DB_ERROR', async () => {
+    // Preserve original env
+    const origEnv = {
+      DB_HOST: process.env.DB_HOST,
+      DB_PORT: process.env.DB_PORT,
+      DB_USERNAME: process.env.DB_USERNAME,
+      DB_PASSWORD: process.env.DB_PASSWORD,
+      DB_DATABASE: process.env.DB_DATABASE,
+      DB_SSL: process.env.DB_SSL,
+    };
+
+    try {
+      // Simulate Render production environment pointing to local test DB
+      process.env.DB_HOST = '127.0.0.1';
+      process.env.DB_PORT = '3308';
+      process.env.DB_USERNAME = 'root';
+      process.env.DB_PASSWORD = 'root';
+      process.env.DB_DATABASE = 'quizmaster_external_migration_test';
+      process.env.DB_SSL = 'false';
+
+      // Call migration with ZERO arguments (as in main.ts bootstrap)
+      const res = await runExternalStudentLegacyBackfill();
+      expect(res.success).toBe(true);
+      expect(res.validation.orphanLessonParticipants).toBe(0);
+    } finally {
+      // Restore original env
+      process.env.DB_HOST = origEnv.DB_HOST;
+      process.env.DB_PORT = origEnv.DB_PORT;
+      process.env.DB_USERNAME = origEnv.DB_USERNAME;
+      process.env.DB_PASSWORD = origEnv.DB_PASSWORD;
+      process.env.DB_DATABASE = origEnv.DB_DATABASE;
+      process.env.DB_SSL = origEnv.DB_SSL;
+    }
+  });
 });

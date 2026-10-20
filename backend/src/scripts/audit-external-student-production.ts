@@ -1,6 +1,5 @@
 import mysql from 'mysql2/promise';
 import dotenv from 'dotenv';
-import path from 'path';
 
 dotenv.config();
 
@@ -39,12 +38,25 @@ export interface AuditReport {
 }
 
 export async function auditProductionDatabase(connectionConfig?: mysql.ConnectionOptions): Promise<AuditReport> {
+  const dbHost = process.env.DB_HOST || 'localhost';
+  const dbPort = Number(process.env.DB_PORT || 3306);
+  const dbUser = process.env.DB_USERNAME || 'root';
+  const dbPassword = process.env.DB_PASSWORD || '';
+  const dbDatabase = process.env.DB_DATABASE || 'quizmaster';
+  const isAiven = dbHost.includes('aivencloud.com');
+  const dbSsl = (process.env.DB_SSL === 'true' || isAiven) ? { rejectUnauthorized: false } : undefined;
+
+  if (isAiven && !process.env.DB_PASSWORD) {
+    throw new Error('[Audit] Missing required DB_PASSWORD environment variable for cloud database.');
+  }
+
   const config: mysql.ConnectionOptions = connectionConfig || {
-    host: process.env.DB_HOST || 'localhost',
-    port: Number(process.env.DB_PORT) || 3306,
-    user: process.env.DB_USERNAME || 'root',
-    password: process.env.DB_PASSWORD || '',
-    ssl: (process.env.DB_SSL === 'true' || (process.env.DB_HOST || '').includes('aivencloud.com')) ? { rejectUnauthorized: false } : undefined,
+    host: dbHost,
+    port: dbPort,
+    user: dbUser,
+    password: dbPassword,
+    database: dbDatabase,
+    ssl: dbSsl,
   };
 
   const connection = await mysql.createConnection(config);

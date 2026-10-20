@@ -48,14 +48,14 @@ dotenv.config();
   imports: [
     TypeOrmModule.forRoot({
       type: 'mysql',
-      host: process.env.DB_HOST || 'csm-db-truonggiang-205.l.aivencloud.com',
-      port: Number(process.env.DB_PORT) || 25532,
-      username: process.env.DB_USERNAME || 'avnadmin',
-      password: process.env.DB_PASSWORD || 'AVNS__ZUD3CAQkiIrycmV2VH',
+      host: process.env.DB_HOST || 'localhost',
+      port: Number(process.env.DB_PORT) || 3306,
+      username: process.env.DB_USERNAME || 'root',
+      password: process.env.DB_PASSWORD || '',
       database: process.env.DB_DATABASE || 'quizmaster',
-      ssl: {
-        rejectUnauthorized: false,
-      },
+      ssl: (process.env.DB_SSL === 'true' || (process.env.DB_HOST || '').includes('aivencloud.com'))
+        ? { rejectUnauthorized: false }
+        : false,
       entities: [
         UserEntity,
         QuizEntity,

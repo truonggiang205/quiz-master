@@ -7,13 +7,14 @@ dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../backend/.env') });
 
 export async function seedTestAccounts() {
+  const isAiven = (process.env.DB_HOST || '').includes('aivencloud.com');
   const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'csm-db-truonggiang-205.l.aivencloud.com',
-    port: Number(process.env.DB_PORT) || 25532,
-    user: process.env.DB_USERNAME || 'avnadmin',
-    password: process.env.DB_PASSWORD || 'AVNS__ZUD3CAQkiIrycmV2VH',
+    host: process.env.DB_HOST || 'localhost',
+    port: Number(process.env.DB_PORT || 3306),
+    user: process.env.DB_USERNAME || 'root',
+    password: process.env.DB_PASSWORD || '',
     database: process.env.DB_DATABASE || 'quizmaster',
-    ssl: { rejectUnauthorized: false },
+    ssl: (process.env.DB_SSL === 'true' || isAiven) ? { rejectUnauthorized: false } : undefined,
   });
 
   try {

@@ -120,18 +120,39 @@ export class TuitionService {
     // 3. Fallback cho lớp kèm 1-1 nếu chưa có record participants
     for (const lesson of monthLessons) {
       if (lesson.classId.startsWith('private-')) {
-        const studentId = lesson.classId.replace('private-', '');
-        const key = `${lesson.classId}__${studentId}`;
-        const hasParticipant = participants.some(
-          (p) => p.lessonId === lesson.id && p.studentId === studentId,
-        );
-        if (!hasParticipant) {
-          const current = groupedFees.get(key) || { baseAmount: 0, lessonCount: 0, totalHours: 0 };
-          current.baseAmount += Number(lesson.feePerLesson || 0);
-          current.lessonCount += 1;
-          current.totalHours += Number(lesson.duration || 1);
-          groupedFees.set(key, current);
+        // Nếu buổi học đã có bản ghi participants, nó đã được tính ở Bước 2 -> bỏ qua để không nhân đôi hay trùng lặp
+        const hasParticipant = participants.some((p) => p.lessonId === lesson.id);
+        if (hasParticipant) {
+          continue;
         }
+
+        const rawStudentId = lesson.classId.replace('private-', '');
+        let targetStudentId: string | null = null;
+
+        // Phân giải sang teacher_student_profiles.id hợp lệ để tuân thủ foreign key constraint
+        if (this.teacherStudentRepo) {
+          const profile = await this.teacherStudentRepo.findOne({
+            where: [
+              { id: rawStudentId, teacherId },
+              { studentAccountId: rawStudentId, teacherId },
+            ],
+          });
+          if (profile) {
+            targetStudentId = profile.id;
+          }
+        }
+
+        // Nếu không tìm thấy profile tương ứng, bỏ qua để tránh vi phạm foreign key khi insert
+        if (!targetStudentId) {
+          continue;
+        }
+
+        const key = `${lesson.classId}__${targetStudentId}`;
+        const current = groupedFees.get(key) || { baseAmount: 0, lessonCount: 0, totalHours: 0 };
+        current.baseAmount += Number(lesson.feePerLesson || 0);
+        current.lessonCount += 1;
+        current.totalHours += Number(lesson.duration || 1);
+        groupedFees.set(key, current);
       }
     }
 
@@ -299,7 +320,7 @@ export class TuitionService {
       qb.andWhere('tui.status = :status', { status: query.status });
     }
 
-    qb.orderBy('student.name', 'ASC');
+    qb.orderBy('student.fullName', 'ASC');
 
     const items = await qb.getMany();
 
@@ -339,12 +360,17 @@ export class TuitionService {
       // Fallback cho lớp 1-1 nếu không có record trong participants
       if (lessonCount === 0 && item.classId.startsWith('private-')) {
         const privateLessons = monthLessons.filter((l) => l.classId === item.classId);
-        lessonCount = privateLessons.length;
-        totalHours = Number(
-          privateLessons
-            .reduce((acc, cur) => acc + Number(cur.duration || 1), 0)
-            .toFixed(2),
+        const hasAnyParticipant = participants.some((p) =>
+          privateLessons.some((pl) => pl.id === p.lessonId),
         );
+        if (!hasAnyParticipant) {
+          lessonCount = privateLessons.length;
+          totalHours = Number(
+            privateLessons
+              .reduce((acc, cur) => acc + Number(cur.duration || 1), 0)
+              .toFixed(2),
+          );
+        }
       }
 
       return {

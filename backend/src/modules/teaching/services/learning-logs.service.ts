@@ -83,12 +83,12 @@ export class LearningLogsService {
 
     if (query.search) {
       qb.andWhere(
-        '(LOWER(student.name) LIKE LOWER(:search) OR LOWER(student.email) LIKE LOWER(:search) OR LOWER(log.content) LIKE LOWER(:search))',
+        '(LOWER(student.fullName) LIKE LOWER(:search) OR LOWER(student.email) LIKE LOWER(:search) OR LOWER(log.content) LIKE LOWER(:search))',
         { search: `%${query.search}%` },
       );
     }
 
-    qb.orderBy('lesson.date', 'DESC').addOrderBy('student.name', 'ASC');
+    qb.orderBy('lesson.date', 'DESC').addOrderBy('student.fullName', 'ASC');
 
     return await qb.getMany();
   }

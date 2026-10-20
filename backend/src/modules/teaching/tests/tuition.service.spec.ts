@@ -2448,5 +2448,246 @@ describe('Tuition Payment Workflow Audit - TC-PAY Suite (Section 13)', () => {
       expect(result[0].studentAvatar).not.toBe(result[1].studentAvatar);
     });
   });
+
+  describe('PRODUCTION REGRESSION: Tuition Foreign Key Constraint on 1-1 Private Lessons', () => {
+    it('REG-TUITION-01: syncTuitionData must not insert user.id into teaching_tuition_items when 1-1 lesson has participant with profile.id', async () => {
+      const teacherId = 'user-1790002782101';
+      const userStudentId = 'user-1790609241891';
+      const profileStudentId = 'ts-legacy-user1790-user1790-535ec7';
+      const classId = `private-${userStudentId}`;
+      const month = '2026-10';
+
+      const validProfileIds = new Set([profileStudentId]);
+
+      const tuitionStore: any[] = [
+        {
+          id: 'tui-existing-1',
+          teacherId,
+          classId,
+          studentId: profileStudentId,
+          month,
+          baseAmount: 200000,
+          surcharge: 0,
+          discount: 0,
+          totalAmount: 200000,
+          paidAmount: 0,
+          remainingAmount: 200000,
+          status: 'UNPAID',
+        },
+      ];
+
+      const fakeTuitionRepo = {
+        find: vi.fn().mockImplementation(async ({ where }: any) => {
+          return tuitionStore.filter((t) => t.teacherId === where.teacherId && t.month === where.month);
+        }),
+        create: vi.fn().mockImplementation((data: any) => ({ ...data })),
+        save: vi.fn().mockImplementation(async (item: any) => {
+          // Emulate MySQL FK constraint: studentId must reference teacher_student_profiles(id)
+          if (!validProfileIds.has(item.studentId)) {
+            throw new Error(
+              `Cannot add or update a child row: a foreign key constraint fails ("quizmaster"."teaching_tuition_items", CONSTRAINT "FK_teaching_tuition_items_student" FOREIGN KEY ("studentId") REFERENCES "teacher_student_profiles" ("id"))`,
+            );
+          }
+          const idx = tuitionStore.findIndex((t) => t.id === item.id);
+          if (idx >= 0) tuitionStore[idx] = item;
+          else tuitionStore.push(item);
+          return item;
+        }),
+      };
+
+      const fakeLessonRepo = {
+        find: vi.fn().mockResolvedValue([
+          {
+            id: 'lesson-private-1',
+            teacherId,
+            classId,
+            date: '2026-10-18',
+            feePerLesson: 100000,
+            duration: 2,
+            status: 'SCHEDULED',
+          },
+          {
+            id: 'lesson-private-2',
+            teacherId,
+            classId,
+            date: '2026-10-25',
+            feePerLesson: 100000,
+            duration: 2,
+            status: 'SCHEDULED',
+          },
+        ]),
+      };
+
+      const fakeParticipantRepo = {
+        find: vi.fn().mockResolvedValue([
+          {
+            id: 'part-1',
+            lessonId: 'lesson-private-1',
+            studentId: profileStudentId,
+            attendanceStatus: 'ATTENDED',
+            feeAmount: 100000,
+          },
+          {
+            id: 'part-2',
+            lessonId: 'lesson-private-2',
+            studentId: profileStudentId,
+            attendanceStatus: 'ATTENDED',
+            feeAmount: 100000,
+          },
+        ]),
+      };
+
+      const fakeTeacherStudentRepo = {
+        findOne: vi.fn().mockImplementation(async ({ where }: any) => {
+          const list = Array.isArray(where) ? where : [where];
+          for (const cond of list) {
+            if (
+              (cond.id === profileStudentId || cond.studentAccountId === userStudentId) &&
+              cond.teacherId === teacherId
+            ) {
+              return {
+                id: profileStudentId,
+                teacherId,
+                studentAccountId: userStudentId,
+                fullName: 'Đặng Thị Hồng Xuân',
+              };
+            }
+          }
+          return null;
+        }),
+      };
+
+      const service = new TuitionService(
+        fakeTuitionRepo as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        fakeLessonRepo as any,
+        fakeParticipantRepo as any,
+        {} as any,
+        {} as any,
+        {} as any,
+        fakeTeacherStudentRepo as any,
+      );
+
+      // Should succeed without throwing FK constraint violation
+      await service.syncTuitionData(teacherId, month);
+
+      // Verify no phantom row was inserted with userStudentId
+      expect(tuitionStore).toHaveLength(1);
+      expect(tuitionStore[0].studentId).toBe(profileStudentId);
+      expect(tuitionStore[0].baseAmount).toBe(200000);
+      expect(fakeTuitionRepo.save).not.toHaveBeenCalled(); // No unnecessary writes!
+    });
+
+    it('REG-TUITION-02: getTuitionList must order by student.fullName without attempting to order by non-existent student.name', async () => {
+      const teacherId = 'user-1790002782101';
+      const mockQb = {
+        leftJoinAndSelect: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockImplementation((orderField: string) => {
+          if (orderField === 'student.name') {
+            throw new Error("Unknown column 'student.name' in 'order clause'");
+          }
+          return mockQb;
+        }),
+        getMany: vi.fn().mockResolvedValue([]),
+      };
+
+      const fakeTuitionRepo = {
+        find: vi.fn().mockResolvedValue([]),
+        createQueryBuilder: vi.fn().mockReturnValue(mockQb),
+      };
+
+      const service = new TuitionService(
+        fakeTuitionRepo as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        {} as any,
+        {} as any,
+        {} as any,
+      );
+
+      vi.spyOn(service, 'syncTuitionData').mockResolvedValue(undefined);
+
+      await expect(service.getTuitionList(teacherId, { month: '2026-10' })).resolves.not.toThrow();
+      expect(mockQb.orderBy).toHaveBeenCalledWith('student.fullName', 'ASC');
+    });
+
+    it('REG-TUITION-03: syncTuitionData for 1-1 lesson without participants resolves user.id to profile.id safely', async () => {
+      const teacherId = 'user-1790002782101';
+      const userStudentId = 'user-1790609241891';
+      const profileStudentId = 'ts-legacy-user1790-user1790-535ec7';
+      const classId = `private-${userStudentId}`;
+      const month = '2026-10';
+
+      const tuitionStore: any[] = [];
+      const fakeTuitionRepo = {
+        find: vi.fn().mockResolvedValue([]),
+        create: vi.fn().mockImplementation((data: any) => ({ ...data })),
+        save: vi.fn().mockImplementation(async (item: any) => {
+          if (item.studentId === userStudentId) {
+            throw new Error('FK VIOLATION: studentId must be profile id, not user id!');
+          }
+          tuitionStore.push(item);
+          return item;
+        }),
+      };
+
+      const fakeLessonRepo = {
+        find: vi.fn().mockResolvedValue([
+          {
+            id: 'lesson-orphan-part',
+            teacherId,
+            classId,
+            date: '2026-10-18',
+            feePerLesson: 150000,
+            duration: 1.5,
+            status: 'SCHEDULED',
+          },
+        ]),
+      };
+
+      const fakeTeacherStudentRepo = {
+        findOne: vi.fn().mockImplementation(async ({ where }: any) => {
+          const list = Array.isArray(where) ? where : [where];
+          for (const cond of list) {
+            if (
+              (cond.id === profileStudentId || cond.studentAccountId === userStudentId) &&
+              cond.teacherId === teacherId
+            ) {
+              return {
+                id: profileStudentId,
+                teacherId,
+                studentAccountId: userStudentId,
+                fullName: 'Đặng Thị Hồng Xuân',
+              };
+            }
+          }
+          return null;
+        }),
+      };
+
+      const service = new TuitionService(
+        fakeTuitionRepo as any,
+        { find: async () => [] } as any,
+        { find: async () => [] } as any,
+        fakeLessonRepo as any,
+        { find: async () => [] } as any, // 0 participants
+        {} as any,
+        {} as any,
+        {} as any,
+        fakeTeacherStudentRepo as any,
+      );
+
+      await service.syncTuitionData(teacherId, month);
+
+      expect(tuitionStore).toHaveLength(1);
+      expect(tuitionStore[0].studentId).toBe(profileStudentId);
+      expect(tuitionStore[0].baseAmount).toBe(150000);
+    });
+  });
 });
 

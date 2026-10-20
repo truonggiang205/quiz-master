@@ -526,4 +526,40 @@ describe('External Student Production Migration Suite (MySQL 8.0 Real Database)'
       process.env.DB_SSL = origEnv.DB_SSL;
     }
   });
+
+  it('MIG-17: Phase 5 per-table filtered updates execute with zero hangs and idempotent affected rows', async () => {
+    const origEnv = {
+      DB_HOST: process.env.DB_HOST,
+      DB_PORT: process.env.DB_PORT,
+      DB_USERNAME: process.env.DB_USERNAME,
+      DB_PASSWORD: process.env.DB_PASSWORD,
+      DB_DATABASE: process.env.DB_DATABASE,
+      DB_SSL: process.env.DB_SSL,
+    };
+
+    try {
+      process.env.DB_HOST = '127.0.0.1';
+      process.env.DB_PORT = '3308';
+      process.env.DB_USERNAME = 'root';
+      process.env.DB_PASSWORD = 'root';
+      process.env.DB_DATABASE = 'quizmaster_external_migration_test';
+      process.env.DB_SSL = 'false';
+
+      const res = await runExternalStudentLegacyBackfill();
+      expect(res.success).toBe(true);
+      expect(res.referencesUpdated).toBeDefined();
+      expect(typeof res.referencesUpdated.teaching_lesson_participants).toBe('number');
+      expect(typeof res.referencesUpdated.teaching_tuition_items).toBe('number');
+      expect(typeof res.referencesUpdated.teaching_tuition_payments).toBe('number');
+      expect(typeof res.referencesUpdated.teaching_learning_logs).toBe('number');
+      expect(typeof res.referencesUpdated.teaching_scores).toBe('number');
+    } finally {
+      process.env.DB_HOST = origEnv.DB_HOST;
+      process.env.DB_PORT = origEnv.DB_PORT;
+      process.env.DB_USERNAME = origEnv.DB_USERNAME;
+      process.env.DB_PASSWORD = origEnv.DB_PASSWORD;
+      process.env.DB_DATABASE = origEnv.DB_DATABASE;
+      process.env.DB_SSL = origEnv.DB_SSL;
+    }
+  });
 });

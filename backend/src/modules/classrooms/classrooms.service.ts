@@ -9,6 +9,7 @@ import { CreateClassDto, JoinClassDto } from './dto/classroom.dto.js';
 import { TeacherStudentEntity } from '../students/entities/teacher-student.entity.js';
 import * as bcrypt from 'bcrypt';
 import * as xlsx from 'xlsx';
+import crypto from 'crypto';
 
 export interface ClassroomStats {
   totalStudents: number;
@@ -280,17 +281,6 @@ export class ClassroomsService {
       relations: { students: true },
     });
 
-    // Compute real statistics for each group class
-    const groupClassesWithStats = await Promise.all(
-      groupClasses.map(async (c) => {
-        const stats = await this.calculateClassStats(c.id, c.students || []);
-        return {
-          ...c,
-          stats,
-        };
-      }),
-    );
-
     // 2. Get private 1-on-1 tutoring classes from teacher_student_profiles (supporting both manual/external and linked students)
     const teacherProfiles = await this.teacherStudentRepo.find({
       where: { teacherId },
@@ -303,14 +293,74 @@ export class ClassroomsService {
       relations: { students: true },
     });
 
+    // Compute real statistics for each group class and map students to canonical profile IDs
+    const groupClassesWithStats = await Promise.all(
+      groupClasses.map(async (c) => {
+        const stats = await this.calculateClassStats(c.id, c.students || []);
+        const mappedStudents = await Promise.all(
+          (c.students || []).map(async (s) => {
+            let p = teacherProfiles.find((tp) => tp.studentAccountId === s.id);
+            if (!p) {
+              p = await this.teacherStudentRepo.findOne({
+                where: { teacherId, studentAccountId: s.id },
+              });
+            }
+            if (!p) {
+              p = this.teacherStudentRepo.create({
+                id: `ts-${Date.now()}-${s.id.slice(-6)}-${crypto.randomBytes(3).toString('hex')}`,
+                teacherId,
+                studentAccountId: s.id,
+                fullName: s.name,
+                email: s.email,
+                phone: s.phone || null,
+                school: s.school || null,
+                avatar: s.avatar || null,
+                status: s.isActive !== false ? 'ACTIVE' : 'INACTIVE',
+                note: `Tự động tạo từ lớp ${c.name}`,
+              });
+              await this.teacherStudentRepo.save(p);
+              teacherProfiles.push(p);
+            }
+            return {
+              id: p.id, // Canonical teacher_student_profiles.id
+              studentProfileId: p.id,
+              userId: s.id,
+              studentAccountId: s.id,
+              name: s.name,
+              email: s.email,
+              avatar: s.avatar,
+            };
+          }),
+        );
+        return {
+          ...c,
+          students: mappedStudents as any,
+          stats,
+        };
+      }),
+    );
+
     // Build unified unique students for 1-1 private classes
-    const uniqueStudentsMap = new Map<string, { id: string; name: string; email?: string; isExternal: boolean; isActive: boolean }>();
+    const uniqueStudentsMap = new Map<
+      string,
+      {
+        id: string;
+        studentProfileId: string;
+        userId?: string | null;
+        studentAccountId?: string | null;
+        name: string;
+        email?: string;
+        isExternal: boolean;
+        isActive: boolean;
+      }
+    >();
 
     for (const p of teacherProfiles) {
-      // Prioritize studentAccountId if exists for linked accounts, otherwise p.id for manual/external students
-      const studentId = p.studentAccountId || p.id;
-      uniqueStudentsMap.set(studentId, {
-        id: studentId,
+      uniqueStudentsMap.set(p.id, {
+        id: p.id, // Canonical teacher_student_profiles.id
+        studentProfileId: p.id,
+        userId: p.studentAccountId || null,
+        studentAccountId: p.studentAccountId || null,
         name: p.fullName,
         email: p.email || p.studentAccount?.email || undefined,
         isExternal: !p.studentAccountId,
@@ -319,9 +369,34 @@ export class ClassroomsService {
     }
 
     for (const s of (teacher?.students ?? [])) {
-      if (!Array.from(uniqueStudentsMap.values()).some((item) => item.id === s.id || (s.email && item.email === s.email))) {
-        uniqueStudentsMap.set(s.id, {
-          id: s.id,
+      const hasProfile = Array.from(uniqueStudentsMap.values()).some(
+        (item) => item.studentAccountId === s.id || item.userId === s.id || (s.email && item.email === s.email),
+      );
+      if (!hasProfile) {
+        let profile = await this.teacherStudentRepo.findOne({
+          where: { teacherId, studentAccountId: s.id },
+        });
+        if (!profile) {
+          profile = this.teacherStudentRepo.create({
+            id: `ts-${Date.now()}-${s.id.slice(-6)}-${crypto.randomBytes(3).toString('hex')}`,
+            teacherId,
+            studentAccountId: s.id,
+            fullName: s.name,
+            email: s.email,
+            phone: s.phone || null,
+            school: s.school || null,
+            avatar: s.avatar || null,
+            status: s.isActive !== false ? 'ACTIVE' : 'INACTIVE',
+            note: 'Đồng bộ từ danh sách học sinh của giáo viên',
+          });
+          await this.teacherStudentRepo.save(profile);
+          teacherProfiles.push(profile);
+        }
+        uniqueStudentsMap.set(profile.id, {
+          id: profile.id,
+          studentProfileId: profile.id,
+          userId: s.id,
+          studentAccountId: s.id,
           name: s.name,
           email: s.email,
           isExternal: false,
@@ -332,11 +407,25 @@ export class ClassroomsService {
 
     const privateClasses = await Promise.all(
       Array.from(uniqueStudentsMap.values()).map(async (student) => {
-        const classId = `private-${student.id}`;
-        let privateClass = await this.classRepo.findOne({
-          where: { id: classId },
-          relations: { students: true },
-        });
+        // Support backward-compatible private class IDs (e.g. private-user-1791052675402)
+        const legacyClassId = student.userId ? `private-${student.userId}` : null;
+        const profileClassId = `private-${student.id}`;
+
+        let privateClass = legacyClassId
+          ? await this.classRepo.findOne({
+              where: { id: legacyClassId },
+              relations: { students: true },
+            })
+          : null;
+
+        if (!privateClass) {
+          privateClass = await this.classRepo.findOne({
+            where: { id: profileClassId },
+            relations: { students: true },
+          });
+        }
+
+        const classId = privateClass ? privateClass.id : (legacyClassId || profileClassId);
 
         if (!privateClass) {
           const rawCode = `PV${student.id.replace(/\D/g, '').slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
@@ -363,7 +452,10 @@ export class ClassroomsService {
         return {
           ...privateClass,
           students: [{
-            id: student.id,
+            id: student.id, // Consistent teacher_student_profiles.id
+            studentProfileId: student.id,
+            userId: student.userId || null,
+            studentAccountId: student.studentAccountId || null,
             name: student.name,
             email: student.email,
           } as any],

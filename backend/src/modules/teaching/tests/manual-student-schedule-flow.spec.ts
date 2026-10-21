@@ -388,7 +388,7 @@ describe('Manual Student & Schedule Full UX Flow Specification (TEST-01 -> TEST-
     expect(lessons[0].participants?.[0]?.student?.name).toBe('Nguyễn Văn A');
   });
 
-  it('TEST-07: Học sinh có account vẫn hoạt động bình thường', async () => {
+  it('TEST-07: Học sinh có account được chuẩn hóa sang teacher_student_profiles.id', async () => {
     // Giáo viên tạo buổi học cho lớp học có học sinh có tài khoản
     const lesson = (await scheduleService.createLesson('teacher-1', {
       classId: 'class-math-10',
@@ -401,7 +401,9 @@ describe('Manual Student & Schedule Full UX Flow Specification (TEST-01 -> TEST-
 
     expect(lesson).toBeDefined();
     expect(lesson.classId).toBe('class-math-10');
-    expect(lesson.participants[0].studentId).toBe('student-account-1');
+    // Participant studentId MUST be canonical profile id (ts-...) to satisfy MySQL foreign key
+    expect(lesson.participants[0].studentId).toMatch(/^ts-/);
+    expect(lesson.participants[0].studentId).not.toBe('student-account-1');
   });
 
   it('TEST-08: Không tạo duplicate external student khi thao tác lặp lại', async () => {
@@ -417,5 +419,145 @@ describe('Manual Student & Schedule Full UX Flow Specification (TEST-01 -> TEST-
     await studentsService.syncLegacyStudents('teacher-1');
     const countAfterSecondSync = studentStore.filter((s) => s.studentAccountId === 'student-account-1').length;
     expect(countAfterSecondSync).toBe(1);
+  });
+
+  it('TEST-09: Trần Võ Hải Mi (Học sinh có tài khoản) tạo lịch thành công với profile ID', async () => {
+    // Thiết lập dữ liệu mẫu tương đương production:
+    // teacher_student_profiles: id = 'ts-legacy-user1790-user1791-b1016b', studentAccountId = 'user-1791052675402'
+    studentStore.push({
+      id: 'ts-legacy-user1790-user1791-b1016b',
+      teacherId: 'teacher-1',
+      studentAccountId: 'user-1791052675402',
+      fullName: 'Trần Võ Hải Mi',
+      status: 'ACTIVE',
+    });
+    userStore.push({
+      id: 'user-1791052675402',
+      name: 'Trần Võ Hải Mi',
+      email: 'a3manga2804@gmail.com',
+      role: 'STUDENT',
+      isActive: true,
+    });
+    classStore.push({
+      id: 'private-user-1791052675402',
+      name: 'Kèm 1-1: Trần Võ Hải Mi',
+      teacherId: 'teacher-1',
+      isPrivate: true,
+      students: [{ id: 'user-1791052675402', name: 'Trần Võ Hải Mi' }],
+    });
+
+    // Frontend gửi studentIds là user-1791052675402 (account ID)
+    const lesson = (await scheduleService.createLesson('teacher-1', {
+      classId: 'private-user-1791052675402',
+      title: 'Kèm 1-1: Trần Võ Hải Mi - Buổi 1',
+      date: '2026-10-23',
+      startTime: '18:00',
+      endTime: '19:30',
+      feePerLesson: 100000,
+      studentIds: ['user-1791052675402'],
+    })) as any;
+
+    expect(lesson).toBeDefined();
+    expect(lesson.participants).toHaveLength(1);
+    // studentId MUST resolve to canonical teacher_student_profiles.id
+    expect(lesson.participants[0].studentId).toBe('ts-legacy-user1790-user1791-b1016b');
+    expect(lesson.participants[0].studentId).not.toBe('user-1791052675402');
+  });
+
+  it('TEST-10: Hà Giang (Học sinh thủ công không có account) tạo lịch thành công', async () => {
+    // Thiết lập dữ liệu mẫu: manual student có studentAccountId = null
+    studentStore.push({
+      id: 'ts-1792519632734-a79b5960',
+      teacherId: 'teacher-1',
+      studentAccountId: null,
+      fullName: 'Hà Giang',
+      status: 'ACTIVE',
+    });
+    classStore.push({
+      id: 'private-ts-1792519632734-a79b5960',
+      name: 'Kèm 1-1: Hà Giang',
+      teacherId: 'teacher-1',
+      isPrivate: true,
+      students: [],
+    });
+
+    const lesson = (await scheduleService.createLesson('teacher-1', {
+      classId: 'private-ts-1792519632734-a79b5960',
+      title: 'Kèm 1-1: Hà Giang - Buổi 1',
+      date: '2026-10-24',
+      startTime: '18:00',
+      endTime: '19:30',
+      feePerLesson: 100000,
+      studentIds: ['ts-1792519632734-a79b5960'],
+    })) as any;
+
+    expect(lesson).toBeDefined();
+    expect(lesson.participants[0].studentId).toBe('ts-1792519632734-a79b5960');
+  });
+
+  it('TEST-11: ID học sinh không hợp lệ ném BadRequestException rõ ràng', async () => {
+    await expect(
+      scheduleService.createLesson('teacher-1', {
+        classId: 'class-math-10',
+        date: '2026-10-25',
+        startTime: '10:00',
+        endTime: '11:30',
+        studentIds: ['non-existent-student-999'],
+      }),
+    ).rejects.toThrow('Học sinh không tồn tại trong hồ sơ học sinh của giáo viên');
+  });
+
+  it('TEST-12: IDOR Protection - Không thể tạo lịch dạy với học sinh của giáo viên khác', async () => {
+    // Học sinh thuộc giáo viên teacher-other
+    studentStore.push({
+      id: 'ts-other-teacher-student',
+      teacherId: 'teacher-other',
+      studentAccountId: 'user-other-student',
+      fullName: 'Học Sinh Của Giáo Viên Khác',
+      status: 'ACTIVE',
+    });
+
+    await expect(
+      scheduleService.createLesson('teacher-1', {
+        classId: 'class-math-10',
+        date: '2026-10-25',
+        startTime: '10:00',
+        endTime: '11:30',
+        studentIds: ['ts-other-teacher-student'],
+      }),
+    ).rejects.toThrow('Học sinh không tồn tại trong hồ sơ học sinh của giáo viên');
+  });
+
+  it('TEST-13: Lọc lịch dạy theo studentId hỗ trợ cả profile id và studentAccountId', async () => {
+    studentStore.push({
+      id: 'ts-mi-profile-id',
+      teacherId: 'teacher-1',
+      studentAccountId: 'user-mi-account-id',
+      fullName: 'Trần Võ Hải Mi',
+      status: 'ACTIVE',
+    });
+
+    await scheduleService.createLesson('teacher-1', {
+      classId: 'class-math-10',
+      title: 'Lịch của Mi',
+      date: '2026-10-26',
+      startTime: '14:00',
+      endTime: '15:30',
+      studentIds: ['user-mi-account-id'],
+    });
+
+    // 1. Truy vấn bằng profile ID
+    const lessonsByProfile = await scheduleService.getLessons('teacher-1', {
+      studentId: 'ts-mi-profile-id',
+    });
+    expect(lessonsByProfile).toHaveLength(1);
+    expect(lessonsByProfile[0].title).toBe('Lịch của Mi');
+
+    // 2. Truy vấn bằng account ID
+    const lessonsByAccount = await scheduleService.getLessons('teacher-1', {
+      studentId: 'user-mi-account-id',
+    });
+    expect(lessonsByAccount).toHaveLength(1);
+    expect(lessonsByAccount[0].title).toBe('Lịch của Mi');
   });
 });

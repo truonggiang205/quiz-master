@@ -110,7 +110,27 @@ export class ScheduleService {
       qb.andWhere('lesson.classId = :classId', { classId: query.classId });
     }
 
-    if (query.studentId) {
+    if (query.studentId && this.teacherStudentRepo) {
+      const profile = await this.teacherStudentRepo.findOne({
+        where: [
+          { id: query.studentId, teacherId },
+          { studentAccountId: query.studentId, teacherId },
+        ],
+      });
+      if (profile) {
+        const canonicalProfileId = profile.id;
+        const privateClassIds = [`private-${canonicalProfileId}`];
+        if (profile.studentAccountId) {
+          privateClassIds.push(`private-${profile.studentAccountId}`);
+        }
+        qb.andWhere(
+          '(participants.studentId = :canonicalProfileId OR lesson.classId IN (:...privateClassIds))',
+          { canonicalProfileId, privateClassIds },
+        );
+      } else {
+        qb.andWhere('participants.studentId = :queryStudentId', { queryStudentId: query.studentId });
+      }
+    } else if (query.studentId) {
       qb.andWhere(
         '(participants.studentId = :studentId OR lesson.classId = :privateClassId)',
         {
@@ -241,6 +261,72 @@ export class ScheduleService {
     return classEntity;
   }
 
+  /**
+   * Phân giải một ID học sinh bất kỳ (profile id hoặc studentAccountId) sang
+   * hồ sơ chuẩn TeacherStudentEntity có teacherId trùng khớp.
+   * Nếu là học sinh từ lớp học có tài khoản UserEntity nhưng chưa có hồ sơ TeacherStudent,
+   * tự động tạo hồ sơ đồng bộ an toàn để thỏa mãn foreign key constraint.
+   */
+  async resolveStudentProfile(
+    teacherId: string,
+    rawStudentId: string,
+    classEntity?: ClassEntity | null,
+  ): Promise<TeacherStudentEntity> {
+    if (!this.teacherStudentRepo) {
+      throw new BadRequestException('Hệ thống quản lý học sinh không khả dụng');
+    }
+
+    // 1. Tra cứu trực tiếp theo profile id hoặc studentAccountId thuộc về giáo viên hiện tại
+    let profile = await this.teacherStudentRepo.findOne({
+      where: [
+        { id: rawStudentId, teacherId },
+        { studentAccountId: rawStudentId, teacherId },
+      ],
+      relations: { studentAccount: true },
+    });
+
+    if (profile) {
+      if (profile.teacherId !== teacherId) {
+        throw new ForbiddenException('Bạn không có quyền thao tác trên hồ sơ học sinh này');
+      }
+      return profile;
+    }
+
+    // 2. Nếu chưa có hồ sơ TeacherStudent, kiểm tra xem rawStudentId có phải là UserEntity
+    // thuộc về lớp học của giáo viên hoặc danh sách học sinh của giáo viên không
+    if (this.userRepo) {
+      const studentUser = await this.userRepo.findOne({ where: { id: rawStudentId } });
+      if (studentUser) {
+        const isClassStudent = classEntity?.students?.some((s) => s.id === studentUser.id);
+        const teacher = await this.userRepo.findOne({
+          where: { id: teacherId },
+          relations: { students: true },
+        });
+        const isTeacherStudent = teacher?.students?.some((s) => s.id === studentUser.id);
+
+        if (isClassStudent || isTeacherStudent) {
+          // Tạo hồ sơ tự động để đảm bảo tồn tại bản ghi trong teacher_student_profiles
+          profile = this.teacherStudentRepo.create({
+            id: `ts-${Date.now()}-${studentUser.id.slice(-6)}-${crypto.randomBytes(3).toString('hex')}`,
+            teacherId,
+            studentAccountId: studentUser.id,
+            fullName: studentUser.name,
+            email: studentUser.email,
+            phone: studentUser.phone || null,
+            school: studentUser.school || null,
+            avatar: studentUser.avatar || null,
+            status: studentUser.isActive !== false ? 'ACTIVE' : 'INACTIVE',
+            note: classEntity ? `Tự động tạo từ lớp ${classEntity.name}` : 'Tự động tạo từ tài khoản học sinh',
+          });
+          return await this.teacherStudentRepo.save(profile);
+        }
+      }
+    }
+
+    // 3. Nếu không tìm thấy hoặc không thuộc sở hữu giáo viên hiện tại, báo lỗi 400 rõ ràng
+    throw new BadRequestException('Học sinh không tồn tại trong hồ sơ học sinh của giáo viên');
+  }
+
   async createLesson(teacherId: string, dto: CreateLessonDto) {
     // 1. Verify class ownership (supporting both group & private 1-on-1 tutoring classes)
     const classEntity = await this.ensureClass(teacherId, dto.classId);
@@ -256,15 +342,28 @@ export class ScheduleService {
     // 2. Validate time
     const duration = this.calculateDuration(dto.startTime, dto.endTime);
 
-    // 3. Determine students to add (supports both TeacherStudent and UserEntity)
-    let targetStudents: { id: string }[] = [];
+    // 3. Determine students to add and resolve to canonical teacher_student_profiles.id
+    const rawStudentIds: string[] = [];
     if (dto.studentIds && dto.studentIds.length > 0) {
-      targetStudents = dto.studentIds.map((sid) => ({ id: sid }));
+      rawStudentIds.push(...dto.studentIds);
     } else if (classEntity.students && classEntity.students.length > 0) {
-      targetStudents = classEntity.students.map((s) => ({ id: s.id }));
+      rawStudentIds.push(...classEntity.students.map((s) => s.id));
     } else if (classEntity.id.startsWith('private-')) {
-      targetStudents = [{ id: classEntity.id.replace('private-', '') }];
+      rawStudentIds.push(classEntity.id.replace('private-', ''));
     }
+
+    // Resolve all student IDs to valid TeacherStudentEntity.id
+    const resolvedProfileMap = new Map<string, TeacherStudentEntity>();
+    for (const rawId of rawStudentIds) {
+      if (!rawId) continue;
+      const profile = await this.resolveStudentProfile(teacherId, rawId, classEntity);
+      resolvedProfileMap.set(profile.id, profile);
+    }
+
+    const targetStudents = Array.from(resolvedProfileMap.values()).map((p) => ({
+      id: p.id,
+      name: p.fullName,
+    }));
 
     // 4. Handle Single vs Recurring schedule
     const datesToSchedule: string[] = [];
@@ -424,7 +523,11 @@ export class ScheduleService {
       // Update participants attendance / fees if provided
       if (dto.participants && dto.participants.length > 0) {
         for (const pDto of dto.participants) {
-          let part = lesson.participants.find((p) => p.studentId === pDto.studentId);
+          let part = lesson.participants.find(
+            (p) =>
+              p.studentId === pDto.studentId ||
+              (p.student && (p.student as any).studentAccountId === pDto.studentId),
+          );
           if (part) {
             part.attendanceStatus = pDto.attendanceStatus;
             if (pDto.feeAmount !== undefined) {

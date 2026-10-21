@@ -301,9 +301,12 @@ export class ClassroomsService {
           (c.students || []).map(async (s) => {
             let p = teacherProfiles.find((tp) => tp.studentAccountId === s.id);
             if (!p) {
-              p = await this.teacherStudentRepo.findOne({
+              const foundProfile = await this.teacherStudentRepo.findOne({
                 where: { teacherId, studentAccountId: s.id },
               });
+              if (foundProfile) {
+                p = foundProfile;
+              }
             }
             if (!p) {
               p = this.teacherStudentRepo.create({

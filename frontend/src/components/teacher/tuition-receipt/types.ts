@@ -1,7 +1,7 @@
 import { Lesson } from '../../../types/teaching';
 import { TuitionRow } from '../../../types/teaching';
 
-export type ReceiptTemplateType = 'template-1' | 'template-2';
+export type ReceiptTemplateType = 'template-1' | 'template-2' | 'template-3';
 
 export interface ReceiptToggles {
   showStudent: boolean;
@@ -16,6 +16,9 @@ export interface ReceiptToggles {
   showQr: boolean;
   showSchedule: boolean;
   showTuitionDetails: boolean;
+  showComments: boolean; // Nhận xét học tập
+  showRoadmap: boolean; // Lộ trình học tập
+  showClosingMessage: boolean; // Lời nhắn cuối
 }
 
 export interface QuickPresetItem {
@@ -45,9 +48,11 @@ export interface ReceiptData {
   lessonDatesFormatted: string; // e.g. "04/10 - 08/10 - 14/10"
   lessons: Lesson[];
 
-  // Evaluations
-  generalComment: string;
-  roadmap: string;
+  // Evaluations (Canonical + backward-compatible aliases)
+  learningComment: string;
+  generalComment?: string;
+  learningRoadmap: string;
+  roadmap?: string;
   closingMessage: string;
 
   // Financials
@@ -83,8 +88,10 @@ export interface ReceiptDraft {
   periodTitle: string;
   startDate: string;
   endDate: string;
-  generalComment: string;
-  roadmap: string;
+  learningComment?: string;
+  generalComment?: string;
+  learningRoadmap?: string;
+  roadmap?: string;
   closingMessage: string;
   prepaidText?: string;
   tuitionRateFormatted?: string;

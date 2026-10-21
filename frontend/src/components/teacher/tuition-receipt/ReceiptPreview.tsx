@@ -2,6 +2,7 @@ import React, { forwardRef } from 'react';
 import { ReceiptData } from './types';
 import { ReceiptTemplate1 } from './ReceiptTemplate1';
 import { ReceiptTemplate2 } from './ReceiptTemplate2';
+import { ReceiptTemplate3 } from './ReceiptTemplate3';
 
 interface ReceiptPreviewProps {
   data: ReceiptData;
@@ -10,12 +11,16 @@ interface ReceiptPreviewProps {
 export const ReceiptPreview = forwardRef<HTMLDivElement, ReceiptPreviewProps>(
   ({ data }, ref) => {
     const templateLabel =
-      data.template === 'template-1' ? 'Mẫu 1 (Classic Banner)' : 'Mẫu 2 (Modern Card)';
+      data.template === 'template-1'
+        ? 'Mẫu 1 — Modern Education'
+        : data.template === 'template-2'
+        ? 'Mẫu 2 — Clean Report'
+        : 'Mẫu 3 — Professional Academic';
 
     return (
       <div className="flex flex-col h-full">
         {/* Preview Header Status */}
-        <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-200 dark:border-slate-800">
+        <div className="print:hidden flex items-center justify-between pb-3 mb-3 border-b border-slate-200 dark:border-slate-800">
           <div>
             <h4 className="text-xs font-bold text-slate-800 dark:text-slate-100 flex items-center gap-2">
               <span>Phiếu hiển thị trực tiếp · {templateLabel}</span>
@@ -36,12 +41,21 @@ export const ReceiptPreview = forwardRef<HTMLDivElement, ReceiptPreviewProps>(
           <div
             ref={ref}
             id="tuition-receipt-card"
-            className="w-full max-w-xl transition-all duration-200"
+            data-testid="receipt-export-root"
+            className="w-full max-w-2xl bg-white rounded-3xl"
+            style={{
+              height: 'auto',
+              minHeight: 0,
+              maxHeight: 'none',
+              overflow: 'visible',
+            }}
           >
             {data.template === 'template-1' ? (
               <ReceiptTemplate1 data={data} />
-            ) : (
+            ) : data.template === 'template-2' ? (
               <ReceiptTemplate2 data={data} />
+            ) : (
+              <ReceiptTemplate3 data={data} />
             )}
           </div>
         </div>

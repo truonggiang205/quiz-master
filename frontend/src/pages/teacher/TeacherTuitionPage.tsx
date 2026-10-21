@@ -44,11 +44,10 @@ import {
   CartesianGrid,
   Cell,
 } from 'recharts';
-import html2canvas from 'html2canvas';
-import { API_BASE_URL } from '../../services/api';
 import { TeachingService } from '../../services/teaching.service';
 import { ClassroomService } from '../../services/classroom.service';
 import { Modal } from '../../components/common/Modal';
+import { TuitionReceiptBuilderModal } from '../../components/teacher/tuition-receipt';
 import { UserAvatar } from '../../components/common/UserAvatar';
 import { useAuthStore } from '../../stores/auth.store';
 import { useUiStore } from '../../stores/ui.store';
@@ -59,7 +58,6 @@ import type {
   TuitionStatus,
   PaymentMethod,
   TeacherBankInfo,
-  InvoiceTemplateConfig,
 } from '../../types/teaching';
 import type { Classroom } from '../../types/classroom';
 import { useSearchParams, useNavigate } from 'react-router-dom';
@@ -149,22 +147,6 @@ export const TeacherTuitionPage: React.FC = () => {
 
   // Invoice Receipt Modal State
   const [invoiceStudent, setInvoiceStudent] = useState<TuitionRow | null>(null);
-  const [invoiceConfig, setInvoiceConfig] = useState<InvoiceTemplateConfig>({
-    template: 'template-1',
-    title: '',
-    note: 'Quý phụ huynh vui lòng thanh toán học phí theo thông tin chuyển khoản bên dưới. Trân trọng cảm ơn!',
-    showStudent: true,
-    showClass: true,
-    showBaseTuition: true,
-    showLessonCount: true,
-    showTotalHours: true,
-    showLessonDates: true,
-    showDiscount: true,
-    showSurcharge: true,
-    showQr: true,
-  });
-  const [isExportingReceipt, setIsExportingReceipt] = useState(false);
-  const receiptCardRef = useRef<HTMLDivElement>(null);
 
   // Single payment form state
   const [paymentForm, setPaymentForm] = useState({
@@ -547,81 +529,7 @@ export const TeacherTuitionPage: React.FC = () => {
   // Open Receipt Modal
   const handleOpenReceiptModal = (row: TuitionRow) => {
     setInvoiceStudent(row);
-    setInvoiceConfig((prev) => ({
-      ...prev,
-      title: `Phiếu Học Phí ${formattedMonthLabel}`,
-    }));
     setIsInvoiceModalOpen(true);
-  };
-
-  // VietQR generation url via backend proxy for same-origin CORS & clean canvas export
-  const receiptQrUrl = useMemo(() => {
-    if (!invoiceStudent || !bankInfo.bankCode || !bankInfo.accountNumber) return '';
-    const amount = invoiceStudent.remainingAmount > 0 ? invoiceStudent.remainingAmount : invoiceStudent.totalAmount;
-    const addInfo = `HP ${invoiceStudent.studentName} ${selectedMonth.replace('-', '')}`.substring(0, 25);
-    const params = new URLSearchParams({
-      bankCode: bankInfo.bankCode,
-      accountNumber: bankInfo.accountNumber,
-      amount: String(amount),
-      addInfo,
-      accountName: bankInfo.accountHolder || '',
-      v: '2',
-    });
-    return `${API_BASE_URL}/teacher/tuition/qr?${params.toString()}`;
-  }, [invoiceStudent, bankInfo, selectedMonth]);
-
-  // Export Receipt as PNG
-  const handleDownloadReceiptImage = async () => {
-    if (!receiptCardRef.current || !invoiceStudent) return;
-    setIsExportingReceipt(true);
-    try {
-      const canvas = await html2canvas(receiptCardRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-      });
-      const dataUrl = canvas.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.href = dataUrl;
-      a.download = `PhieuHocPhi_${invoiceStudent.studentName.replace(/\s+/g, '_')}_${selectedMonth}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      addToast({ type: 'success', title: 'Đã tải xuống phiếu học phí dạng ảnh thành công!' });
-    } catch (err) {
-      console.error('Failed to export receipt image', err);
-      addToast({ type: 'error', title: 'Lỗi khi tạo ảnh phiếu học phí' });
-    } finally {
-      setIsExportingReceipt(false);
-    }
-  };
-
-  // Copy Receipt to Clipboard
-  const handleCopyReceiptImage = async () => {
-    if (!receiptCardRef.current) return;
-    setIsExportingReceipt(true);
-    try {
-      const canvas = await html2canvas(receiptCardRef.current, {
-        scale: 2,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-      });
-      canvas.toBlob(async (blob) => {
-        if (!blob) throw new Error('Blob generation failed');
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        addToast({ type: 'success', title: 'Đã sao chép ảnh phiếu học phí vào clipboard!' });
-      });
-    } catch (err) {
-      console.error('Failed to copy receipt image', err);
-      addToast({ type: 'error', title: 'Không thể sao chép ảnh (trình duyệt không hỗ trợ)' });
-    } finally {
-      setIsExportingReceipt(false);
-    }
-  };
-
-  // Print Receipt
-  const handlePrintReceipt = () => {
-    window.print();
   };
 
   // Export Excel
@@ -1213,305 +1121,15 @@ export const TeacherTuitionPage: React.FC = () => {
         </div>
       )}
 
-      {/* ==================== 7. MODAL: TẠO PHIẾU HỌC PHÍ (RECEIPT) ==================== */}
-      <Modal
+      {/* ==================== 7. MODAL: TẠO PHIẾU HỌC PHÍ CHUYÊN NGHIỆP ==================== */}
+      <TuitionReceiptBuilderModal
         isOpen={isInvoiceModalOpen && !!invoiceStudent}
         onClose={() => setIsInvoiceModalOpen(false)}
-        title="TẠO PHIẾU HỌC PHÍ"
-        maxWidth="4xl"
-        footer={
-          <div className="flex items-center justify-between w-full">
-            <button
-              type="button"
-              onClick={() => setIsInvoiceModalOpen(false)}
-              className="px-4 py-2 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              Hủy bỏ
-            </button>
-            <div className="flex items-center gap-2">
-              <button
-                type="button"
-                onClick={handlePrintReceipt}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 transition-colors"
-              >
-                <Printer className="w-3.5 h-3.5" />
-                <span>In / PDF</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleCopyReceiptImage}
-                disabled={isExportingReceipt}
-                className="flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold text-indigo-700 dark:text-indigo-300 bg-indigo-50 hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900 transition-colors disabled:opacity-50"
-              >
-                <Copy className="w-3.5 h-3.5" />
-                <span>Copy ảnh</span>
-              </button>
-              <button
-                type="button"
-                onClick={handleDownloadReceiptImage}
-                disabled={isExportingReceipt}
-                className="flex items-center gap-1.5 px-5 py-2 rounded-xl text-xs font-semibold bg-[#4F46E5] hover:bg-[#4338CA] text-white shadow-xs transition-colors disabled:opacity-50"
-              >
-                <Download className="w-3.5 h-3.5" />
-                <span>{isExportingReceipt ? 'Đang tạo...' : 'Xuất phiếu (ảnh)'}</span>
-              </button>
-            </div>
-          </div>
-        }
-      >
-        {invoiceStudent && (
-          <div className="grid grid-cols-1 lg:grid-cols-12 gap-6">
-            {/* Left Controls Column (5 cols) */}
-            <div className="lg:col-span-5 space-y-4 text-xs">
-              {/* Teacher Bank Account info banner */}
-              <div className="p-3.5 bg-indigo-50/60 dark:bg-indigo-950/30 rounded-2xl border border-indigo-100 dark:border-indigo-900/40 flex items-center justify-between">
-                <div>
-                  <div className="text-[10px] text-indigo-600 dark:text-indigo-400 font-bold uppercase tracking-wider">
-                    Tài khoản nhận tiền
-                  </div>
-                  <div className="font-bold text-slate-800 dark:text-slate-100 mt-0.5">
-                    {bankInfo.accountHolder} · STK {bankInfo.accountNumber} ({bankInfo.bankCode})
-                  </div>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setIsBankSetupOpen(true)}
-                  className="px-2.5 py-1 rounded-lg bg-white dark:bg-slate-800 text-[11px] font-bold text-indigo-600 dark:text-indigo-300 shadow-2xs hover:bg-indigo-50"
-                >
-                  Thay đổi
-                </button>
-              </div>
-
-              {/* Template Selector */}
-              <div>
-                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1.5">
-                  Chọn mẫu phiếu:
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setInvoiceConfig({ ...invoiceConfig, template: 'template-1' })}
-                    className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all ${
-                      invoiceConfig.template === 'template-1'
-                        ? 'border-indigo-600 bg-indigo-50/60 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-500'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    Mẫu 1 (Indigo Hiện Đại)
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setInvoiceConfig({ ...invoiceConfig, template: 'template-2' })}
-                    className={`py-2 px-3 rounded-xl font-bold text-xs border transition-all ${
-                      invoiceConfig.template === 'template-2'
-                        ? 'border-indigo-600 bg-indigo-50/60 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 dark:border-indigo-500'
-                        : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
-                    }`}
-                  >
-                    Mẫu 2 (Clean Soft)
-                  </button>
-                </div>
-              </div>
-
-              {/* Toggles for items */}
-              <div className="space-y-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block">
-                  Hiển thị thông tin trên phiếu
-                </span>
-                <div className="grid grid-cols-2 gap-2">
-                  {[
-                    { key: 'showStudent', label: 'Học sinh' },
-                    { key: 'showClass', label: 'Lớp/Môn' },
-                    { key: 'showLessonCount', label: 'Số buổi học' },
-                    { key: 'showTotalHours', label: 'Số giờ tích lũy' },
-                    { key: 'showBaseTuition', label: 'Học phí gốc' },
-                    { key: 'showSurcharge', label: 'Phụ thu' },
-                    { key: 'showDiscount', label: 'Giảm học phí' },
-                    { key: 'showQr', label: 'Ảnh QR Ngân hàng' },
-                  ].map((item) => (
-                    <label
-                      key={item.key}
-                      className="flex items-center gap-2 p-2 rounded-xl bg-slate-50 dark:bg-slate-800/60 cursor-pointer text-slate-700 dark:text-slate-300"
-                    >
-                      <input
-                        type="checkbox"
-                        checked={(invoiceConfig as any)[item.key]}
-                        onChange={(e) =>
-                          setInvoiceConfig({
-                            ...invoiceConfig,
-                            [item.key]: e.target.checked,
-                          })
-                        }
-                        className="rounded text-indigo-600 focus:ring-indigo-500"
-                      />
-                      <span className="font-semibold text-[11px]">{item.label}</span>
-                    </label>
-                  ))}
-                </div>
-              </div>
-
-              {/* Title Input */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Tiêu đề phiếu
-                </label>
-                <input
-                  type="text"
-                  value={invoiceConfig.title}
-                  onChange={(e) => setInvoiceConfig({ ...invoiceConfig, title: e.target.value })}
-                  placeholder={`Phiếu Học Phí ${formattedMonthLabel}`}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
-              </div>
-
-              {/* Notes Input */}
-              <div>
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 mb-1">
-                  Lời nhắn gửi phụ huynh
-                </label>
-                <textarea
-                  rows={2}
-                  value={invoiceConfig.note}
-                  onChange={(e) => setInvoiceConfig({ ...invoiceConfig, note: e.target.value })}
-                  className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500 focus:outline-none"
-                />
-              </div>
-            </div>
-
-            {/* Right Live Preview Column (7 cols) */}
-            <div className="lg:col-span-7 bg-slate-100 dark:bg-slate-950 p-4 rounded-3xl flex items-center justify-center">
-              <div
-                ref={receiptCardRef}
-                id="tuition-receipt-card"
-                className={`w-full max-w-md bg-white rounded-3xl shadow-lg border overflow-hidden p-6 text-slate-800 ${
-                  invoiceConfig.template === 'template-1'
-                    ? 'border-indigo-100'
-                    : 'border-slate-200'
-                }`}
-              >
-                {/* Receipt Header */}
-                <div
-                  className={`rounded-2xl p-4 text-center mb-5 ${
-                    invoiceConfig.template === 'template-1'
-                      ? 'bg-[#312E81] text-white'
-                      : 'bg-emerald-50 text-emerald-900 border border-emerald-100'
-                  }`}
-                >
-                  <span className="text-[10px] uppercase font-bold tracking-widest opacity-80 block">
-                    THÔNG BÁO HỌC PHÍ
-                  </span>
-                  <h3 className="text-lg font-black mt-0.5 tracking-tight">
-                    {invoiceConfig.title || `Phiếu Học Phí ${formattedMonthLabel}`}
-                  </h3>
-                  <div className="text-[11px] opacity-75 mt-0.5">
-                    Kỳ học: {dateRangeDisplay}
-                  </div>
-                </div>
-
-                {/* Student Info */}
-                <div className="space-y-2 mb-4 text-xs pb-4 border-b border-slate-100">
-                  {invoiceConfig.showStudent && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 font-medium">Học sinh:</span>
-                      <span className="font-bold text-slate-900 text-sm">{invoiceStudent.studentName}</span>
-                    </div>
-                  )}
-                  {invoiceConfig.showClass && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 font-medium">Lớp học:</span>
-                      <span className="font-semibold text-slate-800">{invoiceStudent.className}</span>
-                    </div>
-                  )}
-                  {invoiceConfig.showLessonCount && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 font-medium">Số buổi hoàn thành:</span>
-                      <span className="font-bold text-slate-800">{invoiceStudent.lessonCount} buổi</span>
-                    </div>
-                  )}
-                  {invoiceConfig.showTotalHours && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400 font-medium">Thời lượng tích lũy:</span>
-                      <span className="font-semibold text-slate-700">{invoiceStudent.totalHours} giờ</span>
-                    </div>
-                  )}
-                </div>
-
-                {/* Amounts Breakdown */}
-                <div className="space-y-1.5 text-xs mb-5">
-                  {invoiceConfig.showBaseTuition && (
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-500">Học phí gốc:</span>
-                      <span className="font-semibold text-slate-800">
-                        {invoiceStudent.baseAmount.toLocaleString()} đ
-                      </span>
-                    </div>
-                  )}
-                  {invoiceConfig.showSurcharge && invoiceStudent.surcharge > 0 && (
-                    <div className="flex items-center justify-between text-indigo-600">
-                      <span>Phụ thu:</span>
-                      <span className="font-semibold">+{invoiceStudent.surcharge.toLocaleString()} đ</span>
-                    </div>
-                  )}
-                  {invoiceConfig.showDiscount && invoiceStudent.discount > 0 && (
-                    <div className="flex items-center justify-between text-rose-600">
-                      <span>Giảm trừ học phí:</span>
-                      <span className="font-semibold">-{invoiceStudent.discount.toLocaleString()} đ</span>
-                    </div>
-                  )}
-
-                  {/* Total Highlight */}
-                  <div className="p-3 bg-slate-50 rounded-2xl flex items-center justify-between mt-2 border border-slate-100">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        TỔNG CẦN THANH TOÁN
-                      </span>
-                      <span className="text-xl font-black text-slate-900">
-                        {invoiceStudent.remainingAmount.toLocaleString()} đ
-                      </span>
-                    </div>
-                    {invoiceStudent.paidAmount > 0 && (
-                      <span className="text-[10px] font-bold text-[#047857] bg-[#ECFDF5] border border-[#A7F3D0] px-2 py-1 rounded-lg">
-                        Đã xác nhận thu: {invoiceStudent.paidAmount.toLocaleString()} đ
-                      </span>
-                    )}
-                  </div>
-                </div>
-
-                {/* Bank QR Code & Payment Details */}
-                {invoiceConfig.showQr && bankInfo.accountNumber && (
-                  <div className="bg-indigo-50/40 rounded-2xl p-4 border border-indigo-100 text-center mb-4">
-                    <img
-                      src={receiptQrUrl}
-                      alt="VietQR"
-                      crossOrigin="anonymous"
-                      className="w-36 h-36 mx-auto rounded-xl object-contain bg-white p-1 border border-indigo-100 shadow-2xs mb-2"
-                    />
-                    <div className="text-[11px] font-bold text-slate-800">
-                      {bankInfo.bankName} ({bankInfo.bankCode})
-                    </div>
-                    <div className="text-xs font-black text-indigo-700 tracking-wider">
-                      STK: {bankInfo.accountNumber}
-                    </div>
-                    <div className="text-[11px] text-slate-600 font-semibold uppercase">
-                      Chủ TK: {bankInfo.accountHolder}
-                    </div>
-                    <div className="text-[10px] text-slate-400 mt-1">
-                      Nội dung: <span className="font-bold text-slate-700">HP {invoiceStudent.studentName} {selectedMonth.replace('-', '')}</span>
-                    </div>
-                  </div>
-                )}
-
-                {/* Note */}
-                {invoiceConfig.note && (
-                  <p className="text-[10px] text-slate-400 italic text-center">
-                    "{invoiceConfig.note}"
-                  </p>
-                )}
-              </div>
-            </div>
-          </div>
-        )}
-      </Modal>
+        student={invoiceStudent}
+        selectedMonth={selectedMonth}
+        bankInfo={bankInfo}
+        onOpenBankSetup={() => setIsBankSetupOpen(true)}
+      />
 
       {/* ==================== 8. MODAL: PHỤ THU & GIẢM HỌC PHÍ ==================== */}
       <Modal

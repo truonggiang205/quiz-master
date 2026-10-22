@@ -304,13 +304,18 @@ export const StudentQuizResultPage: React.FC = () => {
           <p className="text-xs sm:text-sm text-slate-600 dark:text-slate-300">
             Nếu bạn cảm thấy điểm số không chính xác, hãy viết rõ lý do và gửi cho giáo viên xem xét lại.
           </p>
-          <textarea
-            value={appealReason}
-            onChange={(e) => setAppealReason(e.target.value)}
-            placeholder="VD: Câu 3 em chọn đáp án đúng nhưng hệ thống ghi nhận sai..."
-            rows={4}
-            className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors resize-none"
-          />
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
+              Lý do phúc khảo
+            </label>
+            <textarea
+              value={appealReason}
+              onChange={(e) => setAppealReason(e.target.value)}
+              aria-label="Lý do phúc khảo"
+              rows={4}
+              className="w-full px-4 py-3 text-xs sm:text-sm rounded-xl border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-orange-500 bg-slate-50 dark:bg-slate-900 text-slate-800 dark:text-white dark:placeholder-slate-500 transition-colors resize-none"
+            />
+          </div>
         </div>
       </Modal>
     </div>

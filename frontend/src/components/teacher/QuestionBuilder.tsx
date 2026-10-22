@@ -438,7 +438,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                 </label>
                 <textarea
                   rows={2}
-                  placeholder="Nhập nội dung câu hỏi..."
+                  aria-label="Nội dung câu hỏi"
                   value={q.content}
                   onChange={(e) => handleUpdateQuestion(qIndex, { content: e.target.value })}
                   onInput={(e) => {
@@ -520,7 +520,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
 
                       <input
                         type="text"
-                        placeholder={`Nội dung lựa chọn ${letter}...`}
+                        aria-label={`Nội dung lựa chọn ${letter}`}
                         value={opt.text}
                         onChange={(e) =>
                           handleOptionTextChange(qIndex, optIndex, e.target.value)
@@ -580,7 +580,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                         </label>
                         <textarea
                           rows={3}
-                          placeholder="Nhập các câu trả lời hoàn hảo. Khớp chính xác hoặc gần đúng sẽ đạt điểm tối đa..."
+                          aria-label="Đáp án đúng tuyệt đối"
                           value={q.essayRubric?.acceptedAnswers?.join('\n') || ''}
                           onChange={(e) => {
                             const answers = e.target.value.split('\n');
@@ -617,9 +617,12 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                               
                               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 pr-6">
                                 <div>
+                                  <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                                    Mô tả tiêu chí
+                                  </label>
                                   <input
                                     type="text"
-                                    placeholder="Mô tả tiêu chí (VD: Nêu được quá trình quang hợp)"
+                                    aria-label="Mô tả tiêu chí"
                                     value={criterion.description}
                                     onChange={(e) => {
                                       const newCriteria = [...(q.essayRubric?.criteria || [])];
@@ -631,37 +634,47 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                                     className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
                                   />
                                 </div>
-                                <div className="flex gap-2">
-                                  <input
-                                    type="text"
-                                    placeholder="Từ khóa (cách nhau bởi dấu phẩy)"
-                                    value={criterion.keywords.join(', ')}
-                                    onChange={(e) => {
-                                      const kws = e.target.value.split(',').map(k => k.trim()).filter(k => k !== '');
-                                      const newCriteria = [...(q.essayRubric?.criteria || [])];
-                                      newCriteria[cIndex] = { ...criterion, keywords: kws };
-                                      handleUpdateQuestion(qIndex, {
-                                        essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
-                                      });
-                                    }}
-                                    className="flex-1 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
-                                  />
-                                  <NumberInput
-                                    placeholder="Điểm"
-                                    min={0}
-                                    step="0.1"
-                                    defaultValue={0}
-                                    title="Điểm tối đa cho tiêu chí này"
-                                    value={criterion.maxPoints || 0}
-                                    onChange={(pts) => {
-                                      const newCriteria = [...(q.essayRubric?.criteria || [])];
-                                      newCriteria[cIndex] = { ...criterion, maxPoints: pts };
-                                      handleUpdateQuestion(qIndex, {
-                                        essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria },
-                                      });
-                                    }}
-                                    className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-center text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
-                                  />
+                                <div className="flex gap-2 items-end">
+                                  <div className="flex-1">
+                                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
+                                      Từ khóa (phân cách bằng dấu phẩy)
+                                    </label>
+                                    <input
+                                      type="text"
+                                      aria-label="Từ khóa chấm điểm"
+                                      value={criterion.keywords.join(', ')}
+                                      onChange={(e) => {
+                                        const kws = e.target.value.split(',').map(k => k.trim()).filter(k => k !== '');
+                                        const newCriteria = [...(q.essayRubric?.criteria || [])];
+                                        newCriteria[cIndex] = { ...criterion, keywords: kws };
+                                        handleUpdateQuestion(qIndex, {
+                                          essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria }
+                                        });
+                                      }}
+                                      className="w-full rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
+                                    />
+                                  </div>
+                                  <div>
+                                    <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1 text-center">
+                                      Điểm
+                                    </label>
+                                    <NumberInput
+                                      aria-label="Điểm tiêu chí"
+                                      min={0}
+                                      step="0.1"
+                                      defaultValue={0}
+                                      title="Điểm tối đa cho tiêu chí này"
+                                      value={criterion.maxPoints || 0}
+                                      onChange={(pts) => {
+                                        const newCriteria = [...(q.essayRubric?.criteria || [])];
+                                        newCriteria[cIndex] = { ...criterion, maxPoints: pts };
+                                        handleUpdateQuestion(qIndex, {
+                                          essayRubric: { ...(q.essayRubric as EssayRubric), criteria: newCriteria },
+                                        });
+                                      }}
+                                      className="w-16 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 p-2 text-xs text-center text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
+                                    />
+                                  </div>
                                 </div>
                                 <div className="col-span-full">
                                   <label className="flex items-center gap-2 text-xs text-slate-600 dark:text-slate-400 cursor-pointer w-fit">
@@ -715,7 +728,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                 </label>
                 <input
                   type="text"
-                  placeholder="Giải thích vì sao đáp án này đúng..."
+                  aria-label="Lời giải thích chi tiết"
                   value={q.explanation || ''}
                   onChange={(e) => handleUpdateQuestion(qIndex, { explanation: e.target.value })}
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"

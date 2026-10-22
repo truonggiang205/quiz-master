@@ -97,31 +97,47 @@ export const ContentManagementPage: React.FC = () => {
         
         <div className="space-y-4 max-w-2xl">
           <div className="flex gap-4">
-            <input
-              type="text"
-              placeholder="Tiêu đề thông báo..."
-              value={broadcastTitle}
-              onChange={(e) => setBroadcastTitle(e.target.value)}
-              className="flex-1 px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-sky-200 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm"
-            />
-            <select
-              value={targetRole}
-              onChange={(e) => setTargetRole(e.target.value as any)}
-              className="px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-white/50 text-sm [&>option]:text-slate-800"
-            >
-              <option value="ALL">Tất cả mọi người</option>
-              <option value="TEACHER">Chỉ Giáo viên</option>
-              <option value="STUDENT">Chỉ Học sinh</option>
-            </select>
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-sky-100 mb-1">
+                Tiêu đề thông báo
+              </label>
+              <input
+                type="text"
+                aria-label="Tiêu đề thông báo"
+                value={broadcastTitle}
+                onChange={(e) => setBroadcastTitle(e.target.value)}
+                className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-sky-200 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm"
+              />
+            </div>
+            <div className="w-48">
+              <label className="block text-xs font-semibold text-sky-100 mb-1">
+                Đối tượng
+              </label>
+              <select
+                value={targetRole}
+                onChange={(e) => setTargetRole(e.target.value as any)}
+                aria-label="Đối tượng nhận thông báo"
+                className="w-full px-4 py-2.5 rounded-xl bg-white/10 border border-white/20 text-white focus:outline-none focus:ring-2 focus:ring-white/50 text-sm [&>option]:text-slate-800"
+              >
+                <option value="ALL">Tất cả mọi người</option>
+                <option value="TEACHER">Chỉ Giáo viên</option>
+                <option value="STUDENT">Chỉ Học sinh</option>
+              </select>
+            </div>
           </div>
           <div className="flex gap-4 items-end">
-            <textarea
-              placeholder="Nội dung chi tiết..."
-              value={broadcastMessage}
-              onChange={(e) => setBroadcastMessage(e.target.value)}
-              rows={2}
-              className="flex-1 px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-sky-200 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm resize-none"
-            />
+            <div className="flex-1">
+              <label className="block text-xs font-semibold text-sky-100 mb-1">
+                Nội dung chi tiết
+              </label>
+              <textarea
+                aria-label="Nội dung chi tiết thông báo"
+                value={broadcastMessage}
+                onChange={(e) => setBroadcastMessage(e.target.value)}
+                rows={2}
+                className="w-full px-4 py-3 rounded-xl bg-white/10 border border-white/20 text-white placeholder:text-sky-200 focus:outline-none focus:ring-2 focus:ring-white/50 text-sm resize-none"
+              />
+            </div>
             <button
               onClick={handleSendBroadcast}
               disabled={sendingBroadcast}
@@ -138,6 +154,7 @@ export const ContentManagementPage: React.FC = () => {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
           <input
             type="text"
+            aria-label="Tìm kiếm bài thi"
             placeholder="Tìm kiếm bài thi..."
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}

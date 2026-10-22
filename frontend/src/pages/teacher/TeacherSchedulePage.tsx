@@ -1417,7 +1417,7 @@ export const TeacherSchedulePage: React.FC = () => {
                     type="text"
                     value={formData.title}
                     onChange={(e) => setFormData({ ...formData, title: e.target.value })}
-                    placeholder="VD: Ôn tập Hàm số & Đạo hàm"
+                    aria-label="Tên Buổi Học"
                     className="w-full bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl px-4 py-2 text-sm focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                 </div>
@@ -1635,7 +1635,7 @@ export const TeacherSchedulePage: React.FC = () => {
               autoFocus
               value={manualStudentForm.fullName}
               onChange={(e) => setManualStudentForm({ ...manualStudentForm, fullName: e.target.value })}
-              placeholder="Ví dụ: Nguyễn Văn A"
+              aria-label="Họ và tên học sinh"
               className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500"
             />
           </div>
@@ -1649,7 +1649,7 @@ export const TeacherSchedulePage: React.FC = () => {
                 type="tel"
                 value={manualStudentForm.phone}
                 onChange={(e) => setManualStudentForm({ ...manualStudentForm, phone: e.target.value })}
-                placeholder="0912..."
+                aria-label="Số điện thoại"
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
@@ -1662,7 +1662,7 @@ export const TeacherSchedulePage: React.FC = () => {
                 type="email"
                 value={manualStudentForm.email}
                 onChange={(e) => setManualStudentForm({ ...manualStudentForm, email: e.target.value })}
-                placeholder="student@example.com"
+                aria-label="Email"
                 className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500"
               />
             </div>
@@ -1676,7 +1676,7 @@ export const TeacherSchedulePage: React.FC = () => {
               rows={2}
               value={manualStudentForm.note}
               onChange={(e) => setManualStudentForm({ ...manualStudentForm, note: e.target.value })}
-              placeholder="Ví dụ: Học sinh ôn thi đại học..."
+              aria-label="Ghi chú"
               className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500 resize-none"
             />
           </div>

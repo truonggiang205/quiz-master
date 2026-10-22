@@ -188,6 +188,7 @@ export const LoginPage: React.FC = () => {
                   type="text"
                   value={otp}
                   onChange={(e) => setOtp(e.target.value)}
+                  aria-label="Mã OTP 6 số"
                   className="w-full h-[52px] rounded-2xl bg-neumorph-bg shadow-neumorph-inset px-4 text-center text-2xl tracking-[0.5em] text-slate-700 outline-none focus:ring-0 placeholder:text-slate-300 border-none transition-shadow duration-300 focus:shadow-[inset_4px_4px_8px_rgba(163,177,198,0.55),inset_-4px_-4px_8px_rgba(255,255,255,0.9)]"
                   placeholder="------"
                   maxLength={6}
@@ -203,6 +204,7 @@ export const LoginPage: React.FC = () => {
                     type={showPassword ? 'text' : 'password'}
                     value={newPassword}
                     onChange={(e) => setNewPassword(e.target.value)}
+                    aria-label="Mật khẩu mới"
                     className="w-full h-[52px] rounded-2xl bg-neumorph-bg shadow-neumorph-inset pl-5 pr-12 text-[13px] text-slate-700 outline-none focus:ring-0 placeholder:text-slate-400 border-none transition-shadow duration-300 focus:shadow-[inset_4px_4px_8px_rgba(163,177,198,0.55),inset_-4px_-4px_8px_rgba(255,255,255,0.9)]"
                     placeholder="••••••"
                     required

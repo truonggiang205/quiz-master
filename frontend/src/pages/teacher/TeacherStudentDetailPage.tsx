@@ -713,7 +713,7 @@ export const TeacherStudentDetailPage: React.FC = () => {
               required
               value={linkInput}
               onChange={(e) => setLinkInput(e.target.value)}
-              placeholder="hocsinh@quizmaster.vn"
+              aria-label="Email hoặc ID tài khoản học sinh"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-emerald-500 outline-none text-sm"
             />
             <p className="text-[11px] text-slate-400 mt-1.5">

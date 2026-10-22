@@ -297,6 +297,7 @@ export const FloatingChat: React.FC = () => {
                   <Search className="w-4 h-4 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
                   <input
                     type="text"
+                    aria-label="Tìm kiếm theo tên hoặc email"
                     placeholder="Tìm theo tên hoặc email..."
                     value={searchQuery}
                     onChange={handleSearch}
@@ -431,6 +432,7 @@ export const FloatingChat: React.FC = () => {
                         handleSend();
                       }
                     }}
+                    aria-label="Soạn tin nhắn"
                     placeholder="Nhắn tin..."
                     className="flex-1 bg-slate-50 border border-slate-200 rounded-2xl px-4 py-2.5 text-sm focus:outline-none focus:border-sky-500 focus:bg-white transition-colors resize-none max-h-24 custom-scrollbar"
                     rows={1}

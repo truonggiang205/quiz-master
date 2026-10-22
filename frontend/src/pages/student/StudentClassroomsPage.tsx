@@ -176,7 +176,7 @@ export const StudentClassroomsPage: React.FC = () => {
               required
               value={inviteCode}
               onChange={(e) => setInviteCode(e.target.value.toUpperCase())}
-              placeholder="VD: MATH-A8F2"
+              aria-label="Mã lớp học"
               className="w-full px-4 py-3 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all uppercase tracking-wider font-mono text-center text-lg"
             />
             <p className="text-xs text-slate-500 mt-2 text-center">

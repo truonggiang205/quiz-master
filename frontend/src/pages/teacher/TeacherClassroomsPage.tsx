@@ -291,6 +291,7 @@ export const TeacherClassroomsPage: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Tìm kiếm lớp học"
             placeholder="Tìm tên lớp, môn, mã mời..."
             className="w-full pl-9 pr-4 py-2 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
           />
@@ -693,11 +694,7 @@ export const TeacherClassroomsPage: React.FC = () => {
               onChange={(e) =>
                 setFormData({ ...formData, name: e.target.value })
               }
-              placeholder={
-                formData.isPrivate
-                  ? 'VD: Kèm Toán - Bé An'
-                  : 'VD: Lớp 10A1 - Toán nâng cao'
-              }
+              aria-label="Tên lớp học"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
             />
           </div>
@@ -713,7 +710,7 @@ export const TeacherClassroomsPage: React.FC = () => {
               onChange={(e) =>
                 setFormData({ ...formData, subject: e.target.value })
               }
-              placeholder="VD: Toán học, Tiếng Anh..."
+              aria-label="Môn học"
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
             />
           </div>
@@ -728,7 +725,7 @@ export const TeacherClassroomsPage: React.FC = () => {
               onChange={(e) =>
                 setFormData({ ...formData, description: e.target.value })
               }
-              placeholder="Mô tả ngắn về lớp học này..."
+              aria-label="Mô tả lớp học"
               rows={2}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all resize-none text-sm"
             />

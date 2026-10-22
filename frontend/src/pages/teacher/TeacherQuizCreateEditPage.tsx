@@ -750,7 +750,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             </label>
             <input
               type="text"
-              placeholder="VD: Kiểm tra Toán Giải Tích 12 - Khảo sát hàm số"
+              aria-label="Tiêu đề bài kiểm tra"
               value={title}
               onChange={(e) => setTitle(e.target.value)}
               required
@@ -764,7 +764,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             </label>
             <textarea
               rows={2}
-              placeholder="Nhập ghi chú hoặc yêu cầu đối với học sinh..."
+              aria-label="Mô tả ngắn & hướng dẫn làm bài"
               value={description}
               onChange={(e) => setDescription(e.target.value)}
               className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 text-xs md:text-sm text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
@@ -1183,7 +1183,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                   type="text"
                   value={saveBankSubject}
                   onChange={(e) => setSaveBankSubject(e.target.value)}
-                  placeholder="Ví dụ: Toán 12, Giải tích, Vật lý..."
+                  aria-label="Môn học hoặc chủ đề ngân hàng"
                   className="w-full px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />
               </div>
@@ -1215,6 +1215,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                   type="text"
                   value={saveBankSearch}
                   onChange={(e) => setSaveBankSearch(e.target.value)}
+                  aria-label="Tìm theo nội dung câu hỏi"
                   placeholder="Tìm theo nội dung câu hỏi..."
                   className="w-full pl-8 pr-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-500"
                 />

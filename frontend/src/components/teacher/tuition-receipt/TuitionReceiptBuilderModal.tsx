@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import {
   X,
+  ArrowLeft,
   User,
   BookOpen,
   Calendar,
@@ -130,6 +132,31 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
   // 8. Draft status & export status
   const [draftSavedAt, setDraftSavedAt] = useState<string | null>(null);
   const [isExporting, setIsExporting] = useState(false);
+
+  // 9. Mobile/tablet responsive tab ('editor' | 'preview')
+  const [mobileTab, setMobileTab] = useState<'editor' | 'preview'>('editor');
+
+  // Lock body scroll when full-screen workspace is open
+  useEffect(() => {
+    if (isOpen) {
+      const originalOverflow = document.body.style.overflow;
+      document.body.style.overflow = 'hidden';
+      return () => {
+        document.body.style.overflow = originalOverflow;
+      };
+    }
+  }, [isOpen]);
+
+  // Close workspace on Escape key
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape' && isOpen) {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [isOpen, onClose]);
 
   // Initialize or Load Draft when student or selectedMonth changes
   useEffect(() => {
@@ -509,8 +536,13 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
 
   if (!isOpen || !student) return null;
 
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs font-sans overflow-hidden animate-fadeIn">
+  return createPortal(
+    <div
+      className="fixed inset-0 w-screen h-[100dvh] z-[9999] bg-slate-100 dark:bg-slate-950 flex flex-col overflow-hidden font-sans select-none"
+      role="dialog"
+      aria-modal="true"
+      aria-label="Tạo và xuất phiếu học phí"
+    >
       {/* Print Stylesheet for clean A4 PDF Export */}
       <style>{`
         @media print {
@@ -542,79 +574,177 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
         }
       `}</style>
 
-      {/* Outer Workspace Window */}
-      <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-[1440px] h-[95vh] flex flex-col overflow-hidden">
-        {/* ==================== 1. MODAL HEADER ==================== */}
-        <div className="px-6 py-4 border-b border-slate-200 dark:border-slate-800 flex items-center justify-between shrink-0 bg-slate-50/70 dark:bg-slate-800/40">
-          <div>
-            <h2 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
-              <span>Tạo Phiếu Học Phí</span>
-            </h2>
-            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              {user?.name || bankInfo.accountHolder || 'Phương Anh'} · STK{' '}
-              <span className="font-mono font-semibold">{bankInfo.accountNumber}</span>
-              {bankInfo.bankCode ? ` (${bankInfo.bankCode})` : ''}
-            </p>
-          </div>
+      {/* ==================== 1. WORKSPACE FIXED HEADER (64px - 72px) ==================== */}
+      <header className="h-16 md:h-[68px] shrink-0 z-30 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 md:px-6 flex items-center justify-between gap-3 shadow-2xs">
+        {/* Left Side: Back Arrow + Breadcrumbs + Student Title */}
+        <div className="flex items-center gap-3 min-w-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center justify-center w-9 h-9 md:w-auto md:h-auto md:px-3 md:py-1.5 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors shadow-2xs shrink-0"
+            title="Quay lại trang Học phí (Esc)"
+          >
+            <ArrowLeft className="w-4 h-4 md:mr-1.5 text-slate-500" />
+            <span className="hidden md:inline">Quay lại</span>
+          </button>
 
-          <div className="flex items-center gap-4">
-            {/* Template Selector Button Group */}
-            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-              <span className="text-xs font-semibold text-slate-500 pl-2 pr-1 hidden sm:inline">Mẫu phiếu:</span>
-              <button
-                type="button"
-                onClick={() => setTemplate('template-1')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  template === 'template-1'
-                    ? 'bg-[#1E3A8A] text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title="Mẫu 1: Classic Education (Hóa đơn truyền thống & trang trọng)"
-              >
-                Mẫu 1 (Classic)
-              </button>
-              <button
-                type="button"
-                onClick={() => setTemplate('template-2')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  template === 'template-2'
-                    ? 'bg-[#1E3A8A] text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title="Mẫu 2: Modern Education Card (Khuyên dùng)"
-              >
-                Mẫu 2 (Modern Card - Khuyên dùng)
-              </button>
-              <button
-                type="button"
-                onClick={() => setTemplate('template-3')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
-                  template === 'template-3'
-                    ? 'bg-[#1E3A8A] text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                }`}
-                title="Mẫu 3: Education Report (Báo cáo học tập & Học phí)"
-              >
-                Mẫu 3 (Report)
-              </button>
+          <div className="h-6 w-px bg-slate-200 dark:bg-slate-700 hidden sm:block shrink-0" />
+
+          <div className="flex flex-col justify-center min-w-0">
+            <div className="flex items-center gap-1.5 text-[11px] text-slate-400 font-medium leading-none mb-1">
+              <span>Học phí</span>
+              <span>/</span>
+              <span className="text-[#1E3A8A] dark:text-blue-400 font-semibold">Tạo phiếu</span>
             </div>
-
-            {/* Close Button */}
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-9 h-9 rounded-full border border-slate-200 dark:border-slate-700 flex items-center justify-center text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-              title="Đóng"
-            >
-              <X className="w-5 h-5" />
-            </button>
+            <div className="flex items-center gap-2 min-w-0">
+              <h1 className="text-sm md:text-base font-extrabold text-slate-900 dark:text-white tracking-tight shrink-0">
+                Tạo Phiếu Học Phí
+              </h1>
+              <span className="text-xs text-slate-300 dark:text-slate-600 hidden sm:inline">·</span>
+              <span className="text-xs font-semibold text-slate-600 dark:text-slate-300 truncate hidden sm:inline">
+                {student.studentName} · STK {bankInfo.accountNumber}
+                {bankInfo.bankCode ? ` (${bankInfo.bankCode})` : ''}
+              </span>
+            </div>
           </div>
         </div>
 
-        {/* ==================== 2. MAIN 2-COLUMN WORKSPACE ==================== */}
-        <div className="flex-1 grid grid-cols-1 lg:grid-cols-12 overflow-hidden">
-          {/* ==================== LEFT COLUMN: EDITOR PANEL (5 cols) ==================== */}
-          <div className="lg:col-span-5 border-r border-slate-200 dark:border-slate-800 overflow-y-auto custom-scrollbar p-5 space-y-6">
+        {/* Center / Right: Template Selector */}
+        <div className="hidden md:flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200/80 dark:border-slate-700 shrink-0">
+          <span className="text-[11px] font-bold text-slate-500 pl-2 pr-1 hidden lg:inline">
+            Mẫu phiếu:
+          </span>
+          <button
+            type="button"
+            onClick={() => setTemplate('template-1')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              template === 'template-1'
+                ? 'bg-[#1E3A8A] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Mẫu 1: Classic Education (Hóa đơn truyền thống & trang trọng)"
+          >
+            Mẫu 1
+          </button>
+          <button
+            type="button"
+            onClick={() => setTemplate('template-2')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all flex items-center gap-1.5 ${
+              template === 'template-2'
+                ? 'bg-[#1E3A8A] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Mẫu 2: Modern Education Card (Khuyên dùng)"
+          >
+            <span>Mẫu 2</span>
+            <span className="text-[9px] bg-amber-400 text-slate-900 font-black px-1.5 py-0.5 rounded-full uppercase tracking-wider">
+              Khuyên dùng
+            </span>
+          </button>
+          <button
+            type="button"
+            onClick={() => setTemplate('template-3')}
+            className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+              template === 'template-3'
+                ? 'bg-[#1E3A8A] text-white shadow-xs'
+                : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+            }`}
+            title="Mẫu 3: Education Report (Báo cáo học tập & Học phí)"
+          >
+            Mẫu 3
+          </button>
+        </div>
+
+        {/* Right Corner: Close Button */}
+        <div className="flex items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={onClose}
+            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-300 hover:text-rose-600 dark:hover:text-rose-400 hover:bg-rose-50 dark:hover:bg-rose-950/40 border border-slate-200 dark:border-slate-700 transition-colors shadow-2xs"
+            title="Đóng workspace (Esc)"
+          >
+            <X className="w-4 h-4" />
+            <span className="hidden sm:inline">Đóng</span>
+          </button>
+        </div>
+      </header>
+
+      {/* ==================== MOBILE / TABLET SUBHEADER TABS (< LG) ==================== */}
+      <div className="lg:hidden shrink-0 bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800 px-4 py-2 flex items-center justify-between gap-2 z-20">
+        {/* Template Quick Switcher for Mobile */}
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-[11px] font-bold">
+          <button
+            type="button"
+            onClick={() => setTemplate('template-1')}
+            className={`px-2.5 py-1 rounded-md transition-all ${
+              template === 'template-1'
+                ? 'bg-[#1E3A8A] text-white'
+                : 'text-slate-600 dark:text-slate-300'
+            }`}
+          >
+            Mẫu 1
+          </button>
+          <button
+            type="button"
+            onClick={() => setTemplate('template-2')}
+            className={`px-2.5 py-1 rounded-md transition-all ${
+              template === 'template-2'
+                ? 'bg-[#1E3A8A] text-white'
+                : 'text-slate-600 dark:text-slate-300'
+            }`}
+          >
+            Mẫu 2 (Gợi ý)
+          </button>
+          <button
+            type="button"
+            onClick={() => setTemplate('template-3')}
+            className={`px-2.5 py-1 rounded-md transition-all ${
+              template === 'template-3'
+                ? 'bg-[#1E3A8A] text-white'
+                : 'text-slate-600 dark:text-slate-300'
+            }`}
+          >
+            Mẫu 3
+          </button>
+        </div>
+
+        {/* View Mode Toggle (Editor vs Preview) */}
+        <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-0.5 rounded-lg text-xs font-bold">
+          <button
+            type="button"
+            onClick={() => setMobileTab('editor')}
+            className={`px-3 py-1 rounded-md transition-all ${
+              mobileTab === 'editor'
+                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-2xs'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            Chỉnh sửa
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileTab('preview')}
+            className={`px-3 py-1 rounded-md transition-all flex items-center gap-1 ${
+              mobileTab === 'preview'
+                ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-white shadow-2xs'
+                : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
+            }`}
+          >
+            <span>Xem trước</span>
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+          </button>
+        </div>
+      </div>
+
+      {/* ==================== 2. MAIN 2-COLUMN WORKSPACE BODY ==================== */}
+      <main className="flex-1 min-h-0 flex flex-col lg:flex-row overflow-hidden relative">
+        {/* ==================== LEFT COLUMN: EDITOR PANEL ==================== */}
+        <div
+          className={`w-full lg:w-[44%] xl:w-[42%] min-w-0 lg:min-w-[430px] lg:max-w-[580px] shrink-0 border-r border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex flex-col overflow-hidden ${
+            mobileTab === 'editor' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
+          <div className="flex-1 overflow-y-auto custom-scrollbar p-4 sm:p-6 space-y-6 min-h-0 select-text">
             {/* CARD 1: THÔNG TIN HỌC SINH (TOGGLES) */}
             <div className="bg-slate-50/50 dark:bg-slate-800/30 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800 space-y-3">
               <div>
@@ -1233,74 +1363,79 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
               </div>
             </div>
           </div>
-
-          {/* ==================== RIGHT COLUMN: LIVE PREVIEW (7 cols) ==================== */}
-          <div className="lg:col-span-7 bg-slate-100/70 dark:bg-slate-950 p-4 sm:p-6 flex flex-col overflow-hidden">
-            <ReceiptPreview ref={receiptCardRef} data={receiptData} />
-          </div>
         </div>
 
-        {/* ==================== 3. MODAL ACTION FOOTER ==================== */}
-        <div className="px-6 py-3.5 border-t border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row items-center justify-between gap-3 shrink-0 bg-white dark:bg-slate-900">
-          {/* Draft Status Note */}
-          <div className="text-xs text-slate-400 flex items-center gap-1.5">
-            <Save className="w-3.5 h-3.5" />
-            <span>
-              {draftSavedAt
-                ? `Đã lưu bản nháp lúc ${draftSavedAt}`
-                : 'Chưa lưu bản nháp cho kỳ này'}
-            </span>
-          </div>
-
-          {/* Action CTAs */}
-          <div className="flex items-center gap-2 flex-wrap">
-            <button
-              type="button"
-              onClick={onClose}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-            >
-              Hủy bỏ
-            </button>
-
-            <button
-              type="button"
-              onClick={handleSaveDraft}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors shadow-2xs"
-            >
-              Lưu bản nháp
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePrintPdf}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors shadow-2xs flex items-center gap-1.5"
-            >
-              <Printer className="w-3.5 h-3.5" />
-              <span>Xuất PDF</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleCopyImage}
-              disabled={isExporting}
-              className="px-4 py-2 rounded-xl text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/80 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
-            >
-              <Copy className="w-3.5 h-3.5" />
-              <span>Copy ảnh</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handleDownloadImage}
-              disabled={isExporting}
-              className="px-5 py-2 rounded-xl text-xs font-bold bg-[#1E3A8A] hover:bg-blue-800 text-white transition-all shadow-sm flex items-center gap-2 disabled:opacity-50"
-            >
-              <Download className="w-4 h-4" />
-              <span>{isExporting ? 'Đang tạo ảnh...' : 'Xuất phiếu (ảnh)'}</span>
-            </button>
-          </div>
+        {/* ==================== RIGHT COLUMN: LIVE PREVIEW PANEL ==================== */}
+        <div
+          className={`flex-1 min-w-0 min-h-0 bg-slate-100/90 dark:bg-slate-950 flex flex-col overflow-hidden p-3 sm:p-5 md:p-6 ${
+            mobileTab === 'preview' ? 'flex' : 'hidden lg:flex'
+          }`}
+        >
+          <ReceiptPreview ref={receiptCardRef} data={receiptData} />
         </div>
-      </div>
-    </div>
+      </main>
+
+      {/* ==================== 3. FIXED FOOTER ACTION BAR ==================== */}
+      <footer className="h-16 md:h-18 px-4 md:px-6 border-t border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 flex items-center justify-between gap-3 shrink-0 z-30 shadow-2xs">
+        {/* Draft Status Note & Left Actions */}
+        <div className="flex items-center gap-3">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-200 dark:border-slate-700 transition-colors"
+          >
+            Hủy bỏ
+          </button>
+
+          <button
+            type="button"
+            onClick={handleSaveDraft}
+            className="px-4 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors shadow-2xs flex items-center gap-1.5"
+          >
+            <Save className="w-3.5 h-3.5 text-slate-500" />
+            <span>Lưu bản nháp</span>
+          </button>
+
+          <span className="text-[11px] text-slate-400 hidden xl:inline">
+            {draftSavedAt ? `(Đã lưu bản nháp lúc ${draftSavedAt})` : 'Chưa lưu bản nháp kỳ này'}
+          </span>
+        </div>
+
+        {/* Right Actions: Export CTAs */}
+        <div className="flex items-center gap-2 flex-wrap justify-end">
+          <button
+            type="button"
+            onClick={handlePrintPdf}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-200 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-750 transition-colors shadow-2xs flex items-center gap-1.5"
+            title="Xuất phiếu PDF qua hộp thoại in của trình duyệt"
+          >
+            <Printer className="w-3.5 h-3.5 text-slate-500" />
+            <span className="hidden sm:inline">Xuất PDF</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleCopyImage}
+            disabled={isExporting}
+            className="px-3.5 py-2 rounded-xl text-xs font-bold text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800/80 hover:bg-blue-100 dark:hover:bg-blue-900/60 transition-colors shadow-2xs flex items-center gap-1.5 disabled:opacity-50"
+            title="Sao chép ảnh phiếu vào clipboard để gửi Zalo / Messenger"
+          >
+            <Copy className="w-3.5 h-3.5" />
+            <span className="hidden sm:inline">Copy ảnh</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={handleDownloadImage}
+            disabled={isExporting}
+            className="px-5 py-2.5 rounded-xl text-xs font-bold bg-[#1E3A8A] hover:bg-blue-800 text-white transition-all shadow-md flex items-center gap-2 disabled:opacity-50 tracking-wide"
+          >
+            <Download className="w-4 h-4" />
+            <span>{isExporting ? 'Đang tạo ảnh...' : 'Xuất phiếu (ảnh)'}</span>
+          </button>
+        </div>
+      </footer>
+    </div>,
+    document.body
   );
 };

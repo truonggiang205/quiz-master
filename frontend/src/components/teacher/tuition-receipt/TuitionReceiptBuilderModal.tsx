@@ -27,7 +27,6 @@ import {
   AlertCircle,
   Layers,
 } from 'lucide-react';
-import html2canvas from 'html2canvas';
 import { useAuthStore } from '../../../stores/auth.store';
 import { TeachingService } from '../../../services/teaching.service';
 import { StudentService } from '../../../services/student.service';
@@ -48,6 +47,7 @@ import {
   saveReceiptDraft,
 } from './receiptDraftStorage';
 import { ReceiptPreview } from './ReceiptPreview';
+import { exportReceiptToPng, exportReceiptToBlob } from './receiptExport';
 
 interface TuitionReceiptBuilderModalProps {
   isOpen: boolean;
@@ -71,7 +71,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
   const { user } = useAuthStore();
   const receiptCardRef = useRef<HTMLDivElement>(null);
 
-  // 1. Template Selection ('template-1' | 'template-2')
+  // 1. Template Selection ('template-1' | 'template-2' | 'template-3')
   const [template, setTemplate] = useState<ReceiptTemplateType>('template-2');
 
   // 2. Section Visibility Toggles
@@ -88,6 +88,9 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
     showQr: true,
     showSchedule: false,
     showTuitionDetails: true,
+    showComments: true,
+    showRoadmap: true,
+    showClosingMessage: true,
   });
 
   // 3. Period info
@@ -147,12 +150,18 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
 
     if (draft) {
       setTemplate(draft.template || 'template-2');
-      setToggles(draft.toggles || toggles);
+      setToggles({
+        ...toggles,
+        ...(draft.toggles || {}),
+        showComments: draft.toggles?.showComments !== undefined ? draft.toggles.showComments : true,
+        showRoadmap: draft.toggles?.showRoadmap !== undefined ? draft.toggles.showRoadmap : true,
+        showClosingMessage: draft.toggles?.showClosingMessage !== undefined ? draft.toggles.showClosingMessage : true,
+      });
       setPeriodTitle(draft.periodTitle || defaultTitle);
       setStartDate(draft.startDate || firstDay);
       setEndDate(draft.endDate || lastDay);
-      setGeneralComment(draft.generalComment ?? generalComment);
-      setRoadmap(draft.roadmap ?? roadmap);
+      setGeneralComment(draft.learningComment ?? draft.generalComment ?? generalComment);
+      setRoadmap(draft.learningRoadmap ?? draft.roadmap ?? roadmap);
       setClosingMessage(draft.closingMessage ?? closingMessage);
       if (draft.prepaidText) setPrepaidText(draft.prepaidText);
       setDraftSavedAt(draft.updatedAt || null);
@@ -174,6 +183,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
     setLoadingDetails(true);
     TeachingService.getLessons({
       studentId: student.studentId,
+      classId: student.classId,
       month: selectedMonth,
     })
       .then((data) => {
@@ -200,7 +210,9 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
   // Unique sorted lesson dates formatted as "04/10 - 08/10 - 14/10..."
   const lessonDatesFormatted = useMemo(() => {
     if (!lessons || lessons.length === 0) return '';
-    const active = lessons.filter((l) => l.status !== 'CANCELLED');
+    const active = lessons.filter(
+      (l) => l.status !== 'CANCELLED' && (!selectedMonth || l.date.startsWith(selectedMonth))
+    );
     const dates = Array.from(new Set(active.map((l) => l.date))).sort();
     return dates
       .map((d) => {
@@ -209,7 +221,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
         return d;
       })
       .join(' - ');
-  }, [lessons]);
+  }, [lessons, selectedMonth]);
 
   // Formatted tuition rate
   const tuitionRateFormatted = useMemo(() => {
@@ -266,7 +278,9 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
       totalHours: student.totalHours,
       lessonDatesFormatted,
       lessons,
+      learningComment: generalComment,
       generalComment,
+      learningRoadmap: roadmap,
       roadmap,
       closingMessage,
       baseAmount: student.baseAmount,
@@ -395,7 +409,9 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
       periodTitle,
       startDate,
       endDate,
+      learningComment: generalComment,
       generalComment,
+      learningRoadmap: roadmap,
       roadmap,
       closingMessage,
       prepaidText,
@@ -413,21 +429,25 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
   const handleDownloadImage = async () => {
     if (!receiptCardRef.current || !student) return;
     setIsExporting(true);
+
     try {
-      const canvas = await html2canvas(receiptCardRef.current, {
-        scale: 2.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-      const dataUrl = canvas.toDataURL('image/png');
-      const a = document.createElement('a');
-      a.href = dataUrl;
       const cleanStudentName = student.studentName.replace(/\s+/g, '_');
-      a.download = `PhieuHocPhi_${cleanStudentName}_${selectedMonth}.png`;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
+      const filename = `PhieuHocPhi_${cleanStudentName}_${selectedMonth}.png`;
+      const fallbackInfo = {
+        accountNumber: bankInfo.accountNumber,
+        bankName: bankInfo.bankName,
+        accountHolder: bankInfo.accountHolder,
+        transferContent: `HP ${student.studentName} ${selectedMonth.replace('-', '')}`.substring(
+          0,
+          25
+        ),
+        amountFormatted: Number(
+          student.remainingAmount > 0 ? student.remainingAmount : student.totalAmount
+        ).toLocaleString('vi-VN'),
+      };
+
+      await exportReceiptToPng(receiptCardRef.current, filename, fallbackInfo);
+
       if (onToast) {
         onToast({ type: 'success', title: 'Đã xuất phiếu học phí dạng ảnh thành công!' });
       }
@@ -445,23 +465,29 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
   const handleCopyImage = async () => {
     if (!receiptCardRef.current || !student) return;
     setIsExporting(true);
+
     try {
-      const canvas = await html2canvas(receiptCardRef.current, {
-        scale: 2.5,
-        useCORS: true,
-        backgroundColor: '#ffffff',
-        logging: false,
-      });
-      canvas.toBlob(async (blob) => {
-        if (!blob) throw new Error('Blob generation failed');
-        await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
-        if (onToast) {
-          onToast({
-            type: 'success',
-            title: 'Đã sao chép ảnh phiếu học phí vào bộ nhớ tạm (Clipboard)!',
-          });
-        }
-      });
+      const fallbackInfo = {
+        accountNumber: bankInfo.accountNumber,
+        bankName: bankInfo.bankName,
+        accountHolder: bankInfo.accountHolder,
+        transferContent: `HP ${student.studentName} ${selectedMonth.replace('-', '')}`.substring(
+          0,
+          25
+        ),
+        amountFormatted: Number(
+          student.remainingAmount > 0 ? student.remainingAmount : student.totalAmount
+        ).toLocaleString('vi-VN'),
+      };
+
+      const blob = await exportReceiptToBlob(receiptCardRef.current, fallbackInfo);
+      await navigator.clipboard.write([new ClipboardItem({ 'image/png': blob })]);
+      if (onToast) {
+        onToast({
+          type: 'success',
+          title: 'Đã sao chép ảnh phiếu học phí vào bộ nhớ tạm (Clipboard)!',
+        });
+      }
     } catch (err) {
       console.error('Failed to copy receipt image', err);
       if (onToast) {
@@ -475,6 +501,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
     }
   };
 
+
   // Print Receipt / PDF
   const handlePrintPdf = () => {
     window.print();
@@ -484,6 +511,37 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2 sm:p-4 bg-slate-950/70 backdrop-blur-xs font-sans overflow-hidden animate-fadeIn">
+      {/* Print Stylesheet for clean A4 PDF Export */}
+      <style>{`
+        @media print {
+          body * {
+            visibility: hidden !important;
+          }
+          #tuition-receipt-card,
+          #tuition-receipt-card * {
+            visibility: visible !important;
+          }
+          #tuition-receipt-card {
+            position: absolute !important;
+            left: 0 !important;
+            top: 0 !important;
+            width: 100% !important;
+            max-width: 100% !important;
+            margin: 0 !important;
+            padding: 0 !important;
+            border: none !important;
+            box-shadow: none !important;
+            background: white !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          @page {
+            size: A4 portrait;
+            margin: 10mm;
+          }
+        }
+      `}</style>
+
       {/* Outer Workspace Window */}
       <div className="bg-white dark:bg-slate-900 rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 w-full max-w-[1440px] h-[95vh] flex flex-col overflow-hidden">
         {/* ==================== 1. MODAL HEADER ==================== */}
@@ -501,18 +559,19 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
 
           <div className="flex items-center gap-4">
             {/* Template Selector Button Group */}
-            <div className="flex items-center gap-2 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
-              <span className="text-xs font-semibold text-slate-500 pl-2">Chọn mẫu</span>
+            <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl">
+              <span className="text-xs font-semibold text-slate-500 pl-2 pr-1 hidden sm:inline">Mẫu phiếu:</span>
               <button
                 type="button"
                 onClick={() => setTemplate('template-1')}
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   template === 'template-1'
                     ? 'bg-[#1E3A8A] text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
+                title="Mẫu 1: Classic Education (Hóa đơn truyền thống & trang trọng)"
               >
-                Mẫu 1
+                Mẫu 1 (Classic)
               </button>
               <button
                 type="button"
@@ -520,10 +579,23 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                 className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
                   template === 'template-2'
                     ? 'bg-[#1E3A8A] text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
+                title="Mẫu 2: Modern Education Card (Khuyên dùng)"
               >
-                Mẫu 2
+                Mẫu 2 (Modern Card - Khuyên dùng)
+              </button>
+              <button
+                type="button"
+                onClick={() => setTemplate('template-3')}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition-all ${
+                  template === 'template-3'
+                    ? 'bg-[#1E3A8A] text-white shadow-xs'
+                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                }`}
+                title="Mẫu 3: Education Report (Báo cáo học tập & Học phí)"
+              >
+                Mẫu 3 (Report)
               </button>
             </div>
 
@@ -745,6 +817,63 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                     className="w-4 h-4 rounded text-blue-600 pointer-events-none"
                   />
                 </div>
+
+                {/* 11. Nhận xét học tập */}
+                <div
+                  onClick={() => handleToggle('showComments')}
+                  className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-center justify-between cursor-pointer hover:border-blue-400 transition-colors"
+                >
+                  <div className="pr-2">
+                    <span className="text-[11px] text-slate-400 block">Nhận xét học tập</span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                      {toggles.showComments ? 'Hiển thị' : 'Ẩn'}
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={toggles.showComments}
+                    onChange={() => {}}
+                    className="w-4 h-4 rounded text-blue-600 pointer-events-none"
+                  />
+                </div>
+
+                {/* 12. Lộ trình học tập */}
+                <div
+                  onClick={() => handleToggle('showRoadmap')}
+                  className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-center justify-between cursor-pointer hover:border-blue-400 transition-colors"
+                >
+                  <div className="pr-2">
+                    <span className="text-[11px] text-slate-400 block">Lộ trình học tập</span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                      {toggles.showRoadmap ? 'Hiển thị' : 'Ẩn'}
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={toggles.showRoadmap}
+                    onChange={() => {}}
+                    className="w-4 h-4 rounded text-blue-600 pointer-events-none"
+                  />
+                </div>
+
+                {/* 13. Lời nhắn cuối */}
+                <div
+                  onClick={() => handleToggle('showClosingMessage')}
+                  className="p-3 rounded-xl bg-white dark:bg-slate-800 border border-slate-200/80 dark:border-slate-700 flex items-center justify-between cursor-pointer hover:border-blue-400 transition-colors"
+                >
+                  <div className="pr-2">
+                    <span className="text-[11px] text-slate-400 block">Lời nhắn cuối</span>
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100">
+                      {toggles.showClosingMessage ? 'Hiển thị' : 'Ẩn'}
+                    </span>
+                  </div>
+                  <input
+                    type="checkbox"
+                    checked={toggles.showClosingMessage}
+                    onChange={() => {}}
+                    className="w-4 h-4 rounded text-blue-600 pointer-events-none"
+                  />
+                </div>
               </div>
             </div>
 
@@ -933,6 +1062,17 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                     <Edit3 className="w-3.5 h-3.5 text-blue-500" />
                     <span>PHẦN 01: NHẬN XÉT HỌC TẬP</span>
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle('showComments')}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors ${
+                      toggles.showComments
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                        : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                    }`}
+                  >
+                    {toggles.showComments ? 'Đang bật' : 'Đang tắt'}
+                  </button>
                 </div>
                 <textarea
                   rows={3}
@@ -950,6 +1090,17 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                     <Compass className="w-3.5 h-3.5 text-indigo-500" />
                     <span>PHẦN 02: LỘ TRÌNH</span>
                   </span>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle('showRoadmap')}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors ${
+                      toggles.showRoadmap
+                        ? 'bg-indigo-100 text-indigo-700 dark:bg-indigo-900/40 dark:text-indigo-300'
+                        : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                    }`}
+                  >
+                    {toggles.showRoadmap ? 'Đang bật' : 'Đang tắt'}
+                  </button>
                 </div>
                 <textarea
                   rows={2}
@@ -1056,9 +1207,22 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
 
               {/* CÂU KẾT */}
               <div className="space-y-1.5 pt-2 border-t border-slate-100 dark:border-slate-800">
-                <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
-                  CÂU KẾT
-                </label>
+                <div className="flex items-center justify-between">
+                  <label className="block text-xs font-bold text-slate-800 dark:text-slate-200">
+                    CÂU KẾT / LỜI NHẮN
+                  </label>
+                  <button
+                    type="button"
+                    onClick={() => handleToggle('showClosingMessage')}
+                    className={`text-[10px] font-bold px-2 py-0.5 rounded-md transition-colors ${
+                      toggles.showClosingMessage
+                        ? 'bg-blue-100 text-blue-700 dark:bg-blue-900/40 dark:text-blue-300'
+                        : 'bg-slate-200 text-slate-500 dark:bg-slate-700 dark:text-slate-400'
+                    }`}
+                  >
+                    {toggles.showClosingMessage ? 'Đang bật' : 'Đang tắt'}
+                  </button>
+                </div>
                 <textarea
                   rows={2}
                   value={closingMessage}

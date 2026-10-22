@@ -926,7 +926,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                   type="text"
                   value={periodTitle}
                   onChange={(e) => setPeriodTitle(e.target.value)}
-                  placeholder="HỌC PHÍ THÁNG ..."
+                  aria-label="Tiêu đề kỳ học"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-blue-500 focus:outline-none uppercase"
                 />
               </div>
@@ -1036,9 +1036,9 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                     rows={2}
                     value={newPresetText}
                     onChange={(e) => setNewPresetText(e.target.value)}
-                    placeholder={`Nhập câu mẫu mới cho ${
+                    aria-label={`Thêm câu mẫu mới cho ${
                       activePresetTab === 'general' ? 'Tổng quan' : 'Lộ trình'
-                    }...`}
+                    }`}
                     className="w-full px-3 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
                   />
                   <div className="flex items-center justify-between">
@@ -1078,7 +1078,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                   rows={3}
                   value={generalComment}
                   onChange={(e) => setGeneralComment(e.target.value)}
-                  placeholder="Nhập nhận xét tổng quan..."
+                  aria-label="Nhận xét tổng quan"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none leading-relaxed"
                 />
               </div>
@@ -1106,7 +1106,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                   rows={2}
                   value={roadmap}
                   onChange={(e) => setRoadmap(e.target.value)}
-                  placeholder="Nhập lộ trình ôn luyện và mục tiêu..."
+                  aria-label="Lộ trình ôn luyện và mục tiêu"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none leading-relaxed"
                 />
               </div>
@@ -1227,7 +1227,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                   rows={2}
                   value={closingMessage}
                   onChange={(e) => setClosingMessage(e.target.value)}
-                  placeholder="Lời nhắn cuối phiếu dành cho phụ huynh..."
+                  aria-label="Lời nhắn cuối phiếu dành cho phụ huynh"
                   className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-blue-500 focus:outline-none"
                 />
               </div>

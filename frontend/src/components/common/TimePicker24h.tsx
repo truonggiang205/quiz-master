@@ -149,6 +149,7 @@ export const TimePicker24h: React.FC<TimePicker24hProps> = ({
           onBlur={handleBlur}
           onClick={(e) => e.stopPropagation()}
           onFocus={() => setIsOpen(true)}
+          aria-label="Chọn giờ (24h)"
           placeholder={placeholder}
           required={required}
           disabled={disabled}

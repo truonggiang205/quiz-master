@@ -103,7 +103,7 @@ export const ReportBugPage: React.FC = () => {
               <Tag className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="VD: Không thể nộp bài khi hết giờ"
+                aria-label="Tiêu đề sự cố"
                 value={formData.title}
                 onChange={(e) => setFormData({ ...formData, title: e.target.value })}
                 className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none transition-all"
@@ -119,7 +119,7 @@ export const ReportBugPage: React.FC = () => {
               <MessageSquare className="absolute left-3 top-3.5 w-4 h-4 text-slate-400" />
               <textarea
                 rows={4}
-                placeholder="Hãy mô tả thao tác bạn đã làm và lỗi gì đã xảy ra..."
+                aria-label="Mô tả chi tiết sự cố"
                 value={formData.description}
                 onChange={(e) => setFormData({ ...formData, description: e.target.value })}
                 className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none transition-all resize-none"
@@ -195,7 +195,7 @@ export const ReportBugPage: React.FC = () => {
               <MonitorSmartphone className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="VD: Chrome, Windows 11 hoặc Safari, iPhone 14"
+                aria-label="Trình duyệt hoặc thiết bị"
                 value={formData.browser}
                 onChange={(e) => setFormData({ ...formData, browser: e.target.value })}
                 className="w-full pl-9 pr-4 py-3 bg-slate-50 border border-slate-200 rounded-xl focus:ring-2 focus:ring-sky-500/20 focus:border-sky-500 outline-none transition-all"

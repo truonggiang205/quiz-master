@@ -721,6 +721,7 @@ export const TeacherClassroomDetailPage: React.FC = () => {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
+                aria-label="Tìm kiếm theo tên, email, username/MSSV, SĐT"
                 placeholder="Tìm kiếm theo tên, email, username/MSSV, SĐT..."
                 className="w-full pl-9 pr-4 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-sm text-slate-800 dark:text-slate-200 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-sky-500 transition-all"
               />

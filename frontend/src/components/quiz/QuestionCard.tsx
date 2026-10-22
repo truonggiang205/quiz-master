@@ -137,7 +137,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
               <textarea
                 value={essayText}
                 onChange={(e) => onEssayTextChange?.(e.target.value)}
-                placeholder="Nhập câu trả lời của bạn vào đây..."
+                aria-label="Trả lời bằng văn bản"
                 className="w-full min-h-[120px] p-4 rounded-xl border border-slate-300 dark:border-slate-600 bg-white dark:bg-slate-900/50 text-sm text-slate-700 dark:text-slate-200 focus:outline-none focus:ring-2 focus:ring-sky-500 focus:border-transparent transition-shadow resize-y"
               />
             </div>

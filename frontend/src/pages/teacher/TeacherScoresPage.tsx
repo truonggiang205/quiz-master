@@ -597,7 +597,7 @@ export const TeacherScoresPage: React.FC = () => {
               type="text"
               value={scoreForm.assessmentName}
               onChange={(e) => setScoreForm({ ...scoreForm, assessmentName: e.target.value })}
-              placeholder="VD: Kiểm tra 15 phút Số Phức"
+              aria-label="Tên bài kiểm tra"
               required
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
             />
@@ -643,7 +643,7 @@ export const TeacherScoresPage: React.FC = () => {
               type="text"
               value={scoreForm.comment}
               onChange={(e) => setScoreForm({ ...scoreForm, comment: e.target.value })}
-              placeholder="VD: Bài làm tốt, trình bày sạch đẹp"
+              aria-label="Nhận xét"
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-amber-500 focus:outline-none"
             />
           </div>

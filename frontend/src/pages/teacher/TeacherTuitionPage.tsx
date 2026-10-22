@@ -1228,11 +1228,7 @@ export const TeacherTuitionPage: React.FC = () => {
               type="text"
               value={adjustmentForm.reason}
               onChange={(e) => setAdjustmentForm({ ...adjustmentForm, reason: e.target.value })}
-              placeholder={
-                adjustmentForm.type === 'SURCHARGE'
-                  ? 'VD: Tiền in ấn tài liệu, giáo trình ôn thi'
-                  : 'VD: Học bổng chuyên cần, giảm học phí đầu vào'
-              }
+              aria-label="Khoản điều chỉnh hoặc lý do"
               required
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
@@ -1574,7 +1570,7 @@ export const TeacherTuitionPage: React.FC = () => {
                 type="text"
                 value={paymentForm.note}
                 onChange={(e) => setPaymentForm({ ...paymentForm, note: e.target.value })}
-                placeholder="VD: Phụ huynh nộp trực tiếp tại lớp"
+                aria-label="Ghi chú thanh toán"
                 className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl focus:ring-2 focus:ring-emerald-500 focus:outline-none"
               />
             </div>
@@ -1835,7 +1831,7 @@ export const TeacherTuitionPage: React.FC = () => {
               name="accountNumber"
               defaultValue={bankInfo.accountNumber}
               required
-              placeholder="VD: 713072005"
+              aria-label="Số tài khoản (STK)"
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-black text-indigo-700 dark:text-indigo-400 focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>
@@ -1849,7 +1845,7 @@ export const TeacherTuitionPage: React.FC = () => {
               name="accountHolder"
               defaultValue={bankInfo.accountHolder}
               required
-              placeholder="VD: NGUYEN VAN A"
+              aria-label="Tên chủ tài khoản"
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold uppercase focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>

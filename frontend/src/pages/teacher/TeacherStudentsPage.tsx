@@ -264,6 +264,7 @@ export const TeacherStudentsPage: React.FC = () => {
             type="text"
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
+            aria-label="Tìm kiếm học sinh"
             placeholder="Tìm theo họ tên, số điện thoại, trường học..."
             className="w-full pl-10 pr-4 py-2 rounded-xl text-sm bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all"
           />
@@ -513,7 +514,7 @@ export const TeacherStudentsPage: React.FC = () => {
                   required
                   value={externalForm.fullName}
                   onChange={(e) => setExternalForm({ ...externalForm, fullName: e.target.value })}
-                  placeholder="Ví dụ: Nguyễn Văn An"
+                  aria-label="Họ và tên học sinh"
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500"
                 />
               </div>
@@ -527,7 +528,7 @@ export const TeacherStudentsPage: React.FC = () => {
                     type="tel"
                     value={externalForm.phone || ''}
                     onChange={(e) => setExternalForm({ ...externalForm, phone: e.target.value })}
-                    placeholder="0912 345 678"
+                    aria-label="Số điện thoại học sinh"
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
@@ -540,7 +541,7 @@ export const TeacherStudentsPage: React.FC = () => {
                     type="email"
                     value={externalForm.email || ''}
                     onChange={(e) => setExternalForm({ ...externalForm, email: e.target.value })}
-                    placeholder="hocsinh@gmail.com"
+                    aria-label="Email liên hệ"
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
@@ -555,7 +556,7 @@ export const TeacherStudentsPage: React.FC = () => {
                     type="text"
                     value={externalForm.parentName || ''}
                     onChange={(e) => setExternalForm({ ...externalForm, parentName: e.target.value })}
-                    placeholder="Ví dụ: Bác Thành"
+                    aria-label="Tên phụ huynh"
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
@@ -568,7 +569,7 @@ export const TeacherStudentsPage: React.FC = () => {
                     type="tel"
                     value={externalForm.parentPhone || ''}
                     onChange={(e) => setExternalForm({ ...externalForm, parentPhone: e.target.value })}
-                    placeholder="0987 654 321"
+                    aria-label="Số điện thoại phụ huynh"
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
@@ -615,7 +616,7 @@ export const TeacherStudentsPage: React.FC = () => {
                     type="text"
                     value={externalForm.school || ''}
                     onChange={(e) => setExternalForm({ ...externalForm, school: e.target.value })}
-                    placeholder="THPT / THCS..."
+                    aria-label="Trường học"
                     className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500"
                   />
                 </div>
@@ -629,7 +630,7 @@ export const TeacherStudentsPage: React.FC = () => {
                   rows={2}
                   value={externalForm.note || ''}
                   onChange={(e) => setExternalForm({ ...externalForm, note: e.target.value })}
-                  placeholder="Ví dụ: Kèm nâng cao chuyên Toán, mục tiêu thi vào 10..."
+                  aria-label="Ghi chú học tập / Mục tiêu"
                   className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white text-sm outline-none focus:ring-2 focus:ring-sky-500"
                 />
               </div>
@@ -648,7 +649,7 @@ export const TeacherStudentsPage: React.FC = () => {
                   required
                   value={inviteEmail}
                   onChange={(e) => setInviteEmail(e.target.value)}
-                  placeholder="hocsinh@example.com"
+                  aria-label="Địa chỉ Email học sinh"
                   className="w-full px-4 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-900 dark:text-white focus:ring-2 focus:ring-sky-500 outline-none transition-all text-sm"
                 />
               </div>

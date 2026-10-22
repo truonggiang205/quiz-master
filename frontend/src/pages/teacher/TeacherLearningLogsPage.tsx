@@ -778,6 +778,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
               type="text"
               value={searchKeyword}
               onChange={(e) => setSearchKeyword(e.target.value)}
+              aria-label="Tìm tên học sinh hoặc nội dung"
               placeholder="Tìm tên học sinh hoặc nội dung..."
               className="w-full pl-9 pr-8 py-2 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium focus:ring-2 focus:ring-indigo-500/20 focus:border-indigo-500 outline-none transition-all"
             />
@@ -1846,7 +1847,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
               rows={3}
               value={editFormData.content}
               onChange={(e) => setEditFormData({ ...editFormData, content: e.target.value })}
-              placeholder="VD: Ôn tập Toán: giải hệ phương trình bậc nhất hai ẩn..."
+              aria-label="Nội dung bài học"
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none leading-relaxed"
             />
           </div>
@@ -1859,7 +1860,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
               rows={2}
               value={editFormData.homework}
               onChange={(e) => setEditFormData({ ...editFormData, homework: e.target.value })}
-              placeholder="VD: 80% (hoặc ghi chi tiết: Bài 1 đến 5 trang 20)"
+              aria-label="Bài tập về nhà (BTVN)"
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none leading-relaxed"
             />
             {/* Quick completion tags */}
@@ -1902,7 +1903,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
               rows={3}
               value={editFormData.comment}
               onChange={(e) => setEditFormData({ ...editFormData, comment: e.target.value })}
-              placeholder="VD: Em nắm vững phương pháp, cần xem lại các lỗi tính toán căn bản."
+              aria-label="Nhận xét của giáo viên"
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none leading-relaxed"
             />
           </div>
@@ -1915,7 +1916,7 @@ export const TeacherLearningLogsPage: React.FC = () => {
               type="text"
               value={editFormData.note}
               onChange={(e) => setEditFormData({ ...editFormData, note: e.target.value })}
-              placeholder="VD: Đã nhắc phụ huynh ôn từ vựng"
+              aria-label="Ghi chú riêng"
               className="w-full px-3 py-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs focus:ring-2 focus:ring-indigo-500 focus:outline-none"
             />
           </div>

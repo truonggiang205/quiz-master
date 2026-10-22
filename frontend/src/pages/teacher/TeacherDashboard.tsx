@@ -597,6 +597,7 @@ export const TeacherDashboard: React.FC = () => {
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
+                aria-label="Tìm học sinh theo tên hoặc email"
                 placeholder="Tìm học sinh theo tên hoặc email..."
                 value={submissionsSearch}
                 onChange={(e) => setSubmissionsSearch(e.target.value)}
@@ -734,6 +735,7 @@ export const TeacherDashboard: React.FC = () => {
               <Search className="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
               <input
                 type="text"
+                aria-label="Tìm học sinh theo tên hoặc email"
                 placeholder="Tìm học sinh theo tên hoặc email..."
                 value={studentsSearch}
                 onChange={(e) => setStudentsSearch(e.target.value)}

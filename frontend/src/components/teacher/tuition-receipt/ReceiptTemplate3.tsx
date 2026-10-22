@@ -92,7 +92,7 @@ export const ReceiptTemplate3: React.FC<ReceiptTemplateProps> = ({ data }) => {
           <span>1. THÔNG TIN HỌC TẬP</span>
         </div>
         <div className="border border-t-0 border-slate-200 rounded-b-lg overflow-hidden bg-slate-50/40">
-          <div className="grid grid-cols-2 md:grid-cols-4 divide-x divide-y md:divide-y-0 divide-slate-200 text-xs">
+          <div className="grid grid-cols-4 divide-x divide-slate-200 text-xs">
             {toggles.showStudent && (
               <div className="p-3">
                 <span className="text-[11px] text-slate-400 block font-medium">Họ và tên:</span>
@@ -223,9 +223,9 @@ export const ReceiptTemplate3: React.FC<ReceiptTemplateProps> = ({ data }) => {
           <span>5. THÔNG TIN THANH TOÁN & HỌC PHÍ</span>
         </div>
         <div className="border border-t-0 border-slate-200 rounded-b-lg p-4 bg-white">
-          <div className="grid grid-cols-1 md:grid-cols-12 gap-5 items-center">
+          <div className="flex flex-row items-stretch gap-5">
             {/* Financial Details Table */}
-            <div className={`${toggles.showQr && data.qrUrl ? 'md:col-span-7' : 'md:col-span-12'}`}>
+            <div className="flex-1 min-w-0 flex flex-col justify-between">
               <table className="w-full text-xs mb-3 border-collapse">
                 <tbody className="divide-y divide-slate-100">
                   {toggles.showTuitionDetails && (
@@ -305,19 +305,20 @@ export const ReceiptTemplate3: React.FC<ReceiptTemplateProps> = ({ data }) => {
 
             {/* QR Payment Box */}
             {toggles.showQr && data.qrUrl && (
-              <div className="md:col-span-5 flex flex-col items-center text-center p-3 rounded-xl border border-slate-200 bg-slate-50/40">
-                <span className="text-[10px] uppercase font-black tracking-widest text-[#1E3A8A] mb-1.5 flex items-center gap-1">
+              <div className="w-[230px] shrink-0 flex flex-col items-center justify-center text-center p-3 rounded-xl border border-slate-200 bg-slate-50/60">
+                <span className="text-[10px] uppercase font-black tracking-widest text-[#1E3A8A] mb-2 flex items-center gap-1">
                   <QrCode className="w-3.5 h-3.5" />
                   <span>MÃ VIETQR CHÍNH THỨC</span>
                 </span>
 
-                <div className="p-2 rounded-xl bg-white border border-slate-200 shadow-2xs mb-2">
+                <div className="p-1.5 rounded-xl bg-white border border-slate-200 shadow-2xs mb-2 mx-auto w-fit h-auto flex items-center justify-center">
                   <img
                     src={data.qrUrl}
                     alt="VietQR"
-                    data-qr="true"
+                    data-receipt-qr="true"
                     crossOrigin="anonymous"
-                    className="w-40 h-40 sm:w-44 sm:h-44 object-contain mx-auto rounded-lg"
+                    className="w-[180px] h-[180px] object-contain rounded-lg block"
+                    style={{ width: '180px', height: '180px', maxWidth: '180px', maxHeight: '180px' }}
                   />
                 </div>
 

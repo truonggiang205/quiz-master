@@ -12,10 +12,10 @@ export const ReceiptPreview = forwardRef<HTMLDivElement, ReceiptPreviewProps>(
   ({ data }, ref) => {
     const templateLabel =
       data.template === 'template-1'
-        ? 'Mẫu 1 — Modern Education'
+        ? 'Mẫu 1 — Classic Education'
         : data.template === 'template-2'
-        ? 'Mẫu 2 — Clean Report'
-        : 'Mẫu 3 — Professional Academic';
+        ? 'Mẫu 2 — Modern Education Card'
+        : 'Mẫu 3 — Education Report';
 
     return (
       <div className="flex flex-col h-full">

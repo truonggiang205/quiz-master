@@ -72,7 +72,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
   const receiptCardRef = useRef<HTMLDivElement>(null);
 
   // 1. Template Selection ('template-1' | 'template-2' | 'template-3')
-  const [template, setTemplate] = useState<ReceiptTemplateType>('template-1');
+  const [template, setTemplate] = useState<ReceiptTemplateType>('template-2');
 
   // 2. Section Visibility Toggles
   const [toggles, setToggles] = useState<ReceiptToggles>({
@@ -149,7 +149,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
     const draft = loadReceiptDraft(teacherId, student.studentId, selectedMonth);
 
     if (draft) {
-      setTemplate(draft.template || 'template-1');
+      setTemplate(draft.template || 'template-2');
       setToggles({
         ...toggles,
         ...(draft.toggles || {}),
@@ -166,7 +166,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
       if (draft.prepaidText) setPrepaidText(draft.prepaidText);
       setDraftSavedAt(draft.updatedAt || null);
     } else {
-      setTemplate('template-1');
+      setTemplate('template-2');
       setPeriodTitle(defaultTitle);
       setStartDate(firstDay);
       setEndDate(lastDay);
@@ -183,6 +183,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
     setLoadingDetails(true);
     TeachingService.getLessons({
       studentId: student.studentId,
+      classId: student.classId,
       month: selectedMonth,
     })
       .then((data) => {
@@ -209,7 +210,9 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
   // Unique sorted lesson dates formatted as "04/10 - 08/10 - 14/10..."
   const lessonDatesFormatted = useMemo(() => {
     if (!lessons || lessons.length === 0) return '';
-    const active = lessons.filter((l) => l.status !== 'CANCELLED');
+    const active = lessons.filter(
+      (l) => l.status !== 'CANCELLED' && (!selectedMonth || l.date.startsWith(selectedMonth))
+    );
     const dates = Array.from(new Set(active.map((l) => l.date))).sort();
     return dates
       .map((d) => {
@@ -218,7 +221,7 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
         return d;
       })
       .join(' - ');
-  }, [lessons]);
+  }, [lessons, selectedMonth]);
 
   // Formatted tuition rate
   const tuitionRateFormatted = useMemo(() => {
@@ -566,9 +569,9 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                     ? 'bg-[#1E3A8A] text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
-                title="Mẫu 1: Modern Education (Khuyên dùng)"
+                title="Mẫu 1: Classic Education (Hóa đơn truyền thống & trang trọng)"
               >
-                Mẫu 1 (Modern)
+                Mẫu 1 (Classic)
               </button>
               <button
                 type="button"
@@ -578,9 +581,9 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                     ? 'bg-[#1E3A8A] text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
-                title="Mẫu 2: Clean Report"
+                title="Mẫu 2: Modern Education Card (Khuyên dùng)"
               >
-                Mẫu 2 (Clean Report)
+                Mẫu 2 (Modern Card - Khuyên dùng)
               </button>
               <button
                 type="button"
@@ -590,9 +593,9 @@ export const TuitionReceiptBuilderModal: React.FC<TuitionReceiptBuilderModalProp
                     ? 'bg-[#1E3A8A] text-white shadow-xs'
                     : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
                 }`}
-                title="Mẫu 3: Professional Academic"
+                title="Mẫu 3: Education Report (Báo cáo học tập & Học phí)"
               >
-                Mẫu 3 (Academic)
+                Mẫu 3 (Report)
               </button>
             </div>
 

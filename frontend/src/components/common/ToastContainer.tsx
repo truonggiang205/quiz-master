@@ -2,6 +2,7 @@ import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { useUiStore, ToastType } from '../../stores/ui.store';
 import { CheckCircle2, AlertCircle, AlertTriangle, Info, X, Loader2 } from 'lucide-react';
+import { UserAvatar } from './UserAvatar';
 
 export const ToastContainer: React.FC = () => {
   const { toasts, removeToast } = useUiStore();
@@ -59,17 +60,22 @@ export const ToastContainer: React.FC = () => {
             <div className="absolute inset-0 bg-gradient-to-r from-sky-500/10 to-purple-500/10 opacity-0 group-hover:opacity-100 transition-opacity duration-300 pointer-events-none" />
           )}
 
-          {toast.type === 'message' && toast.avatar ? (
+          {toast.type === 'message' ? (
             <div className="relative shrink-0">
-              <img src={toast.avatar} alt="Avatar" className="w-10 h-10 rounded-full object-cover ring-2 ring-sky-100 shadow-sm" />
+              <UserAvatar
+                src={toast.avatar}
+                name={toast.title}
+                size="header"
+                ring
+                ringColor="ring-sky-100"
+                className="shadow-sm"
+              />
               <span className="absolute bottom-0 right-0 w-3 h-3 bg-emerald-500 border-2 border-white rounded-full"></span>
             </div>
           ) : (
-            toast.type !== 'message' && (
-              <div className="transition-all duration-200 shrink-0">
-                {iconMap[toast.type] || iconMap.info}
-              </div>
-            )
+            <div className="transition-all duration-200 shrink-0">
+              {iconMap[toast.type] || iconMap.info}
+            </div>
           )}
           
           <div className="flex-1 min-w-0 pt-0.5">

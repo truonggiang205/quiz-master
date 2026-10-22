@@ -33,7 +33,7 @@ export class SubmissionEntity {
   studentEmail: string;
 
   @Column({ type: 'text', nullable: true })
-  studentAvatar: string;
+  studentAvatar: string | null;
 
   @Column({ type: 'double', default: 0 })
   score: number;

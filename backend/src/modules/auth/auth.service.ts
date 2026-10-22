@@ -172,8 +172,7 @@ export class AuthService implements OnModuleInit {
         email: cleanEmail,
         password: await bcrypt.hash(dto.password || '123456', 10),
         role: safeRole,
-        avatar:
-          'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256',
+        avatar: null,
         school: dto.school || 'Trường THPT',
         dob: dto.dob ? new Date(dto.dob) : null,
         gender: dto.gender || null,

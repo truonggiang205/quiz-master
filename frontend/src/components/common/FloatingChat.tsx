@@ -4,6 +4,7 @@ import io, { Socket } from 'socket.io-client';
 import { useAuthStore } from '../../stores/auth.store';
 import { useUiStore } from '../../stores/ui.store';
 import { chatService, Conversation, Message, ChatUser } from '../../services/chat.service';
+import { UserAvatar } from './UserAvatar';
 
 
 export const FloatingChat: React.FC = () => {
@@ -67,7 +68,7 @@ export const FloatingChat: React.FC = () => {
             type: 'message',
             title: msg.sender?.name || 'Tin nhắn mới',
             message: msg.content,
-            avatar: msg.sender?.avatar || 'https://api.dicebear.com/7.x/avataaars/svg?seed=fallback',
+            avatar: msg.sender?.avatar || null,
             payload: msg.sender,
           });
         }
@@ -271,11 +272,12 @@ export const FloatingChat: React.FC = () => {
               )}
               
               <div className="flex items-center gap-3">
-                {activeTab === 'CHAT' && activeConv?.otherUser?.avatar && (
-                  <img 
-                    src={activeConv.otherUser.avatar} 
-                    alt="avatar" 
-                    className="w-9 h-9 rounded-full object-cover ring-2 ring-white/30"
+                {activeTab === 'CHAT' && activeConv?.otherUser && (
+                  <UserAvatar
+                    user={activeConv.otherUser}
+                    size="md"
+                    ring
+                    ringColor="ring-white/30"
                   />
                 )}
                 <div className="flex-1 min-w-0">
@@ -312,7 +314,12 @@ export const FloatingChat: React.FC = () => {
                     {searchResults.length > 0 ? (
                       searchResults.map(u => (
                         <button key={u.id} onClick={() => startChatWith(u)} className="w-full flex items-center gap-3 p-3 mb-1 rounded-2xl hover:bg-sky-50 border border-transparent hover:border-sky-100 transition-all text-left group shadow-sm bg-white">
-                          <img src={u.avatar} alt={u.name} className="w-11 h-11 rounded-full object-cover ring-2 ring-slate-100 group-hover:ring-sky-300 transition-all" />
+                          <UserAvatar
+                            user={u}
+                            size="lg"
+                            ring
+                            ringColor="ring-slate-100 group-hover:ring-sky-300"
+                          />
                           <div className="flex-1 overflow-hidden">
                             <p className="font-bold text-sm text-slate-800 truncate group-hover:text-sky-700 transition-colors">{u.name}</p>
                             <div className="flex items-center gap-1.5 mt-0.5">
@@ -333,7 +340,12 @@ export const FloatingChat: React.FC = () => {
                   conversations.map(c => (
                     <button key={c.id} onClick={() => startChatWith(c.otherUser!)} className="w-full flex items-center gap-3 p-2 rounded-xl hover:bg-white hover:shadow-sm transition-all text-left group">
                       <div className="relative">
-                        <img src={c.otherUser?.avatar} alt={c.otherUser?.name} className="w-10 h-10 rounded-full object-cover ring-1 ring-slate-200" />
+                        <UserAvatar
+                          user={c.otherUser}
+                          size="header"
+                          ring
+                          ringColor="ring-slate-200"
+                        />
                         {c.unreadCount ? (
                           <span className="absolute -top-1 -right-1 min-w-4 h-4 px-1 bg-rose-500 rounded-full border-2 border-white text-[9px] font-bold text-white flex items-center justify-center">
                             {c.unreadCount > 99 ? '99+' : c.unreadCount}
@@ -377,10 +389,10 @@ export const FloatingChat: React.FC = () => {
                     >
                       <div className="flex items-end gap-2 max-w-[85%]">
                         {!isMe && (
-                          <img 
-                            src={activeConv?.otherUser?.avatar} 
-                            alt="avatar"
-                            className="w-7 h-7 rounded-full object-cover shrink-0 mb-0.5 shadow-sm"
+                          <UserAvatar
+                            user={activeConv?.otherUser}
+                            size="xs"
+                            className="mb-0.5 shadow-sm"
                           />
                         )}
                         <div className={`rounded-2xl px-4 py-2.5 text-[13px] md:text-sm shadow-sm ${
@@ -393,10 +405,10 @@ export const FloatingChat: React.FC = () => {
                       </div>
                       {isMe && isLastMessage && m.isRead && (
                          <div className="flex items-center gap-1 mt-1 mr-1 animate-in fade-in zoom-in duration-300">
-                           <img 
-                             src={activeConv?.otherUser?.avatar} 
-                             alt="seen"
-                             className="w-3.5 h-3.5 rounded-full object-cover opacity-80" 
+                           <UserAvatar
+                             user={activeConv?.otherUser}
+                             size={14}
+                             className="opacity-80"
                            />
                          </div>
                       )}
@@ -406,10 +418,10 @@ export const FloatingChat: React.FC = () => {
                 
                 {activeConv?.otherUser?.id && typingUsers[activeConv.otherUser.id] && (
                   <div className="flex items-end gap-2 max-w-[85%] animate-in fade-in slide-in-from-bottom-2 duration-300">
-                    <img 
-                      src={activeConv.otherUser.avatar} 
-                      alt="avatar"
-                      className="w-7 h-7 rounded-full object-cover shrink-0 mb-0.5 shadow-sm"
+                    <UserAvatar
+                      user={activeConv.otherUser}
+                      size="xs"
+                      className="mb-0.5 shadow-sm"
                     />
                     <div className="bg-white border border-slate-100 rounded-2xl rounded-bl-sm px-4 py-3 shadow-sm flex items-center gap-1.5 h-10">
                       <div className="w-1.5 h-1.5 bg-slate-400 rounded-full  [animation-delay:-0.3s]"></div>

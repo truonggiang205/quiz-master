@@ -32,6 +32,9 @@ export function resolveAvatarUrl(user?: AvatarSource | string | null): string | 
     user.avatar ||
     user.avatarUrl ||
     user.studentAvatar ||
+    (user as any).studentAccount?.avatar ||
+    (user as any).studentAccount?.avatarUrl ||
+    (user as any).account?.avatar ||
     user.profileImage ||
     user.photoUrl ||
     user.image;
@@ -47,12 +50,23 @@ export function resolveAvatarUrl(user?: AvatarSource | string | null): string | 
 }
 
 /**
+ * Common Vietnamese compound surnames (Họ kép / họ ghép cha mẹ)
+ */
+const COMPOUND_SURNAMES = new Set([
+  'võ', 'vũ', 'lê', 'nguyễn', 'trần', 'phạm', 'hoàng', 'huỳnh',
+  'phan', 'bùi', 'đặng', 'đỗ', 'hồ', 'ngô', 'dương', 'lý',
+  'đinh', 'đoàn', 'lâm', 'trịnh', 'mai', 'đào', 'cao', 'hà'
+]);
+
+/**
  * Generates clean 1 or 2 letter uppercase initials from Vietnamese or international names.
- * Example:
+ * Examples:
  *  "Hà Trường Giang" -> "HG"
- *  "Đặng Thị Hồng Xuân" -> "ĐX"
- *  "Trần Võ Hải Mi" -> "TM"
+ *  "Hà Giang" -> "HG"
+ *  "Trần Võ Hải Mi" -> "TV" (Họ kép Trần Võ)
+ *  "Nguyễn Văn An" -> "NA"
  *  "Giang" -> "G"
+ *  "" -> "?"
  */
 export function resolveInitials(name?: string | null): string {
   if (!name || typeof name !== 'string') return '?';
@@ -60,8 +74,17 @@ export function resolveInitials(name?: string | null): string {
   if (!clean) return '?';
 
   const parts = clean.split(/\s+/).filter(Boolean);
+  if (parts.length === 0) return '?';
+
   if (parts.length === 1) {
-    return parts[0].slice(0, 2).toUpperCase();
+    return parts[0].charAt(0).toUpperCase();
+  }
+
+  // Handle 4-word names with compound surnames (Họ kép như Trần Võ, Nguyễn Lê...)
+  if (parts.length === 4 && COMPOUND_SURNAMES.has(parts[1].toLowerCase())) {
+    const firstSurname = parts[0].charAt(0).toUpperCase();
+    const secondSurname = parts[1].charAt(0).toUpperCase();
+    return `${firstSurname}${secondSurname}`;
   }
 
   const firstLetter = parts[0].charAt(0).toUpperCase();

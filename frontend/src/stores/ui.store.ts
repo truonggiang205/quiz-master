@@ -7,7 +7,7 @@ export interface ToastMessage {
   type: ToastType;
   title: string;
   message?: string;
-  avatar?: string;
+  avatar?: string | null;
   payload?: any;
   duration?: number;
   persistent?: boolean;

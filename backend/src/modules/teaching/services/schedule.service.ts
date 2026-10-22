@@ -102,8 +102,10 @@ export class ScheduleService {
       .leftJoinAndSelect('lesson.class', 'class')
       .leftJoinAndSelect('lesson.participants', 'participants')
       .leftJoinAndSelect('participants.student', 'student')
+      .leftJoinAndSelect('student.studentAccount', 'studentAccount')
       .leftJoinAndSelect('lesson.learningLogs', 'learningLogs')
       .leftJoinAndSelect('learningLogs.student', 'logStudent')
+      .leftJoinAndSelect('logStudent.studentAccount', 'logStudentAccount')
       .where('lesson.teacherId = :teacherId', { teacherId });
 
     if (query.classId) {
@@ -161,7 +163,24 @@ export class ScheduleService {
 
     qb.orderBy('lesson.date', 'ASC').addOrderBy('lesson.startTime', 'ASC');
 
-    return await qb.getMany();
+    const lessons = await qb.getMany();
+    return lessons.map((l) => {
+      if (l.participants) {
+        l.participants.forEach((p) => {
+          if (p.student) {
+            p.student.avatar = p.student.avatar || (p.student as any).studentAccount?.avatar || null;
+          }
+        });
+      }
+      if (l.learningLogs) {
+        l.learningLogs.forEach((ll) => {
+          if (ll.student) {
+            ll.student.avatar = ll.student.avatar || (ll.student as any).studentAccount?.avatar || null;
+          }
+        });
+      }
+      return l;
+    });
   }
 
   async getLessonById(teacherId: string, lessonId: string) {
@@ -170,10 +189,13 @@ export class ScheduleService {
       .leftJoinAndSelect('lesson.class', 'class')
       .leftJoinAndSelect('lesson.participants', 'participants')
       .leftJoinAndSelect('participants.student', 'student')
+      .leftJoinAndSelect('student.studentAccount', 'studentAccount')
       .leftJoinAndSelect('lesson.learningLogs', 'learningLogs')
       .leftJoinAndSelect('learningLogs.student', 'logStudent')
+      .leftJoinAndSelect('logStudent.studentAccount', 'logStudentAccount')
       .leftJoinAndSelect('lesson.scores', 'scores')
       .leftJoinAndSelect('scores.student', 'scoreStudent')
+      .leftJoinAndSelect('scoreStudent.studentAccount', 'scoreStudentAccount')
       .where('lesson.id = :lessonId', { lessonId })
       .getOne();
 
@@ -183,6 +205,28 @@ export class ScheduleService {
 
     if (lesson.teacherId !== teacherId) {
       throw new ForbiddenException('Bạn không có quyền truy cập buổi học này');
+    }
+
+    if (lesson.participants) {
+      lesson.participants.forEach((p) => {
+        if (p.student) {
+          p.student.avatar = p.student.avatar || (p.student as any).studentAccount?.avatar || null;
+        }
+      });
+    }
+    if (lesson.learningLogs) {
+      lesson.learningLogs.forEach((ll) => {
+        if (ll.student) {
+          ll.student.avatar = ll.student.avatar || (ll.student as any).studentAccount?.avatar || null;
+        }
+      });
+    }
+    if (lesson.scores) {
+      lesson.scores.forEach((sc) => {
+        if (sc.student) {
+          sc.student.avatar = sc.student.avatar || (sc.student as any).studentAccount?.avatar || null;
+        }
+      });
     }
 
     return lesson;

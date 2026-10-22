@@ -28,6 +28,7 @@ import { TeachingService } from '../../services/teaching.service';
 import { ClassroomService } from '../../services/classroom.service';
 import { Modal } from '../../components/common/Modal';
 import { UserAvatar } from '../../components/common/UserAvatar';
+import { resolveAvatarUrl } from '../../utils/avatar.util';
 import type { LearningLog, Lesson, SaveLearningLogPayload } from '../../types/teaching';
 import type { Classroom } from '../../types/classroom';
 import { useSearchParams } from 'react-router-dom';
@@ -207,35 +208,66 @@ export const TeacherLearningLogsPage: React.FC = () => {
   const rosterStudents = useMemo(() => {
     const studentMap = new Map<string, RosterStudent>();
 
+    const upsertStudent = (
+      id: string,
+      data: {
+        name: string;
+        email?: string;
+        avatar?: string | null;
+        className: string;
+        classId: string;
+        subject?: string;
+        accentColor?: string;
+      },
+    ) => {
+      const cleanAvatar = resolveAvatarUrl(data.avatar) || (data as any).avatar || undefined;
+      const existing = studentMap.get(id);
+      if (!existing) {
+        studentMap.set(id, {
+          id,
+          name: data.name,
+          email: data.email,
+          avatar: cleanAvatar,
+          className: data.className,
+          classId: data.classId,
+          subject: data.subject,
+          accentColor: data.accentColor,
+        });
+      } else {
+        if (!existing.avatar && cleanAvatar) {
+          existing.avatar = cleanAvatar;
+        }
+        if (!existing.email && data.email) {
+          existing.email = data.email;
+        }
+      }
+    };
+
     // 1. Add students from loaded classes
     classes.forEach((cls, classIdx) => {
       const accent = CLASS_ACCENT_COLORS[classIdx % CLASS_ACCENT_COLORS.length];
       if (cls.students && cls.students.length > 0) {
         cls.students.forEach((s) => {
-          if (!studentMap.has(s.id)) {
-            studentMap.set(s.id, {
-              id: s.id,
-              name: s.name,
-              email: s.email,
-              avatar: s.avatar,
-              className: cls.name,
-              classId: cls.id,
-              subject: cls.subject || 'Tổng hợp',
-              accentColor: accent,
-            });
-          }
+          upsertStudent(s.id, {
+            name: s.name,
+            email: s.email,
+            avatar: resolveAvatarUrl(s) || s.avatar,
+            className: cls.name,
+            classId: cls.id,
+            subject: cls.subject || 'Tổng hợp',
+            accentColor: accent,
+          });
         });
       }
     });
 
     // 2. Add students found in logs (e.g. from tests or historical records)
     logs.forEach((log) => {
-      if (log.student && !studentMap.has(log.student.id)) {
-        studentMap.set(log.student.id, {
-          id: log.student.id,
-          name: log.student.name,
+      if (log.student) {
+        upsertStudent(log.student.id, {
+          name: log.student.name || (log.student as any).fullName || 'Học sinh',
           email: log.student.email,
-          avatar: log.student.avatar,
+          avatar: resolveAvatarUrl(log.student) || log.student.avatar,
           className: log.class?.name || 'Lớp học',
           classId: log.classId,
           subject: log.class?.subject || 'Tổng hợp',
@@ -248,12 +280,11 @@ export const TeacherLearningLogsPage: React.FC = () => {
     lessons.forEach((l) => {
       if (l.participants) {
         l.participants.forEach((p) => {
-          if (p.student && !studentMap.has(p.student.id)) {
-            studentMap.set(p.student.id, {
-              id: p.student.id,
-              name: p.student.name || p.student.fullName || 'Học sinh',
+          if (p.student) {
+            upsertStudent(p.student.id, {
+              name: p.student.name || (p.student as any).fullName || 'Học sinh',
               email: p.student.email,
-              avatar: p.student.avatar,
+              avatar: resolveAvatarUrl(p.student) || p.student.avatar,
               className: l.class?.name || 'Lớp học',
               classId: l.classId,
               subject: l.class?.subject || 'Tổng hợp',
@@ -517,13 +548,6 @@ export const TeacherLearningLogsPage: React.FC = () => {
   const formatCurrency = (val?: number): string => {
     if (val == null || isNaN(val)) return '0 ₫';
     return new Intl.NumberFormat('vi-VN').format(val) + ' ₫';
-  };
-
-  const getInitials = (name?: string): string => {
-    if (!name) return 'HS';
-    const parts = name.trim().split(/\s+/);
-    if (parts.length === 1) return parts[0].slice(0, 2).toUpperCase();
-    return (parts[0][0] + parts[parts.length - 1][0]).toUpperCase();
   };
 
   // Open Edit / Create Log Modal

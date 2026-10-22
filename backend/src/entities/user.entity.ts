@@ -29,7 +29,7 @@ export class UserEntity {
   gender: 'MALE' | 'FEMALE' | 'OTHER' | null;
 
   @Column({ type: 'text', nullable: true })
-  avatar: string;
+  avatar: string | null;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
   phone: string;

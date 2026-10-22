@@ -5,6 +5,7 @@ import { useAuthStore } from '../stores/auth.store';
 import { formatUserName } from '../utils/user.utils';
 import { ChevronDown, User, LogOut } from 'lucide-react';
 import { Logo } from '../components/common/Logo';
+import { UserAvatar } from '../components/common/UserAvatar';
 
 export const LandingPage: React.FC = () => {
   const { user, logout } = useAuthStore();
@@ -54,10 +55,11 @@ export const LandingPage: React.FC = () => {
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-2 p-1.5 pr-3 rounded-full hover:bg-slate-100 transition-colors border border-transparent hover:border-slate-200"
             >
-              <img
-                src={user.avatar}
-                alt={user.name}
-                className="w-8 h-8 rounded-full object-cover ring-2 ring-slate-200"
+              <UserAvatar
+                user={user}
+                size="sm"
+                ring
+                ringColor="ring-slate-200"
               />
               <div className="hidden sm:flex flex-col text-left">
                 <span className="text-xs font-bold text-slate-800 truncate max-w-[120px]">

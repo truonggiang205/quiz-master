@@ -6,6 +6,7 @@ import { formatUserName } from '../../utils/user.utils';
 import { uploadService } from '../../services/upload.service';
 import { AuthService } from '../../services/auth.service';
 import { AvatarCropperModal } from '../../components/common/AvatarCropperModal';
+import { UserAvatar } from '../../components/common/UserAvatar';
 
 export const StudentProfilePage: React.FC = () => {
   const { user, setUser } = useAuthStore();
@@ -78,10 +79,14 @@ export const StudentProfilePage: React.FC = () => {
         {/* Avatar Header */}
         <div className="flex items-center gap-6 pb-6 border-b border-slate-100 dark:border-slate-700">
           <div className="relative group">
-            <img
+            <UserAvatar
               src={avatar || user?.avatar}
-              alt={user?.name}
-              className={`w-20 h-20 rounded-2xl object-cover ring-4 ring-emerald-100 dark:ring-emerald-900 transition-opacity ${isUploading ? 'opacity-50' : ''}`}
+              name={user?.name}
+              size={80}
+              ring
+              ringColor="ring-emerald-100 dark:ring-emerald-900"
+              rounded="rounded-2xl"
+              className={`transition-opacity ${isUploading ? 'opacity-50' : ''}`}
             />
             <label className="absolute inset-0 flex items-center justify-center bg-black/40 text-white opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer">
               {isUploading ? <Loader2 className="w-6 h-6 animate-spin" /> : <Camera className="w-6 h-6" />}

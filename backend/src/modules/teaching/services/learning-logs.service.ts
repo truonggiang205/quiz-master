@@ -61,6 +61,7 @@ export class LearningLogsService {
     const qb = this.logRepo
       .createQueryBuilder('log')
       .leftJoinAndSelect('log.student', 'student')
+      .leftJoinAndSelect('student.studentAccount', 'studentAccount')
       .leftJoinAndSelect('log.class', 'class')
       .leftJoinAndSelect('log.lesson', 'lesson')
       .where('log.teacherId = :teacherId', { teacherId });
@@ -90,13 +91,19 @@ export class LearningLogsService {
 
     qb.orderBy('lesson.date', 'DESC').addOrderBy('student.fullName', 'ASC');
 
-    return await qb.getMany();
+    const logs = await qb.getMany();
+    return logs.map((log) => {
+      if (log.student) {
+        log.student.avatar = log.student.avatar || (log.student as any).studentAccount?.avatar || null;
+      }
+      return log;
+    });
   }
 
   async getLogById(teacherId: string, logId: string) {
     const log = await this.logRepo.findOne({
       where: { id: logId },
-      relations: { student: true, class: true, lesson: true },
+      relations: { student: { studentAccount: true }, class: true, lesson: true },
     });
 
     if (!log) {
@@ -105,6 +112,10 @@ export class LearningLogsService {
 
     if (log.teacherId !== teacherId) {
       throw new ForbiddenException('Bạn không có quyền xem nhật ký này');
+    }
+
+    if (log.student) {
+      log.student.avatar = log.student.avatar || (log.student as any).studentAccount?.avatar || null;
     }
 
     return log;

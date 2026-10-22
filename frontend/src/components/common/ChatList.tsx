@@ -1,6 +1,7 @@
 import React from 'react';
 import { Check, CheckCheck } from 'lucide-react';
 import { PremiumList, PremiumListItem } from './PremiumList';
+import { UserAvatar } from './UserAvatar';
 
 export interface ChatItem {
   id: string | number;
@@ -30,10 +31,11 @@ export const ChatList: React.FC<ChatListProps> = ({ items, onChatClick }) => {
           hoverColorClass="bg-sky-600"
           avatar={
             <>
-              <img
+              <UserAvatar
                 src={chat.avatar}
-                alt={chat.name}
-                className="w-14 h-14 rounded-full object-cover shadow-sm p-0.5 border-2 border-slate-100 group-hover:border-sky-200 transition-colors duration-300"
+                name={chat.name}
+                size={56}
+                className="shadow-sm p-0.5 border-2 border-slate-100 group-hover:border-sky-200 transition-colors duration-300"
               />
               {chat.isOnline && (
                 <div className="absolute bottom-0 right-0 w-3.5 h-3.5 rounded-full border-2 border-white bg-green-500 shadow-[0_0_8px_rgba(34,197,94,0.4)]" />

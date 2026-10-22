@@ -304,6 +304,7 @@ export class TuitionService {
     const qb = this.tuitionRepo
       .createQueryBuilder('tui')
       .leftJoinAndSelect('tui.student', 'student')
+      .leftJoinAndSelect('student.studentAccount', 'studentAccount')
       .leftJoinAndSelect('tui.class', 'class')
       .leftJoinAndSelect('tui.adjustments', 'adjustments')
       .leftJoinAndSelect('tui.payments', 'payments')
@@ -380,7 +381,7 @@ export class TuitionService {
         studentId: item.studentId,
         studentName: (item.student as any)?.fullName || (item.student as any)?.name || '',
         studentEmail: item.student?.email || '',
-        studentAvatar: item.student?.avatar || null,
+        studentAvatar: item.student?.avatar || (item.student as any)?.studentAccount?.avatar || null,
         isExternal: (item.student as any)?.studentAccountId === null || (item.student as any)?.studentAccountId === undefined ? true : !(item.student as any)?.studentAccountId,
         classId: item.classId,
         className: item.class?.name || '',

@@ -291,7 +291,7 @@ export class SubmissionsService {
       studentId: student.id,
       studentName: student.name,
       studentEmail: student.email,
-      studentAvatar: student.avatar || 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&q=80&w=256',
+      studentAvatar: student.avatar || null,
       score: scaledScore,
       maxScore: maxScore,
       percentage,

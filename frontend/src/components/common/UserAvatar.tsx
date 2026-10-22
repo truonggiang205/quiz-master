@@ -12,6 +12,7 @@ export interface UserAvatarProps {
   alt?: string;
   ring?: boolean;
   ringColor?: string;
+  rounded?: string;
 }
 
 const SIZE_MAP: Record<string, { container: string; text: string; px: number }> = {
@@ -32,6 +33,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
   alt,
   ring = false,
   ringColor = 'ring-blue-100 dark:ring-blue-900',
+  rounded = 'rounded-full',
 }) => {
   const resolvedUrl = src || resolveAvatarUrl(user);
   const displayName = name || user?.name || (user as any)?.fullName || '';
@@ -66,7 +68,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
         alt={accessibilityAlt}
         onError={() => setHasError(true)}
         style={customStyle}
-        className={`rounded-full object-cover shrink-0 select-none ${sizeClasses} ${ringClasses} ${className}`}
+        className={`${rounded} object-cover shrink-0 select-none ${sizeClasses} ${ringClasses} ${className}`}
         crossOrigin="anonymous"
         loading="lazy"
       />
@@ -78,7 +80,7 @@ export const UserAvatar: React.FC<UserAvatarProps> = ({
     <div
       style={customStyle}
       aria-label={accessibilityAlt}
-      className={`rounded-full shrink-0 select-none font-bold flex items-center justify-center border ${sizeClasses} ${colorScheme.bg} ${colorScheme.text} ${colorScheme.border} ${ringClasses} ${className}`}
+      className={`${rounded} shrink-0 select-none font-bold flex items-center justify-center border ${sizeClasses} ${colorScheme.bg} ${colorScheme.text} ${colorScheme.border} ${ringClasses} ${className}`}
     >
       <span>{initials}</span>
     </div>

@@ -3,6 +3,7 @@ import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../stores/auth.store';
 import { Logo } from '../components/common/Logo';
+import { UserAvatar } from '../components/common/UserAvatar';
 import {
   Users,
   LayoutDashboard,
@@ -73,7 +74,7 @@ export const AdminLayout: React.FC = () => {
 
         <div className="p-4 border-t border-slate-800">
           <div className="flex items-center gap-3 px-4 py-3 mb-2">
-            <img src={user?.avatar} alt="Admin" className="w-8 h-8 rounded-full border border-slate-700" />
+            <UserAvatar user={user} size="sm" className="border border-slate-700" />
             <div className="flex-1 min-w-0">
               <p className="text-sm font-bold text-white truncate">{user?.name}</p>
               <p className="text-xs text-slate-500 truncate">Super Admin</p>

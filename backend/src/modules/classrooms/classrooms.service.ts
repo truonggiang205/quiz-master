@@ -331,7 +331,7 @@ export class ClassroomsService {
               studentAccountId: s.id,
               name: s.name,
               email: s.email,
-              avatar: s.avatar,
+              avatar: s.avatar || p.avatar || p.studentAccount?.avatar || null,
             };
           }),
         );
@@ -353,6 +353,7 @@ export class ClassroomsService {
         studentAccountId?: string | null;
         name: string;
         email?: string;
+        avatar?: string | null;
         isExternal: boolean;
         isActive: boolean;
       }
@@ -366,6 +367,7 @@ export class ClassroomsService {
         studentAccountId: p.studentAccountId || null,
         name: p.fullName,
         email: p.email || p.studentAccount?.email || undefined,
+        avatar: p.avatar || p.studentAccount?.avatar || null,
         isExternal: !p.studentAccountId,
         isActive: p.status === 'ACTIVE',
       });
@@ -402,6 +404,7 @@ export class ClassroomsService {
           studentAccountId: s.id,
           name: s.name,
           email: s.email,
+          avatar: s.avatar || profile.avatar || profile.studentAccount?.avatar || null,
           isExternal: false,
           isActive: s.isActive !== false,
         });
@@ -461,6 +464,7 @@ export class ClassroomsService {
             studentAccountId: student.studentAccountId || null,
             name: student.name,
             email: student.email,
+            avatar: student.avatar || null,
           } as any],
           stats,
         };
@@ -668,7 +672,7 @@ export class ClassroomsService {
         createdAt: s.createdAt,
         phone: s.phone || '',
         school: s.school || '',
-        avatar: s.avatar || '',
+        avatar: s.avatar || null,
         avgScore: stuAvg,
         submissionsCount: stuSubs.length,
       };

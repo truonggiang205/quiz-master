@@ -231,12 +231,25 @@ export async function runExternalStudentLegacyBackfill(
       }
     }
 
-    // Source 2: class_students join classes
+    // Source 2: class_students join classes (Group classes only - strictly exclude private 1-1 classes)
     if (tables.includes('class_students') && tables.includes('classes')) {
+      const [colsRaw]: any = await connection.query(`
+        SELECT COLUMN_NAME
+        FROM information_schema.COLUMNS
+        WHERE TABLE_SCHEMA = DATABASE()
+          AND TABLE_NAME = 'classes'
+          AND COLUMN_NAME = 'isPrivate';
+      `);
+      const hasIsPrivate = Array.isArray(colsRaw) && colsRaw.length > 0;
+      const classFilter = hasIsPrivate
+        ? `WHERE c.id NOT LIKE 'private-%' AND (c.isPrivate = 0 OR c.isPrivate IS NULL)`
+        : `WHERE c.id NOT LIKE 'private-%'`;
+
       const [csRows] = await connection.query(`
         SELECT c.teacherId, cs.studentId
         FROM class_students cs
-        JOIN classes c ON c.id = cs.classId;
+        JOIN classes c ON c.id = cs.classId
+        ${classFilter};
       `);
       for (const r of csRows as any[]) {
         if (r.teacherId && r.studentId) {

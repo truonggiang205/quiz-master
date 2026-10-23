@@ -378,7 +378,7 @@ export class StudentsService {
       targetIds.push(student.studentAccountId);
     }
 
-    // Kiểm tra toàn vẹn dữ liệu lịch sử
+    // 1. Kiểm tra toàn vẹn dữ liệu lịch sử (Schedule, Tuition, Payments, Scores, Learning Logs)
     const safeCount = async (repo: any, where: any) => {
       if (!repo) return 0;
       if (typeof repo.count === 'function') {
@@ -406,19 +406,101 @@ export class StudentsService {
       );
     }
 
-    // Đồng bộ gỡ khỏi bảng join legacy nếu có
-    if (student.studentAccountId) {
-      const teacher = await this.userRepo.findOne({
-        where: { id: teacherId },
+    // 2. Thực hiện dọn dẹp toàn bộ quan hệ trong một Database Transaction nguyên tử
+    const executeInTransaction = async (work: (mgr: any) => Promise<any>) => {
+      if (this.teacherStudentRepo?.manager?.transaction) {
+        return await this.teacherStudentRepo.manager.transaction(work);
+      }
+      const fakeManager = {
+        find: (entity: any, opts: any) => {
+          if (entity === ClassEntity && this.classRepo) return this.classRepo.find(opts);
+          if (entity === UserEntity && this.userRepo) return this.userRepo.find(opts);
+          return [];
+        },
+        findOne: (entity: any, opts: any) => {
+          if (entity === ClassEntity && this.classRepo) return this.classRepo.findOne(opts);
+          if (entity === UserEntity && this.userRepo) return this.userRepo.findOne(opts);
+          return null;
+        },
+        count: (entity: any, opts: any) => {
+          if (entity === LessonEntity && this.lessonRepo) return this.lessonRepo.count(opts);
+          if (entity === TuitionItemEntity && this.tuitionItemRepo) return this.tuitionItemRepo.count(opts);
+          return 0;
+        },
+        save: (entity: any, data: any) => {
+          if (entity === ClassEntity && this.classRepo) return this.classRepo.save(data);
+          if (entity === UserEntity && this.userRepo) return this.userRepo.save(data);
+          return data;
+        },
+        remove: (entity: any, data: any) => {
+          if (entity === ClassEntity && this.classRepo) return this.classRepo.remove(data);
+          if (entity === TeacherStudentEntity && this.teacherStudentRepo) return this.teacherStudentRepo.remove(data);
+          return data;
+        },
+      };
+      return await work(fakeManager);
+    };
+
+    await executeInTransaction(async (manager) => {
+      // a. Xóa học sinh khỏi tất cả các lớp nhóm thuộc sở hữu của giáo viên này (bảng class_students)
+      const teacherClasses = await manager.find(ClassEntity, {
+        where: { teacherId },
         relations: { students: true },
       });
-      if (teacher && teacher.students) {
-        teacher.students = teacher.students.filter((s) => s.id !== student.studentAccountId);
-        await this.userRepo.save(teacher);
-      }
-    }
 
-    await this.teacherStudentRepo.remove(student);
+      for (const cls of teacherClasses) {
+        if (!cls.isPrivate && cls.students && cls.students.length > 0) {
+          const originalCount = cls.students.length;
+          cls.students = cls.students.filter((s) => !targetIds.includes(s.id));
+          if (cls.students.length !== originalCount) {
+            await manager.save(ClassEntity, cls);
+          }
+        }
+      }
+
+      // b. Xử lý các lớp học kèm 1-1 (isPrivate: true) của học sinh với giáo viên này
+      const privateClasses = teacherClasses.filter((cls) => {
+        if (!cls.isPrivate) return false;
+        if (cls.id === `private-${student.id}`) return true;
+        if (student.studentAccountId && cls.id === `private-${student.studentAccountId}`) return true;
+        if (cls.students && cls.students.some((s) => targetIds.includes(s.id))) return true;
+        return false;
+      });
+
+      for (const pClass of privateClasses) {
+        // Kiểm tra xem lớp private này có bất kỳ bài học hoặc mục học phí nào gắn vào không
+        const [lessonCount, tuitionCount] = await Promise.all([
+          manager.count(LessonEntity, { where: { classId: pClass.id } }),
+          manager.count(TuitionItemEntity, { where: { classId: pClass.id } }),
+        ]);
+
+        if (lessonCount === 0 && tuitionCount === 0) {
+          pClass.students = [];
+          await manager.save(ClassEntity, pClass);
+          await manager.remove(ClassEntity, pClass);
+        } else {
+          // Nếu có lịch sử liên quan đến lớp, chỉ detach quan hệ học sinh nhưng giữ lớp
+          pClass.students = (pClass.students || []).filter((s) => !targetIds.includes(s.id));
+          await manager.save(ClassEntity, pClass);
+        }
+      }
+
+      // c. Đồng bộ gỡ khỏi bảng join legacy teacher_students
+      if (student.studentAccountId) {
+        const teacher = await manager.findOne(UserEntity, {
+          where: { id: teacherId },
+          relations: { students: true },
+        });
+        if (teacher && teacher.students) {
+          teacher.students = teacher.students.filter((s) => s.id !== student.studentAccountId);
+          await manager.save(UserEntity, teacher);
+        }
+      }
+
+      // d. Xóa hồ sơ khỏi teacher_student_profiles (UserEntity trong bảng users KHÔNG bị xóa)
+      await manager.remove(TeacherStudentEntity, student);
+    });
+
     return { success: true, message: 'Đã xóa học sinh khỏi danh bạ thành công' };
   }
 

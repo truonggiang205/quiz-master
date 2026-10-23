@@ -1,4 +1,4 @@
-import { Injectable, NotFoundException, BadRequestException, UnauthorizedException, ForbiddenException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, UnauthorizedException, ForbiddenException, Optional } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { ClassEntity } from '../../entities/class.entity.js';
@@ -22,6 +22,18 @@ export interface ClassroomStats {
   scoreDistribution: { label: string; count: number }[];
   recentQuizScores: { id: string; title: string; avgScore: number; totalAttempts: number }[];
 }
+
+export type ClassroomMember =
+  | UserEntity
+  | {
+      id: string;
+      studentAccountId?: string | null;
+      userId?: string | null;
+      name?: string;
+      email?: string;
+      avatar?: string | null;
+      isActive?: boolean;
+    };
 
 export interface ImportStudentError {
   row: number;
@@ -51,6 +63,12 @@ export class ClassroomsService {
     private readonly submissionRepo: Repository<SubmissionEntity>,
     @InjectRepository(TeacherStudentEntity)
     private readonly teacherStudentRepo: Repository<TeacherStudentEntity>,
+    @Optional()
+    @InjectRepository(LessonEntity)
+    private readonly lessonRepo?: Repository<LessonEntity>,
+    @Optional()
+    @InjectRepository(TuitionItemEntity)
+    private readonly tuitionRepo?: Repository<TuitionItemEntity>,
   ) {}
 
   // Sinh mã lớp ngẫu nhiên dạng: SUBJECT-XXXX (Ví dụ: MATH-A8F2)
@@ -61,10 +79,10 @@ export class ClassroomsService {
   }
 
   // Helper tính toán thống kê thực tế cho lớp học
-  private async calculateClassStats(classId: string, students: UserEntity[]): Promise<ClassroomStats> {
+  private async calculateClassStats(classId: string, students: ClassroomMember[]): Promise<ClassroomStats> {
     const totalStudents = students.length;
-    const activeStudents = students.filter((s) => s.isActive !== false).length;
-    const inactiveStudents = students.filter((s) => s.isActive === false).length;
+    const activeStudents = students.filter((s: ClassroomMember) => s.isActive !== false).length;
+    const inactiveStudents = students.filter((s: ClassroomMember) => s.isActive === false).length;
 
     const getNormScore = (rawScore: number): number => {
       if (!rawScore || rawScore <= 0) return 0;
@@ -97,9 +115,9 @@ export class ClassroomsService {
           new Set(
             [
               studentId,
-              ...(students.map((s) => s.id)),
-              ...(students.map((s: any) => s.studentAccountId || s.userId)).filter(Boolean),
-            ].filter(Boolean),
+              ...students.map((s: ClassroomMember) => s.id),
+              ...students.map((s: ClassroomMember) => ('studentAccountId' in s ? s.studentAccountId : null) || ('userId' in s ? s.userId : null)),
+            ].filter((id): id is string => Boolean(id)),
           ),
         );
         const studentSubs = await this.submissionRepo.find({
@@ -162,13 +180,13 @@ export class ClassroomsService {
       const validStudentIds = new Set(
         [
           studentId,
-          ...(students.map((s) => s.id)),
-          ...(students.map((s: any) => s.studentAccountId || s.userId)).filter(Boolean),
-        ].filter(Boolean),
+          ...students.map((s: ClassroomMember) => s.id),
+          ...students.map((s: ClassroomMember) => ('studentAccountId' in s ? s.studentAccountId : null) || ('userId' in s ? s.userId : null)),
+        ].filter((id): id is string => Boolean(id)),
       );
       submissions = submissions.filter((s) => validStudentIds.has(s.studentId));
     } else {
-      const classStudentIds = new Set(students.map((s) => s.id));
+      const classStudentIds = new Set(students.map((s: ClassroomMember) => s.id));
       if (classStudentIds.size > 0) {
         submissions = submissions.filter((s) => classStudentIds.has(s.studentId));
       }
@@ -735,9 +753,8 @@ export class ClassroomsService {
             return null;
           },
           count: (entity: any, opts: any) => {
-            const self = this as any;
-            if (entity === LessonEntity && self.lessonRepo) return self.lessonRepo.count(opts);
-            if (entity === TuitionItemEntity && self.tuitionItemRepo) return self.tuitionItemRepo.count(opts);
+            if (entity === LessonEntity && this.lessonRepo) return this.lessonRepo.count(opts);
+            if (entity === TuitionItemEntity && this.tuitionRepo) return this.tuitionRepo.count(opts);
             return 0;
           },
           save: (entity: any, data: any) => {
@@ -774,7 +791,7 @@ export class ClassroomsService {
           const hasHistory = lessonCount > 0 || tuitionCount > 0 || quizCount > 0;
           if (hasHistory) {
             // Không xóa class nếu có lịch sử, chỉ gỡ quan hệ sinh viên trong class_students
-            privateClass.students = (privateClass.students || []).filter((s: any) => s.id !== studentId);
+            privateClass.students = (privateClass.students || []).filter((s: UserEntity) => s.id !== studentId);
             await manager.save(ClassEntity, privateClass);
           } else {
             // Xóa sạch membership và xóa lớp private rỗng khỏi DB
@@ -790,7 +807,7 @@ export class ClassroomsService {
           relations: { students: true },
         });
         if (teacher && teacher.students) {
-          teacher.students = teacher.students.filter((s: any) => s.id !== studentId);
+          teacher.students = teacher.students.filter((s: UserEntity) => s.id !== studentId);
           await manager.save(UserEntity, teacher);
         }
 

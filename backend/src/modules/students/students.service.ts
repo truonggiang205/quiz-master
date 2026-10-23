@@ -3,7 +3,6 @@ import {
   NotFoundException,
   BadRequestException,
   UnauthorizedException,
-  ForbiddenException,
   Logger,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -424,7 +423,7 @@ export class StudentsService {
         },
         count: (entity: any, opts: any) => {
           if (entity === LessonEntity && this.lessonRepo) return this.lessonRepo.count(opts);
-          if (entity === TuitionItemEntity && this.tuitionItemRepo) return this.tuitionItemRepo.count(opts);
+          if (entity === TuitionItemEntity && this.tuitionRepo) return this.tuitionRepo.count(opts);
           return 0;
         },
         save: (entity: any, data: any) => {
@@ -451,7 +450,7 @@ export class StudentsService {
       for (const cls of teacherClasses) {
         if (!cls.isPrivate && cls.students && cls.students.length > 0) {
           const originalCount = cls.students.length;
-          cls.students = cls.students.filter((s) => !targetIds.includes(s.id));
+          cls.students = cls.students.filter((s: UserEntity) => !targetIds.includes(s.id));
           if (cls.students.length !== originalCount) {
             await manager.save(ClassEntity, cls);
           }
@@ -459,11 +458,11 @@ export class StudentsService {
       }
 
       // b. Xử lý các lớp học kèm 1-1 (isPrivate: true) của học sinh với giáo viên này
-      const privateClasses = teacherClasses.filter((cls) => {
+      const privateClasses = teacherClasses.filter((cls: ClassEntity) => {
         if (!cls.isPrivate) return false;
         if (cls.id === `private-${student.id}`) return true;
         if (student.studentAccountId && cls.id === `private-${student.studentAccountId}`) return true;
-        if (cls.students && cls.students.some((s) => targetIds.includes(s.id))) return true;
+        if (cls.students && cls.students.some((s: UserEntity) => targetIds.includes(s.id))) return true;
         return false;
       });
 
@@ -480,7 +479,7 @@ export class StudentsService {
           await manager.remove(ClassEntity, pClass);
         } else {
           // Nếu có lịch sử liên quan đến lớp, chỉ detach quan hệ học sinh nhưng giữ lớp
-          pClass.students = (pClass.students || []).filter((s) => !targetIds.includes(s.id));
+          pClass.students = (pClass.students || []).filter((s: UserEntity) => !targetIds.includes(s.id));
           await manager.save(ClassEntity, pClass);
         }
       }
@@ -492,7 +491,7 @@ export class StudentsService {
           relations: { students: true },
         });
         if (teacher && teacher.students) {
-          teacher.students = teacher.students.filter((s) => s.id !== student.studentAccountId);
+          teacher.students = teacher.students.filter((s: UserEntity) => s.id !== student.studentAccountId);
           await manager.save(UserEntity, teacher);
         }
       }

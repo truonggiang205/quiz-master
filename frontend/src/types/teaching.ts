@@ -245,6 +245,9 @@ export interface ScoreRecord {
   maxScore: number;
   date: string;
   comment?: string;
+  source?: 'MANUAL' | 'ONLINE';
+  quizId?: string;
+  submissionId?: string;
   createdAt: string;
   student?: {
     id: string;
@@ -266,15 +269,26 @@ export interface ScoreMatrixStudent {
   studentId: string;
   studentName: string;
   studentEmail: string;
-  scores: Record<string, { id: string; score: number; maxScore: number; date: string }>;
+  scores: Record<
+    string,
+    { id: string; score: number; maxScore: number; date: string; source?: 'MANUAL' | 'ONLINE' }
+  >;
   averageScore: number;
   totalAssessments: number;
+}
+
+export interface ScoreMatrixAssessment {
+  key: string;
+  name: string;
+  type: AssessmentType;
+  source?: 'MANUAL' | 'ONLINE';
+  quizId?: string;
 }
 
 export interface ScoreMatrixResponse {
   classId: string;
   className: string;
-  assessments: { key: string; name: string; type: AssessmentType }[];
+  assessments: ScoreMatrixAssessment[];
   students: ScoreMatrixStudent[];
   classAverage: number;
 }

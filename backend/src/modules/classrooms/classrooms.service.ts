@@ -8,9 +8,7 @@ import { SubmissionEntity } from '../../entities/submission.entity.js';
 import { CreateClassDto, JoinClassDto } from './dto/classroom.dto.js';
 import { TeacherStudentEntity } from '../students/entities/teacher-student.entity.js';
 import { LessonEntity, TuitionItemEntity } from '../teaching/entities/index.js';
-import * as bcrypt from 'bcrypt';
 import * as xlsx from 'xlsx';
-import crypto from 'crypto';
 
 export interface ClassroomStats {
   totalStudents: number;

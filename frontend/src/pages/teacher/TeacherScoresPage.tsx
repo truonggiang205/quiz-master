@@ -378,7 +378,14 @@ export const TeacherScoresPage: React.FC = () => {
                     {matrixData.assessments.map((ass) => (
                       <th key={ass.key} className="py-3.5 px-4 text-center">
                         <span className="block text-slate-700 dark:text-slate-300 font-bold">{ass.name}</span>
-                        <span className="text-[10px] text-slate-400 lowercase">({ass.type})</span>
+                        <div className="flex items-center justify-center gap-1.5 mt-0.5">
+                          <span className="text-[10px] text-slate-400 lowercase">({ass.type})</span>
+                          {ass.source === 'ONLINE' && (
+                            <span className="px-1.5 py-0.5 rounded text-[9px] font-bold bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
+                              Online
+                            </span>
+                          )}
+                        </div>
                       </th>
                     ))}
                     <th className="py-3.5 px-4 text-center bg-amber-50/40 dark:bg-amber-950/20 text-amber-700 dark:text-amber-400">
@@ -435,6 +442,7 @@ export const TeacherScoresPage: React.FC = () => {
                     <th className="py-3.5 px-4">Ngày</th>
                     <th className="py-3.5 px-4">Học Sinh</th>
                     <th className="py-3.5 px-4">Tên Bài Đánh Giá</th>
+                    <th className="py-3.5 px-4">Nguồn</th>
                     <th className="py-3.5 px-4">Loại</th>
                     <th className="py-3.5 px-4 text-center">Điểm Đạt Được</th>
                     <th className="py-3.5 px-4">Nhận Xét</th>
@@ -450,6 +458,17 @@ export const TeacherScoresPage: React.FC = () => {
                         {sc.assessmentName}
                       </td>
                       <td className="py-3 px-4">
+                        {sc.source === 'ONLINE' ? (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
+                            Online Quiz
+                          </span>
+                        ) : (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-medium bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                            GV Nhập
+                          </span>
+                        )}
+                      </td>
+                      <td className="py-3 px-4">
                         <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/60 dark:text-amber-400">
                           {sc.assessmentType}
                         </span>
@@ -459,22 +478,31 @@ export const TeacherScoresPage: React.FC = () => {
                       </td>
                       <td className="py-3 px-4 text-slate-500 max-w-xs truncate">{sc.comment || '-'}</td>
                       <td className="py-3 px-4 text-right">
-                        <div className="flex items-center justify-end gap-1.5">
-                          <button
-                            onClick={() => handleOpenEdit(sc)}
-                            className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-slate-100"
-                            title="Sửa điểm"
+                        {sc.source === 'ONLINE' ? (
+                          <span
+                            className="inline-block text-[11px] text-slate-400 dark:text-slate-500 italic px-2 py-1 bg-slate-50 dark:bg-slate-800/50 rounded-lg"
+                            title="Điểm tự động từ Quiz Online - không thể sửa trực tiếp"
                           >
-                            <Edit2 className="w-4 h-4" />
-                          </button>
-                          <button
-                            onClick={() => handleDeleteScore(sc.id)}
-                            className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100"
-                            title="Xóa điểm"
-                          >
-                            <Trash2 className="w-4 h-4" />
-                          </button>
-                        </div>
+                            Tự động
+                          </span>
+                        ) : (
+                          <div className="flex items-center justify-end gap-1.5">
+                            <button
+                              onClick={() => handleOpenEdit(sc)}
+                              className="p-1.5 text-slate-400 hover:text-amber-600 rounded-lg hover:bg-slate-100"
+                              title="Sửa điểm"
+                            >
+                              <Edit2 className="w-4 h-4" />
+                            </button>
+                            <button
+                              onClick={() => handleDeleteScore(sc.id)}
+                              className="p-1.5 text-slate-400 hover:text-red-600 rounded-lg hover:bg-slate-100"
+                              title="Xóa điểm"
+                            >
+                              <Trash2 className="w-4 h-4" />
+                            </button>
+                          </div>
+                        )}
                       </td>
                     </tr>
                   ))}

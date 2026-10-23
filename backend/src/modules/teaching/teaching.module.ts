@@ -11,6 +11,8 @@ import {
 } from './entities/index.js';
 import { ClassEntity } from '../../entities/class.entity.js';
 import { UserEntity } from '../../entities/user.entity.js';
+import { QuizEntity } from '../../entities/quiz.entity.js';
+import { SubmissionEntity } from '../../entities/submission.entity.js';
 import { TeacherStudentEntity } from '../students/entities/teacher-student.entity.js';
 import { ScheduleService } from './services/schedule.service.js';
 import { LearningLogsService } from './services/learning-logs.service.js';
@@ -36,6 +38,8 @@ import { CalendarController } from './controllers/calendar.controller.js';
       ClassEntity,
       UserEntity,
       TeacherStudentEntity,
+      QuizEntity,
+      SubmissionEntity,
     ]),
   ],
   controllers: [

@@ -5,21 +5,66 @@ import {
   ForbiddenException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
 import { ScoreRecordEntity, AssessmentType } from '../entities/score-record.entity.js';
 import { ClassEntity } from '../../../entities/class.entity.js';
 import { UserEntity } from '../../../entities/user.entity.js';
 import { TeacherStudentEntity } from '../../students/entities/teacher-student.entity.js';
 import { LessonEntity } from '../entities/lesson.entity.js';
+import { QuizEntity } from '../../../entities/quiz.entity.js';
+import { SubmissionEntity } from '../../../entities/submission.entity.js';
 import { CreateScoreDto, UpdateScoreDto } from '../dto/score.dto.js';
 import * as xlsx from 'xlsx';
 import crypto from 'crypto';
+
+export type ScoreSource = 'MANUAL' | 'ONLINE';
+
+export interface ScoreItemResponse {
+  id: string;
+  teacherId: string;
+  classId: string;
+  studentId: string;
+  lessonId: string | null;
+  assessmentType: AssessmentType;
+  assessmentName: string;
+  score: number;
+  maxScore: number;
+  date: string;
+  comment: string;
+  source: ScoreSource;
+  quizId?: string;
+  submissionId?: string;
+  student?: {
+    id: string;
+    name: string;
+    fullName?: string;
+    email?: string;
+  };
+  class?: {
+    id: string;
+    name: string;
+  };
+  lesson?: any;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface ScoreMatrixAssessment {
+  key: string;
+  name: string;
+  type: AssessmentType;
+  source: ScoreSource;
+  quizId?: string;
+}
 
 export interface ScoreMatrixStudent {
   studentId: string;
   studentName: string;
   studentEmail: string;
-  scores: Record<string, { id: string; score: number; maxScore: number; date: string }>;
+  scores: Record<
+    string,
+    { id: string; score: number; maxScore: number; date: string; source: ScoreSource }
+  >;
   averageScore: number;
   totalAssessments: number;
 }
@@ -27,7 +72,7 @@ export interface ScoreMatrixStudent {
 export interface ScoreMatrixResponse {
   classId: string;
   className: string;
-  assessments: { key: string; name: string; type: AssessmentType }[];
+  assessments: ScoreMatrixAssessment[];
   students: ScoreMatrixStudent[];
   classAverage: number;
 }
@@ -45,6 +90,10 @@ export class ScoresService {
     private readonly lessonRepo: Repository<LessonEntity>,
     @InjectRepository(TeacherStudentEntity)
     private readonly teacherStudentRepo?: Repository<TeacherStudentEntity>,
+    @InjectRepository(QuizEntity)
+    private readonly quizRepo?: Repository<QuizEntity>,
+    @InjectRepository(SubmissionEntity)
+    private readonly submissionRepo?: Repository<SubmissionEntity>,
   ) {}
 
   private validateScoreRange(score: number, maxScore: number) {
@@ -61,6 +110,282 @@ export class ScoresService {
     }
   }
 
+  private isSubmissionPendingGrading(sub: SubmissionEntity): boolean {
+    if (!Array.isArray(sub.answers)) return false;
+    return sub.answers.some(
+      (ans) => (ans.isCorrect === undefined || ans.isCorrect === null) && !ans.isManuallyGraded,
+    );
+  }
+
+  private getStudentAccountId(student: any, profiles: TeacherStudentEntity[]): string | null {
+    if (student.studentAccountId) return student.studentAccountId;
+    if (student.userId) return student.userId;
+    for (const p of profiles) {
+      if (p.id === student.id || p.studentAccountId === student.id) {
+        return p.studentAccountId || null;
+      }
+    }
+    if (student.id && !student.id.startsWith('ts-')) {
+      return student.id;
+    }
+    return null;
+  }
+
+  private getStudentIdentifiers(student: any, profiles: TeacherStudentEntity[]): Set<string> {
+    const ids = new Set<string>();
+    if (student.id) ids.add(student.id);
+    if (student.userId) ids.add(student.userId);
+    if (student.studentAccountId) ids.add(student.studentAccountId);
+    if (student.studentProfileId) ids.add(student.studentProfileId);
+    for (const p of profiles) {
+      if (
+        (student.id && (p.id === student.id || p.studentAccountId === student.id)) ||
+        (student.email && p.email && p.email.toLowerCase() === student.email.toLowerCase())
+      ) {
+        ids.add(p.id);
+        if (p.studentAccountId) ids.add(p.studentAccountId);
+      }
+    }
+    return ids;
+  }
+
+  private async getOnlineQuizScores(
+    teacherId: string,
+    query: {
+      classId?: string;
+      studentId?: string;
+      startDate?: string;
+      endDate?: string;
+    },
+    manualScores: ScoreRecordEntity[] = [],
+  ): Promise<ScoreItemResponse[]> {
+    if (!this.quizRepo || !this.submissionRepo) {
+      return [];
+    }
+
+    // 1. Quizzes MUST belong to this teacher (authorization requirement)
+    const teacherQuizzes = await this.quizRepo.find({
+      where: { teacherId },
+      order: { createdAt: 'ASC' },
+    });
+
+    if (teacherQuizzes.length === 0) {
+      return [];
+    }
+
+    // 2. Fetch teacher's student profiles for mapping
+    const profiles = (await this.teacherStudentRepo?.find({ where: { teacherId } })) || [];
+
+    // Determine target class and student filters
+    let targetClass: ClassEntity | null = null;
+    let targetStudents: any[] = [];
+
+    if (query.classId) {
+      targetClass = await this.ensureClass(teacherId, query.classId, false);
+      if (!targetClass || targetClass.teacherId !== teacherId) {
+        return [];
+      }
+      targetStudents = targetClass.students || [];
+      if (query.classId.startsWith('private-') && targetStudents.length === 0) {
+        const studentId = query.classId.replace('private-', '');
+        const profile = profiles.find((p) => p.id === studentId || p.studentAccountId === studentId);
+        if (profile) {
+          targetStudents = [
+            {
+              id: profile.id,
+              name: profile.fullName,
+              email: profile.email,
+              studentAccountId: profile.studentAccountId,
+            },
+          ];
+        } else {
+          const user = await this.userRepo.findOne({ where: { id: studentId } });
+          if (user) {
+            targetStudents = [user];
+          }
+        }
+      }
+    } else if (query.studentId) {
+      const profile = profiles.find((p) => p.id === query.studentId || p.studentAccountId === query.studentId);
+      if (profile) {
+        targetStudents = [
+          {
+            id: profile.id,
+            name: profile.fullName,
+            email: profile.email,
+            studentAccountId: profile.studentAccountId,
+          },
+        ];
+      } else {
+        const user = await this.userRepo.findOne({ where: { id: query.studentId } });
+        if (user) {
+          targetStudents = [user];
+        }
+      }
+    } else {
+      targetStudents = profiles.map((p) => ({
+        id: p.id,
+        name: p.fullName,
+        email: p.email,
+        studentAccountId: p.studentAccountId,
+      }));
+    }
+
+    // Collect account IDs of target students
+    const targetAccountIds = new Set<string>();
+    for (const s of targetStudents) {
+      const accId = this.getStudentAccountId(s, profiles);
+      if (accId) targetAccountIds.add(accId);
+    }
+
+    if (targetAccountIds.size === 0) {
+      return [];
+    }
+
+    // Filter relevant quizzes
+    const isPrivate = query.classId ? query.classId.startsWith('private-') : false;
+    let relevantQuizzes = teacherQuizzes.filter((q) => {
+      if (query.classId) {
+        if (q.classId === query.classId) return true;
+        if (Array.isArray(q.assignedStudentIds) && q.assignedStudentIds.length > 0) {
+          return q.assignedStudentIds.some((id) => targetAccountIds.has(id));
+        }
+        return false;
+      }
+      return true;
+    });
+
+    if (isPrivate && relevantQuizzes.length === 0) {
+      const studentSubs = await this.submissionRepo.find({
+        where: { studentId: In(Array.from(targetAccountIds)) },
+        select: { quizId: true },
+      });
+      const submittedQuizIds = new Set(studentSubs.map((s) => s.quizId));
+      relevantQuizzes = teacherQuizzes.filter((tq) => submittedQuizIds.has(tq.id));
+    }
+
+    const quizIds = relevantQuizzes.map((q) => q.id);
+    if (quizIds.length === 0) {
+      return [];
+    }
+
+    // Batch query submissions
+    const submissions = await this.submissionRepo.find({
+      where: {
+        quizId: In(quizIds),
+        studentId: In(Array.from(targetAccountIds)),
+      },
+      order: { createdAt: 'DESC' },
+    });
+
+    if (submissions.length === 0) {
+      return [];
+    }
+
+    // Group submissions by studentId and quizId, keeping the latest valid attempt
+    const seenQuizStudent = new Set<string>();
+    const latestValidSubmissions = new Map<string, SubmissionEntity>();
+    for (const sub of submissions) {
+      const key = `${sub.studentId}__${sub.quizId}`;
+      if (seenQuizStudent.has(key)) {
+        continue;
+      }
+      seenQuizStudent.add(key);
+
+      if (this.isSubmissionPendingGrading(sub)) {
+        // Latest attempt is pending grading, so do not display score
+        continue;
+      }
+      latestValidSubmissions.set(key, sub);
+    }
+
+    // Build online score items
+    const onlineScoreItems: ScoreItemResponse[] = [];
+
+    for (const student of targetStudents) {
+      const studentAccId = this.getStudentAccountId(student, profiles);
+      if (!studentAccId) continue;
+
+      const studentIds = this.getStudentIdentifiers(student, profiles);
+      const studentName = student.name || student.fullName || 'Học sinh';
+      const studentEmail = student.email || '';
+
+      for (const quiz of relevantQuizzes) {
+        const sub = latestValidSubmissions.get(`${studentAccId}__${quiz.id}`);
+        if (!sub) continue;
+
+        const subDate = sub.submittedAt
+          ? sub.submittedAt.substring(0, 10)
+          : sub.createdAt
+          ? new Date(sub.createdAt).toISOString().substring(0, 10)
+          : new Date().toISOString().substring(0, 10);
+
+        if (query.startDate && query.endDate) {
+          if (subDate < query.startDate || subDate > query.endDate) {
+            continue;
+          }
+        }
+
+        // Deduplication: check if teacher entered a manual score for the same quiz
+        const hasManualDuplicate = manualScores.some((ms) => {
+          const isSameStudent = studentIds.has(ms.studentId);
+          const isSameClass = !query.classId || ms.classId === query.classId;
+          const isSameQuiz =
+            ms.assessmentType === 'QUIZ' &&
+            ms.assessmentName?.trim().toLowerCase() === quiz.title?.trim().toLowerCase();
+          return isSameStudent && isSameClass && isSameQuiz;
+        });
+
+        if (hasManualDuplicate) {
+          continue;
+        }
+
+        const maxScore = sub.maxScore > 0 ? sub.maxScore : 10;
+        const normalizedScore = Number(((sub.score / maxScore) * 10).toFixed(1));
+
+        const resolvedClassId =
+          query.classId || quiz.classId || (targetClass ? targetClass.id : `private-${studentAccId}`);
+        const resolvedClassName = targetClass
+          ? targetClass.name
+          : quiz.classId
+          ? 'Lớp học'
+          : `Kèm 1-1: ${studentName}`;
+
+        onlineScoreItems.push({
+          id: `online-${sub.id}`,
+          teacherId,
+          classId: resolvedClassId,
+          studentId: student.id || studentAccId,
+          lessonId: null,
+          assessmentType: 'QUIZ',
+          assessmentName: quiz.title,
+          score: normalizedScore,
+          maxScore: 10,
+          date: subDate,
+          comment: `Điểm bài thi online: ${quiz.title}`,
+          source: 'ONLINE',
+          quizId: quiz.id,
+          submissionId: sub.id,
+          student: {
+            id: student.id || studentAccId,
+            name: studentName,
+            fullName: studentName,
+            email: studentEmail,
+          },
+          class: {
+            id: resolvedClassId,
+            name: resolvedClassName,
+          },
+          lesson: null,
+          createdAt: sub.createdAt || new Date(),
+          updatedAt: sub.updatedAt || new Date(),
+        });
+      }
+    }
+
+    return onlineScoreItems;
+  }
+
   async getScores(
     teacherId: string,
     query: {
@@ -71,7 +396,7 @@ export class ScoresService {
       startDate?: string;
       endDate?: string;
     },
-  ) {
+  ): Promise<ScoreItemResponse[]> {
     const qb = this.scoreRepo
       .createQueryBuilder('score')
       .leftJoinAndSelect('score.student', 'student')
@@ -106,7 +431,45 @@ export class ScoresService {
 
     qb.orderBy('score.date', 'DESC').addOrderBy('score.createdAt', 'DESC');
 
-    return await qb.getMany();
+    const manualScores = await qb.getMany();
+
+    const formattedManualScores: ScoreItemResponse[] = manualScores.map((sc) => ({
+      ...sc,
+      source: 'MANUAL' as ScoreSource,
+      student: sc.student
+        ? {
+            id: sc.student.id,
+            name: sc.student.name || (sc.student as any).fullName || '',
+            fullName: (sc.student as any).fullName || sc.student.name || '',
+            email: sc.student.email || '',
+          }
+        : undefined,
+      class: sc.class
+        ? {
+            id: sc.class.id,
+            name: sc.class.name,
+          }
+        : undefined,
+      createdAt: sc.createdAt,
+      updatedAt: sc.updatedAt,
+    }));
+
+    if (query.lessonId || (query.assessmentType && query.assessmentType !== 'QUIZ')) {
+      return formattedManualScores;
+    }
+
+    const onlineScores = await this.getOnlineQuizScores(teacherId, query, manualScores);
+
+    const allScores = [...formattedManualScores, ...onlineScores];
+    allScores.sort((a, b) => {
+      const dateCmp = (b.date || '').localeCompare(a.date || '');
+      if (dateCmp !== 0) return dateCmp;
+      const bTime = b.createdAt ? new Date(b.createdAt).getTime() : 0;
+      const aTime = a.createdAt ? new Date(a.createdAt).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    return allScores;
   }
 
   async getScoreById(teacherId: string, id: string) {
@@ -126,7 +489,11 @@ export class ScoresService {
     return score;
   }
 
-  async ensureClass(teacherId: string, classId: string): Promise<ClassEntity | null> {
+  async ensureClass(
+    teacherId: string,
+    classId: string,
+    persistIfVirtual = false,
+  ): Promise<ClassEntity | null> {
     let classEntity = await this.classRepo.findOne({
       where: { id: classId },
       relations: { students: true },
@@ -166,14 +533,22 @@ export class ScoresService {
           teacherId,
           students: studentUser ? [studentUser] : [],
         });
-        await this.classRepo.save(classEntity);
+        if (persistIfVirtual) {
+          await this.classRepo.save(classEntity);
+        }
       }
-    } else if (classEntity && classId.startsWith('private-') && (!classEntity.students || classEntity.students.length === 0)) {
+    } else if (
+      classEntity &&
+      classId.startsWith('private-') &&
+      (!classEntity.students || classEntity.students.length === 0)
+    ) {
       const studentId = classId.replace('private-', '');
       const student = await this.userRepo.findOne({ where: { id: studentId } });
       if (student) {
         classEntity.students = [student];
-        await this.classRepo.save(classEntity);
+        if (persistIfVirtual) {
+          await this.classRepo.save(classEntity);
+        }
       }
     }
 
@@ -184,8 +559,7 @@ export class ScoresService {
     const maxScore = dto.maxScore ?? 10;
     this.validateScoreRange(dto.score, maxScore);
 
-    // Validate class ownership (supporting both group & private 1-on-1 tutoring classes)
-    const classEntity = await this.ensureClass(teacherId, dto.classId);
+    const classEntity = await this.ensureClass(teacherId, dto.classId, true);
 
     if (!classEntity) {
       throw new NotFoundException('Không tìm thấy lớp học');
@@ -195,7 +569,6 @@ export class ScoresService {
       throw new ForbiddenException('Bạn không có quyền nhập điểm cho lớp học này');
     }
 
-    // Validate student is enrolled in class (supports both TeacherStudent and UserEntity)
     let isStudentInClass = classEntity.students.some((s) => s.id === dto.studentId);
     if (!isStudentInClass && classEntity.id.startsWith('private-')) {
       isStudentInClass = classEntity.id === `private-${dto.studentId}`;
@@ -210,7 +583,6 @@ export class ScoresService {
       throw new BadRequestException('Học sinh này không thuộc lớp học được chọn');
     }
 
-    // If lessonId is provided, validate lesson belongs to teacher and class
     let lesson: LessonEntity | null = null;
     if (dto.lessonId) {
       lesson = await this.lessonRepo.findOne({ where: { id: dto.lessonId } });
@@ -240,6 +612,10 @@ export class ScoresService {
   }
 
   async updateScore(teacherId: string, id: string, dto: UpdateScoreDto) {
+    if (id.startsWith('online-')) {
+      throw new BadRequestException('Không thể cập nhật điểm bài làm online trực tiếp từ bảng điểm');
+    }
+
     const score = await this.getScoreById(teacherId, id);
 
     const newScoreValue = dto.score ?? score.score;
@@ -257,13 +633,17 @@ export class ScoresService {
   }
 
   async deleteScore(teacherId: string, id: string) {
+    if (id.startsWith('online-')) {
+      throw new BadRequestException('Không thể xóa điểm bài làm online trực tiếp từ bảng điểm');
+    }
+
     const score = await this.getScoreById(teacherId, id);
     await this.scoreRepo.remove(score);
     return { success: true, message: 'Đã xóa điểm thành công' };
   }
 
   async getClassScoreMatrix(teacherId: string, classId: string): Promise<ScoreMatrixResponse> {
-    const classEntity = await this.ensureClass(teacherId, classId);
+    const classEntity = await this.ensureClass(teacherId, classId, false);
 
     if (!classEntity) {
       throw new NotFoundException('Không tìm thấy lớp học');
@@ -273,48 +653,126 @@ export class ScoresService {
       throw new ForbiddenException('Bạn không có quyền xem bảng điểm của lớp này');
     }
 
-    const scores = await this.scoreRepo.find({
+    // 1. Fetch manual scores for this class
+    const manualScores = await this.scoreRepo.find({
       where: { classId },
       order: { date: 'ASC', createdAt: 'ASC' },
     });
 
-    // Extract unique assessment definitions (Key: assessmentType + Name)
-    const assessmentMap = new Map<string, { key: string; name: string; type: AssessmentType }>();
-    for (const sc of scores) {
-      const key = `${sc.assessmentType}__${sc.assessmentName}`;
+    // 2. Fetch profiles for student mapping
+    const profiles = (await this.teacherStudentRepo?.find({ where: { teacherId } })) || [];
+
+    // Ensure students list has proper student info
+    let classStudents = classEntity.students || [];
+    if (classId.startsWith('private-') && classStudents.length === 0) {
+      const studentId = classId.replace('private-', '');
+      const profile = profiles.find((p) => p.id === studentId || p.studentAccountId === studentId);
+      if (profile) {
+        classStudents = [
+          {
+            id: profile.id,
+            name: profile.fullName,
+            email: profile.email || '',
+            studentAccountId: profile.studentAccountId,
+          } as any,
+        ];
+      } else {
+        const user = await this.userRepo.findOne({ where: { id: studentId } });
+        if (user) classStudents = [user];
+      }
+    }
+
+    // 3. Fetch online quiz scores for this class
+    const onlineScores = await this.getOnlineQuizScores(
+      teacherId,
+      { classId },
+      manualScores,
+    );
+
+    // 4. Build assessment columns Map (Key -> metadata)
+    const assessmentMap = new Map<string, ScoreMatrixAssessment>();
+
+    // Add manual assessment definitions
+    for (const sc of manualScores) {
+      const key = `MANUAL__${sc.assessmentType}__${sc.assessmentName}`;
       if (!assessmentMap.has(key)) {
         assessmentMap.set(key, {
           key,
           name: sc.assessmentName,
           type: sc.assessmentType,
+          source: 'MANUAL',
         });
       }
     }
+
+    // Add online assessment definitions
+    for (const sc of onlineScores) {
+      const key = `ONLINE__${sc.quizId || sc.id}`;
+      if (!assessmentMap.has(key)) {
+        assessmentMap.set(key, {
+          key,
+          name: sc.assessmentName,
+          type: 'QUIZ',
+          source: 'ONLINE',
+          quizId: sc.quizId,
+        });
+      }
+    }
+
     const assessments = Array.from(assessmentMap.values());
 
-    // Build matrix for each student
+    // 5. Build matrix for each student
     const studentRows: ScoreMatrixStudent[] = [];
     let totalScoreAll = 0;
     let totalAssessmentsAll = 0;
 
-    for (const student of classEntity.students) {
-      const studentScores = scores.filter((sc) => sc.studentId === student.id);
-      const scoreObj: Record<string, { id: string; score: number; maxScore: number; date: string }> = {};
+    for (const student of classStudents) {
+      const studentIds = this.getStudentIdentifiers(student, profiles);
+      const studentAccId = this.getStudentAccountId(student, profiles);
+
+      const studentManualScores = manualScores.filter((sc) => studentIds.has(sc.studentId));
+      const studentOnlineScores = onlineScores.filter(
+        (sc) => studentIds.has(sc.studentId) || (studentAccId && sc.studentId === studentAccId),
+      );
+
+      const scoreObj: Record<
+        string,
+        { id: string; score: number; maxScore: number; date: string; source: ScoreSource }
+      > = {};
 
       let studentNormalizedSum = 0;
-      for (const sc of studentScores) {
-        const key = `${sc.assessmentType}__${sc.assessmentName}`;
+      let count = 0;
+
+      // Populate manual scores
+      for (const sc of studentManualScores) {
+        const key = `MANUAL__${sc.assessmentType}__${sc.assessmentName}`;
         scoreObj[key] = {
           id: sc.id,
           score: sc.score,
           maxScore: sc.maxScore,
           date: sc.date,
+          source: 'MANUAL',
         };
-        // Normalize to scale 10: (score / maxScore) * 10
         studentNormalizedSum += (sc.score / sc.maxScore) * 10;
+        count++;
       }
 
-      const count = studentScores.length;
+      // Populate online scores
+      for (const sc of studentOnlineScores) {
+        const key = `ONLINE__${sc.quizId || sc.id}`;
+        if (!scoreObj[key]) {
+          scoreObj[key] = {
+            id: sc.id,
+            score: sc.score,
+            maxScore: sc.maxScore,
+            date: sc.date,
+            source: 'ONLINE',
+          };
+          studentNormalizedSum += (sc.score / sc.maxScore) * 10;
+          count++;
+        }
+      }
+
       const averageScore = count > 0 ? Number((studentNormalizedSum / count).toFixed(2)) : 0;
 
       if (count > 0) {
@@ -322,10 +780,13 @@ export class ScoresService {
         totalAssessmentsAll += count;
       }
 
+      const displayName = student.name || (student as any).fullName || 'Học sinh';
+      const displayEmail = student.email || '';
+
       studentRows.push({
         studentId: student.id,
-        studentName: student.name,
-        studentEmail: student.email,
+        studentName: displayName,
+        studentEmail: displayEmail,
         scores: scoreObj,
         averageScore,
         totalAssessments: count,
@@ -359,7 +820,8 @@ export class ScoresService {
 
         for (const ass of matrix.assessments) {
           const sc = st.scores[ass.key];
-          row[ass.name] = sc ? `${sc.score}/${sc.maxScore}` : '-';
+          const colName = ass.source === 'ONLINE' ? `${ass.name} (Online)` : ass.name;
+          row[colName] = sc ? `${sc.score}/${sc.maxScore}` : '-';
         }
 
         row['Điểm trung bình (hệ 10)'] = st.averageScore;
@@ -378,6 +840,7 @@ export class ScoresService {
       'Học sinh': sc.student?.name || '',
       Email: sc.student?.email || '',
       'Lớp học': sc.class?.name || '',
+      'Nguồn': sc.source === 'ONLINE' ? 'Online Quiz' : 'GV nhập',
       'Loại đánh giá': sc.assessmentType,
       'Tên bài kiểm tra': sc.assessmentName,
       'Điểm đạt được': sc.score,
@@ -397,7 +860,7 @@ export class ScoresService {
     classId: string,
     fileBuffer: Buffer,
   ): Promise<{ successCount: number; errors: string[] }> {
-    const classEntity = await this.ensureClass(teacherId, classId);
+    const classEntity = await this.ensureClass(teacherId, classId, true);
 
     if (!classEntity) {
       throw new NotFoundException('Không tìm thấy lớp học');

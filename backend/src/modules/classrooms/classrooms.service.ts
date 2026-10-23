@@ -7,6 +7,7 @@ import { QuizEntity } from '../../entities/quiz.entity.js';
 import { SubmissionEntity } from '../../entities/submission.entity.js';
 import { CreateClassDto, JoinClassDto } from './dto/classroom.dto.js';
 import { TeacherStudentEntity } from '../students/entities/teacher-student.entity.js';
+import { LessonEntity, TuitionItemEntity } from '../teaching/entities/index.js';
 import * as bcrypt from 'bcrypt';
 import * as xlsx from 'xlsx';
 import crypto from 'crypto';
@@ -288,53 +289,24 @@ export class ClassroomsService {
       order: { createdAt: 'DESC' },
     });
 
-    const teacher = await this.userRepo.findOne({
-      where: { id: teacherId },
-      relations: { students: true },
-    });
-
-    // Compute real statistics for each group class and map students to canonical profile IDs
+    // Compute real statistics for each group class and map students to canonical profile IDs (STRICTLY READ-ONLY)
     const groupClassesWithStats = await Promise.all(
       groupClasses.map(async (c) => {
         const stats = await this.calculateClassStats(c.id, c.students || []);
-        const mappedStudents = await Promise.all(
-          (c.students || []).map(async (s) => {
-            let p = teacherProfiles.find((tp) => tp.studentAccountId === s.id);
-            if (!p) {
-              const foundProfile = await this.teacherStudentRepo.findOne({
-                where: { teacherId, studentAccountId: s.id },
-              });
-              if (foundProfile) {
-                p = foundProfile;
-              }
-            }
-            if (!p) {
-              p = this.teacherStudentRepo.create({
-                id: `ts-${Date.now()}-${s.id.slice(-6)}-${crypto.randomBytes(3).toString('hex')}`,
-                teacherId,
-                studentAccountId: s.id,
-                fullName: s.name,
-                email: s.email,
-                phone: s.phone || null,
-                school: s.school || null,
-                avatar: s.avatar || null,
-                status: s.isActive !== false ? 'ACTIVE' : 'INACTIVE',
-                note: `Tự động tạo từ lớp ${c.name}`,
-              });
-              await this.teacherStudentRepo.save(p);
-              teacherProfiles.push(p);
-            }
-            return {
-              id: p.id, // Canonical teacher_student_profiles.id
-              studentProfileId: p.id,
-              userId: s.id,
-              studentAccountId: s.id,
-              name: s.name,
-              email: s.email,
-              avatar: s.avatar || p.avatar || p.studentAccount?.avatar || null,
-            };
-          }),
-        );
+        const mappedStudents = (c.students || []).map((s) => {
+          const foundProfile = teacherProfiles.find(
+            (tp) => tp.studentAccountId === s.id || tp.id === s.id,
+          );
+          return {
+            id: foundProfile ? foundProfile.id : s.id,
+            studentProfileId: foundProfile ? foundProfile.id : null,
+            userId: s.id,
+            studentAccountId: s.id,
+            name: s.name,
+            email: s.email,
+            avatar: s.avatar || foundProfile?.avatar || foundProfile?.studentAccount?.avatar || null,
+          };
+        });
         return {
           ...c,
           students: mappedStudents as any,
@@ -343,7 +315,7 @@ export class ClassroomsService {
       }),
     );
 
-    // Build unified unique students for 1-1 private classes
+    // Build unified unique students for 1-1 private classes from active teacherProfiles (STRICTLY READ-ONLY)
     const uniqueStudentsMap = new Map<
       string,
       {
@@ -373,44 +345,6 @@ export class ClassroomsService {
       });
     }
 
-    for (const s of (teacher?.students ?? [])) {
-      const hasProfile = Array.from(uniqueStudentsMap.values()).some(
-        (item) => item.studentAccountId === s.id || item.userId === s.id || (s.email && item.email === s.email),
-      );
-      if (!hasProfile) {
-        let profile = await this.teacherStudentRepo.findOne({
-          where: { teacherId, studentAccountId: s.id },
-        });
-        if (!profile) {
-          profile = this.teacherStudentRepo.create({
-            id: `ts-${Date.now()}-${s.id.slice(-6)}-${crypto.randomBytes(3).toString('hex')}`,
-            teacherId,
-            studentAccountId: s.id,
-            fullName: s.name,
-            email: s.email,
-            phone: s.phone || null,
-            school: s.school || null,
-            avatar: s.avatar || null,
-            status: s.isActive !== false ? 'ACTIVE' : 'INACTIVE',
-            note: 'Đồng bộ từ danh sách học sinh của giáo viên',
-          });
-          await this.teacherStudentRepo.save(profile);
-          teacherProfiles.push(profile);
-        }
-        uniqueStudentsMap.set(profile.id, {
-          id: profile.id,
-          studentProfileId: profile.id,
-          userId: s.id,
-          studentAccountId: s.id,
-          name: s.name,
-          email: s.email,
-          avatar: s.avatar || profile.avatar || profile.studentAccount?.avatar || null,
-          isExternal: false,
-          isActive: s.isActive !== false,
-        });
-      }
-    }
-
     const privateClasses = await Promise.all(
       Array.from(uniqueStudentsMap.values()).map(async (student) => {
         // Support backward-compatible private class IDs (e.g. private-user-1791052675402)
@@ -433,22 +367,19 @@ export class ClassroomsService {
 
         const classId = privateClass ? privateClass.id : (legacyClassId || profileClassId);
 
-        if (!privateClass) {
-          const rawCode = `PV${student.id.replace(/\D/g, '').slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
-          privateClass = this.classRepo.create({
-            id: classId,
-            name: `Kèm 1-1: ${student.name}`,
-            subject: 'Gia sư cá nhân',
-            description: 'Lớp học riêng 1 kèm 1',
-            inviteCode: rawCode,
-            teacherId,
-            isPrivate: true,
-            students: [],
-          });
-          await this.classRepo.save(privateClass);
-        } else if (!privateClass.students || privateClass.students.length === 0) {
-          // Keep students populated
-        }
+        const rawCode = `PV${student.id.replace(/\D/g, '').slice(-4)}${Math.floor(1000 + Math.random() * 9000)}`;
+        const resolvedClass = privateClass || {
+          id: classId,
+          name: `Kèm 1-1: ${student.name}`,
+          subject: 'Gia sư cá nhân',
+          description: 'Lớp học riêng 1 kèm 1',
+          inviteCode: rawCode,
+          teacherId,
+          isPrivate: true,
+          students: [],
+          createdAt: new Date(),
+          updatedAt: new Date(),
+        };
 
         const stats = await this.calculateClassStats(classId, [{
           id: student.id,
@@ -456,7 +387,7 @@ export class ClassroomsService {
         } as any]);
 
         return {
-          ...privateClass,
+          ...resolvedClass,
           students: [{
             id: student.id, // Consistent teacher_student_profiles.id
             studentProfileId: student.id,
@@ -681,14 +612,77 @@ export class ClassroomsService {
 
   async removeStudentFromClass(classId: string, studentId: string, teacherId: string) {
     if (classId.startsWith('private-')) {
-      const teacher = await this.userRepo.findOne({
-        where: { id: teacherId },
-        relations: { students: true },
+      const executeInTransaction = async (work: (mgr: any) => Promise<any>) => {
+        if (this.classRepo?.manager?.transaction) {
+          return await this.classRepo.manager.transaction(work);
+        }
+        const fakeManager = {
+          findOne: (entity: any, opts: any) => {
+            if (entity === ClassEntity && this.classRepo) return this.classRepo.findOne(opts);
+            if (entity === UserEntity && this.userRepo) return this.userRepo.findOne(opts);
+            return null;
+          },
+          count: (entity: any, opts: any) => {
+            if (entity === LessonEntity && this.lessonRepo) return this.lessonRepo.count(opts);
+            if (entity === TuitionItemEntity && this.tuitionItemRepo) return this.tuitionItemRepo.count(opts);
+            return 0;
+          },
+          save: (entity: any, data: any) => {
+            if (entity === ClassEntity && this.classRepo) return this.classRepo.save(data);
+            if (entity === UserEntity && this.userRepo) return this.userRepo.save(data);
+            return data;
+          },
+          remove: (entity: any, data: any) => {
+            if (entity === ClassEntity && this.classRepo) return this.classRepo.remove(data);
+            return data;
+          },
+        };
+        return await work(fakeManager);
+      };
+
+      return await executeInTransaction(async (manager) => {
+        const privateClass = await manager.findOne(ClassEntity, {
+          where: { id: classId },
+          relations: { students: true },
+        });
+
+        if (privateClass) {
+          if (privateClass.teacherId !== teacherId) {
+            throw new ForbiddenException('Chỉ giáo viên của lớp mới được xóa học sinh');
+          }
+
+          // Kiểm tra xem lớp 1-1 này có lịch sử buổi học hoặc học phí không
+          const [lessonCount, tuitionCount, quizCount] = await Promise.all([
+            manager.count(LessonEntity, { where: { classId } }),
+            manager.count(TuitionItemEntity, { where: { classId } }),
+            this.quizRepo.count({ where: { classId } }),
+          ]);
+
+          const hasHistory = lessonCount > 0 || tuitionCount > 0 || quizCount > 0;
+          if (hasHistory) {
+            // Không xóa class nếu có lịch sử, chỉ gỡ quan hệ sinh viên trong class_students
+            privateClass.students = (privateClass.students || []).filter((s) => s.id !== studentId);
+            await manager.save(ClassEntity, privateClass);
+          } else {
+            // Xóa sạch membership và xóa lớp private rỗng khỏi DB
+            privateClass.students = [];
+            await manager.save(ClassEntity, privateClass);
+            await manager.remove(ClassEntity, privateClass);
+          }
+        }
+
+        // Đồng bộ gỡ khỏi bảng join legacy teacher_students
+        const teacher = await manager.findOne(UserEntity, {
+          where: { id: teacherId },
+          relations: { students: true },
+        });
+        if (teacher && teacher.students) {
+          teacher.students = teacher.students.filter((s) => s.id !== studentId);
+          await manager.save(UserEntity, teacher);
+        }
+
+        return { success: true };
       });
-      if (!teacher) throw new NotFoundException('Không tìm thấy giáo viên');
-      teacher.students = (teacher.students || []).filter((s) => s.id !== studentId);
-      await this.userRepo.save(teacher);
-      return { success: true };
     }
 
     const classDetails = await this.classRepo.findOne({

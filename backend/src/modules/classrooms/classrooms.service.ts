@@ -77,35 +77,55 @@ export class ClassroomsService {
       const studentId = classId.replace('private-', '');
 
       // 1. Quizzes assigned to private class or specifically to student
-      quizzes = await this.quizRepo
-        .createQueryBuilder('quiz')
-        .where('quiz.classId = :classId', { classId })
-        .orWhere('JSON_CONTAINS(quiz.assignedStudentIds, :sIdStr)', { sIdStr: `"${studentId}"` })
-        .orderBy('quiz.createdAt', 'DESC')
-        .getMany();
+      if (typeof this.quizRepo?.createQueryBuilder === 'function') {
+        quizzes = await this.quizRepo
+          .createQueryBuilder('quiz')
+          .where('quiz.classId = :classId', { classId })
+          .orWhere('JSON_CONTAINS(quiz.assignedStudentIds, :sIdStr)', { sIdStr: `"${studentId}"` })
+          .orderBy('quiz.createdAt', 'DESC')
+          .getMany();
+      } else if (typeof this.quizRepo?.find === 'function') {
+        quizzes = await this.quizRepo.find({
+          where: { classId },
+          order: { createdAt: 'DESC' },
+        });
+      }
 
       // 2. Also find any quiz that this student has submissions for
-      const studentSubs = await this.submissionRepo.find({
-        where: { studentId },
-        select: { quizId: true },
-      });
-      const submittedQuizIds = Array.from(new Set(studentSubs.map((s) => s.quizId)));
-      if (submittedQuizIds.length > 0) {
-        const extraQuizzes = await this.quizRepo.find({
-          where: { id: In(submittedQuizIds) },
+      if (typeof this.submissionRepo?.find === 'function') {
+        const candidateSubsIds = Array.from(
+          new Set(
+            [
+              studentId,
+              ...(students.map((s) => s.id)),
+              ...(students.map((s: any) => s.studentAccountId || s.userId)).filter(Boolean),
+            ].filter(Boolean),
+          ),
+        );
+        const studentSubs = await this.submissionRepo.find({
+          where: { studentId: In(candidateSubsIds) },
+          select: { quizId: true },
         });
-        const existingIds = new Set(quizzes.map((q) => q.id));
-        for (const eq of extraQuizzes) {
-          if (!existingIds.has(eq.id)) {
-            quizzes.push(eq);
+        const submittedQuizIds = Array.from(new Set(studentSubs.map((s) => s.quizId)));
+        if (submittedQuizIds.length > 0 && typeof this.quizRepo?.find === 'function') {
+          const extraQuizzes = await this.quizRepo.find({
+            where: { id: In(submittedQuizIds) },
+          });
+          const existingIds = new Set(quizzes.map((q) => q.id));
+          for (const eq of extraQuizzes) {
+            if (!existingIds.has(eq.id)) {
+              quizzes.push(eq);
+            }
           }
         }
       }
     } else {
-      quizzes = await this.quizRepo.find({
-        where: { classId },
-        order: { createdAt: 'DESC' },
-      });
+      if (typeof this.quizRepo?.find === 'function') {
+        quizzes = await this.quizRepo.find({
+          where: { classId },
+          order: { createdAt: 'DESC' },
+        });
+      }
     }
 
     const quizCount = quizzes.length;
@@ -130,7 +150,7 @@ export class ClassroomsService {
 
     const quizIds = quizzes.map((q) => q.id);
     let submissions: SubmissionEntity[] = [];
-    if (quizIds.length > 0) {
+    if (quizIds.length > 0 && typeof this.submissionRepo?.find === 'function') {
       submissions = await this.submissionRepo.find({
         where: { quizId: In(quizIds) },
       });
@@ -139,7 +159,14 @@ export class ClassroomsService {
     // Filter submissions strictly for this class or private student
     if (classId.startsWith('private-')) {
       const studentId = classId.replace('private-', '');
-      submissions = submissions.filter((s) => s.studentId === studentId);
+      const validStudentIds = new Set(
+        [
+          studentId,
+          ...(students.map((s) => s.id)),
+          ...(students.map((s: any) => s.studentAccountId || s.userId)).filter(Boolean),
+        ].filter(Boolean),
+      );
+      submissions = submissions.filter((s) => validStudentIds.has(s.studentId));
     } else {
       const classStudentIds = new Set(students.map((s) => s.id));
       if (classStudentIds.size > 0) {
@@ -438,37 +465,154 @@ export class ClassroomsService {
   }
 
   async getClassDetails(classId: string, userId: string) {
-    if (classId.startsWith('private-')) {
+    const isPrivateRequest = classId.startsWith('private-');
+    let classDetails = await this.classRepo.findOne({
+      where: { id: classId },
+      relations: { students: true, teacher: true },
+    });
+
+    if (!classDetails && isPrivateRequest) {
       const targetId = classId.replace('private-', '');
-      // Check if current user is teacher with this student
-      const teacher = await this.userRepo.findOne({
-        where: { id: userId },
-        relations: { students: true },
+      // Check if targetId is an alternate ID (e.g. classId is private-ts-... but DB class is private-user-... or vice versa)
+      const profile = await this.teacherStudentRepo.findOne({
+        where: [{ id: targetId }, { studentAccountId: targetId }],
       });
-      const student = teacher?.students?.find((s) => s.id === targetId);
-      if (student) {
+      if (profile?.studentAccountId) {
+        classDetails = await this.classRepo.findOne({
+          where: { id: `private-${profile.studentAccountId}` },
+          relations: { students: true, teacher: true },
+        });
+      }
+    }
+
+    if (classDetails) {
+      const isTeacher = classDetails.teacherId === userId;
+      const isStudent = (classDetails.students || []).some((s) => s.id === userId);
+
+      // Check if current user is student linked to this private class
+      let isLinkedPrivateStudent = false;
+      if (classDetails.isPrivate && !isTeacher && !isStudent) {
+        const targetId = classId.startsWith('private-') ? classId.replace('private-', '') : null;
+        if (targetId === userId) {
+          isLinkedPrivateStudent = true;
+        } else {
+          const profile = await this.teacherStudentRepo.findOne({
+            where: { teacherId: classDetails.teacherId, studentAccountId: userId },
+          });
+          if (profile) isLinkedPrivateStudent = true;
+        }
+      }
+
+      if (!isTeacher && !isStudent && !isLinkedPrivateStudent) {
+        throw new ForbiddenException('Bạn không có quyền truy cập lớp học này');
+      }
+
+      if (classDetails.isPrivate) {
+        const targetId = classId.startsWith('private-') ? classId.replace('private-', '') : null;
+        const enrolledStudent = classDetails.students?.[0];
+
+        const profile = await this.teacherStudentRepo.findOne({
+          where: [
+            ...(targetId ? [{ teacherId: classDetails.teacherId, id: targetId }, { teacherId: classDetails.teacherId, studentAccountId: targetId }] : []),
+            ...(enrolledStudent ? [{ teacherId: classDetails.teacherId, id: enrolledStudent.id }, { teacherId: classDetails.teacherId, studentAccountId: enrolledStudent.id }] : []),
+          ],
+          relations: { studentAccount: true },
+        });
+
+        const resolvedStudent = profile
+          ? {
+              id: profile.id,
+              studentProfileId: profile.id,
+              userId: profile.studentAccountId || null,
+              studentAccountId: profile.studentAccountId || null,
+              name: profile.fullName,
+              email: profile.email || profile.studentAccount?.email || '',
+              avatar: profile.avatar || profile.studentAccount?.avatar || null,
+              phone: profile.phone || '',
+              school: profile.school || '',
+              isActive: profile.status === 'ACTIVE',
+              isExternal: !profile.studentAccountId,
+              createdAt: profile.createdAt,
+              updatedAt: profile.updatedAt,
+            }
+          : (enrolledStudent || null);
+
+        const studentsList = resolvedStudent ? [resolvedStudent] : [];
+        const stats = await this.calculateClassStats(classDetails.id, studentsList as any);
+
+        return {
+          ...classDetails,
+          students: studentsList as any,
+          stats,
+        };
+      }
+
+      const stats = await this.calculateClassStats(classId, classDetails.students || []);
+      return {
+        ...classDetails,
+        stats,
+      };
+    }
+
+    // Virtual private 1-1 class handling (strictly in-memory, read-only)
+    if (isPrivateRequest) {
+      const targetId = classId.replace('private-', '');
+
+      // Check if current user is teacher with this student
+      const profile = await this.teacherStudentRepo.findOne({
+        where: [
+          { teacherId: userId, id: targetId },
+          { teacherId: userId, studentAccountId: targetId },
+        ],
+        relations: { studentAccount: true },
+      });
+
+      if (profile) {
+        const teacher = await this.userRepo.findOneBy({ id: userId });
+        const resolvedStudent = {
+          id: profile.id,
+          studentProfileId: profile.id,
+          userId: profile.studentAccountId || null,
+          studentAccountId: profile.studentAccountId || null,
+          name: profile.fullName,
+          email: profile.email || profile.studentAccount?.email || '',
+          avatar: profile.avatar || profile.studentAccount?.avatar || null,
+          phone: profile.phone || '',
+          school: profile.school || '',
+          isActive: profile.status === 'ACTIVE',
+          isExternal: !profile.studentAccountId,
+          createdAt: profile.createdAt,
+          updatedAt: profile.updatedAt,
+        };
+
+        const stats = await this.calculateClassStats(classId, [resolvedStudent as any]);
+
         return {
           id: classId,
-          name: `Kèm 1-1: ${student.name}`,
+          name: `Kèm 1-1: ${profile.fullName}`,
           subject: 'Gia sư cá nhân',
           description: 'Lớp học riêng 1 kèm 1',
           inviteCode: '',
           teacherId: userId,
-          teacher,
+          teacher: teacher || undefined,
           isPrivate: true,
-          students: [student],
-          createdAt: student.createdAt,
-          updatedAt: student.updatedAt,
-          stats: await this.calculateClassStats(classId, [student]),
+          students: [resolvedStudent] as any,
+          createdAt: profile.createdAt,
+          updatedAt: profile.updatedAt,
+          stats,
         };
       }
 
       // Check if current user is student with this teacher
+      const studentProfile = await this.teacherStudentRepo.findOne({
+        where: { teacherId: targetId, studentAccountId: userId },
+      });
       const studentUser = await this.userRepo.findOne({
         where: { id: userId },
         relations: { teachers: true },
       });
-      const teacherUser = studentUser?.teachers?.find((t) => t.id === targetId);
+      const teacherUser = studentUser?.teachers?.find((t) => t.id === targetId) || (studentProfile ? await this.userRepo.findOneBy({ id: targetId }) : null);
+
       if (teacherUser && studentUser) {
         return {
           id: classId,
@@ -495,63 +639,23 @@ export class ClassroomsService {
         };
       }
 
-      throw new NotFoundException('Không tìm thấy lớp học');
-    }
-
-    const classDetails = await this.classRepo.findOne({
-      where: { id: classId },
-      relations: { students: true, teacher: true },
-    });
-
-    if (!classDetails) {
-      throw new NotFoundException('Không tìm thấy lớp học');
-    }
-
-    const isTeacher = classDetails.teacherId === userId;
-    const isStudent = classDetails.students.some((s) => s.id === userId);
-
-    if (!isTeacher && !isStudent) {
-      throw new ForbiddenException('Bạn không có quyền truy cập lớp học này');
-    }
-
-    const stats = await this.calculateClassStats(classId, classDetails.students || []);
-
-    return {
-      ...classDetails,
-      stats,
-    };
-  }
-
-  async getClassStudents(classId: string, userId: string, search?: string, status?: string) {
-    let list: UserEntity[] = [];
-
-    if (classId.startsWith('private-')) {
-      const studentId = classId.replace('private-', '');
-      const teacher = await this.userRepo.findOne({
-        where: { id: userId },
-        relations: { students: true },
+      // Check if another teacher owns this profile/student -> 403 Forbidden
+      const otherProfile = await this.teacherStudentRepo.findOne({
+        where: [{ id: targetId }, { studentAccountId: targetId }],
       });
-      const student = teacher?.students?.find((s) => s.id === studentId);
-      if (!student) {
-        throw new NotFoundException('Không tìm thấy lớp học');
-      }
-      list = [student];
-    } else {
-      const classDetails = await this.classRepo.findOne({
-        where: { id: classId },
-        relations: { students: true },
-      });
-
-      if (!classDetails) {
-        throw new NotFoundException('Không tìm thấy lớp học');
-      }
-
-      if (classDetails.teacherId !== userId) {
+      if (otherProfile && otherProfile.teacherId !== userId) {
         throw new ForbiddenException('Bạn không có quyền truy cập lớp học này');
       }
 
-      list = classDetails.students || [];
+      throw new NotFoundException('Không tìm thấy lớp học');
     }
+
+    throw new NotFoundException('Không tìm thấy lớp học');
+  }
+
+  async getClassStudents(classId: string, userId: string, search?: string, status?: string) {
+    const classDetails = await this.getClassDetails(classId, userId);
+    let list: any[] = classDetails.students || [];
 
     if (status === 'active') {
       list = list.filter((s) => s.isActive !== false);
@@ -567,13 +671,20 @@ export class ClassroomsService {
           (s.email && s.email.toLowerCase().includes(q)) ||
           (s.phone && s.phone.toLowerCase().includes(q)) ||
           (s.school && s.school.toLowerCase().includes(q)) ||
-          s.id.toLowerCase().includes(q),
+          (s.id && s.id.toLowerCase().includes(q)),
       );
     }
 
-    const studentIds = list.map((s) => s.id);
+    const candidateIds = new Set<string>();
+    for (const s of list) {
+      if (s.id) candidateIds.add(s.id);
+      if (s.studentAccountId) candidateIds.add(s.studentAccountId);
+      if (s.userId) candidateIds.add(s.userId);
+    }
+
+    const studentIds = Array.from(candidateIds);
     let studentSubmissions: SubmissionEntity[] = [];
-    if (studentIds.length > 0) {
+    if (studentIds.length > 0 && typeof this.submissionRepo?.find === 'function') {
       studentSubmissions = await this.submissionRepo.find({
         where: { studentId: In(studentIds) },
       });
@@ -582,7 +693,8 @@ export class ClassroomsService {
     const getNormScore = (raw: number) => (!raw || raw <= 0 ? 0 : raw > 10 ? raw / 100 : raw);
 
     return list.map((s, index) => {
-      const stuSubs = studentSubmissions.filter((sub) => sub.studentId === s.id);
+      const matchIds = new Set([s.id, s.studentAccountId, s.userId].filter(Boolean));
+      const stuSubs = studentSubmissions.filter((sub) => matchIds.has(sub.studentId));
       const stuAvg =
         stuSubs.length > 0
           ? Number(
@@ -596,9 +708,9 @@ export class ClassroomsService {
         stt: index + 1,
         id: s.id,
         name: s.name,
-        email: s.email,
+        email: s.email || '',
         username: s.email ? s.email.split('@')[0] : s.id,
-        isActive: s.isActive ?? true,
+        isActive: s.isActive !== false,
         status: s.isActive !== false ? 'ACTIVE' : 'INACTIVE',
         createdAt: s.createdAt,
         phone: s.phone || '',
@@ -623,8 +735,9 @@ export class ClassroomsService {
             return null;
           },
           count: (entity: any, opts: any) => {
-            if (entity === LessonEntity && this.lessonRepo) return this.lessonRepo.count(opts);
-            if (entity === TuitionItemEntity && this.tuitionItemRepo) return this.tuitionItemRepo.count(opts);
+            const self = this as any;
+            if (entity === LessonEntity && self.lessonRepo) return self.lessonRepo.count(opts);
+            if (entity === TuitionItemEntity && self.tuitionItemRepo) return self.tuitionItemRepo.count(opts);
             return 0;
           },
           save: (entity: any, data: any) => {
@@ -661,7 +774,7 @@ export class ClassroomsService {
           const hasHistory = lessonCount > 0 || tuitionCount > 0 || quizCount > 0;
           if (hasHistory) {
             // Không xóa class nếu có lịch sử, chỉ gỡ quan hệ sinh viên trong class_students
-            privateClass.students = (privateClass.students || []).filter((s) => s.id !== studentId);
+            privateClass.students = (privateClass.students || []).filter((s: any) => s.id !== studentId);
             await manager.save(ClassEntity, privateClass);
           } else {
             // Xóa sạch membership và xóa lớp private rỗng khỏi DB
@@ -677,7 +790,7 @@ export class ClassroomsService {
           relations: { students: true },
         });
         if (teacher && teacher.students) {
-          teacher.students = teacher.students.filter((s) => s.id !== studentId);
+          teacher.students = teacher.students.filter((s: any) => s.id !== studentId);
           await manager.save(UserEntity, teacher);
         }
 

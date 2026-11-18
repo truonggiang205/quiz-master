@@ -17,6 +17,11 @@ import { DEFAULT_GRADING_CONFIG } from '../grading/grading.config.js';
 
 @Injectable()
 export class SubmissionsService {
+  private maskStatementAnswers(answer: StudentAnswer): StudentAnswer {
+    if (!answer.statementAnswers) return answer;
+    const { statementAnswers: _statementAnswers, ...rest } = answer;
+    return rest;
+  }
   constructor(
     @InjectRepository(SubmissionEntity)
     private readonly submissionRepo: Repository<SubmissionEntity>,
@@ -97,6 +102,13 @@ export class SubmissionsService {
       order: { order: 'ASC' },
     });
 
+    const statementResponses = (dto.answers || []).filter(answer => answer.statementAnswers !== undefined);
+    if (statementResponses.some(answer => !quizQuestions.some(question => question.id === answer.questionId && question.type === 'MULTIPLE_TRUE_FALSE') ||
+        dto.answers.filter(item => item.questionId === answer.questionId).length !== 1) ||
+        new Set(statementResponses.map(answer => answer.questionId)).size !== statementResponses.length) {
+      throw new BadRequestException('Câu hỏi nhận định không hợp lệ hoặc bị trùng');
+    }
+
     const answers: StudentAnswer[] = [];
 
     let totalScore = 0;
@@ -109,6 +121,31 @@ export class SubmissionsService {
       const selected = studentAns ? studentAns.selectedOptionIds || [] : [];
       let essayImageUrl = studentAns ? studentAns.essayImageUrl : undefined;
       let essayText = studentAns ? studentAns.essayText : undefined;
+
+      if (q.type === 'MULTIPLE_TRUE_FALSE') {
+        const statements = q.options || [];
+        const submitted = studentAns?.statementAnswers || [];
+        const validIds = new Set(statements.map(statement => statement.id));
+        if (submitted.some(item => !validIds.has(item.statementId)) ||
+            new Set(submitted.map(item => item.statementId)).size !== submitted.length) {
+          throw new BadRequestException('Nhận định không hợp lệ hoặc bị trùng');
+        }
+        const statementAnswers = statements.map(statement => {
+          const answer = submitted.find(item => item.statementId === statement.id)?.answer ?? null;
+          return { statementId: statement.id, text: statement.text, answer,
+            correctAnswer: statement.isCorrect === true,
+            isCorrect: answer !== null && answer === statement.isCorrect };
+        });
+        const correct = statementAnswers.filter(item => item.isCorrect).length;
+        const scoreAwarded = statements.length ? Math.round((Number(q.points) || 0) * correct / statements.length) : 0;
+        totalScore += scoreAwarded;
+        if (submitted.length === 0) unansweredCount++;
+        else if (correct === statements.length) correctCount++;
+        else wrongCount++;
+        answers.push({ questionId: q.id, statementAnswers, scoreAwarded,
+          isCorrect: correct === statements.length && statements.length > 0 });
+        continue;
+      }
 
       if (q.type === 'ESSAY') {
         if (essayImageUrl) {
@@ -304,7 +341,7 @@ export class SubmissionsService {
     });
 
     const saved = await this.submissionRepo.save(submission);
-    return saved;
+    return { ...saved, answers: saved.answers.map(answer => this.maskStatementAnswers(answer)) };
   }
 
   async getSubmissionById(id: string, userRole?: string, userId?: string) {
@@ -324,16 +361,16 @@ export class SubmissionsService {
     });
 
     const now = new Date();
-    const isTeacher = userRole === 'TEACHER';
+    const isTeacher = userRole === 'TEACHER' || userRole === 'ADMIN';
     const releaseTime = quiz?.answerReleaseAt ? new Date(quiz.answerReleaseAt) : null;
     const canViewAnswers = isTeacher || (releaseTime ? now >= releaseTime : true);
 
     const detailedAnswers = sub.answers.map((ans) => {
       const q = quizQuestions.find((ques) => ques.id === ans.questionId);
-      if (!q) return ans;
+      if (!q) return canViewAnswers ? ans : this.maskStatementAnswers(ans);
 
       return {
-        ...ans,
+        ...(canViewAnswers ? ans : this.maskStatementAnswers(ans)),
         questionContent: q.content,
         questionImageUrl: q.imageUrl,
         questionType: q.type,
@@ -350,6 +387,7 @@ export class SubmissionsService {
 
     return {
       ...sub,
+      answers: canViewAnswers ? sub.answers : sub.answers.map(answer => this.maskStatementAnswers(answer)),
       quiz,
       detailedAnswers,
       isAnswerReleased: canViewAnswers,
@@ -357,7 +395,7 @@ export class SubmissionsService {
     };
   }
 
-  async getQuizResults(quizId: string) {
+  async getQuizResults(quizId: string, userRole?: string) {
     const quiz = await this.quizRepo.findOneBy({ id: quizId });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
@@ -422,7 +460,9 @@ export class SubmissionsService {
         lowestScore,
         passRate,
       },
-      submissions,
+      submissions: userRole === 'TEACHER' || userRole === 'ADMIN' ? submissions : submissions.map(sub => ({
+        ...sub, answers: sub.answers.map(answer => this.maskStatementAnswers(answer)),
+      })),
       unsubmittedStudents,
     };
   }
@@ -440,6 +480,7 @@ export class SubmissionsService {
       const hasUngradedEssay = sub.answers?.some(a => a.isCorrect === undefined && a.scoreAwarded === 0);
       result.push({
         ...sub,
+        answers: sub.answers.map(answer => this.maskStatementAnswers(answer)),
         quizType: quiz?.mode || 'QUIZ',
         isFullyGraded: !hasUngradedEssay,
       });

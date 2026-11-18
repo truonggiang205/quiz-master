@@ -477,7 +477,13 @@ export class DashboardService {
         highestScore: highestScore, // null if 0 submissions
       },
       availableQuizzes: availableQuizzes.slice(0, 6),
-      recentSubmissions: mySubmissions.slice(0, 6),
+      recentSubmissions: mySubmissions.slice(0, 6).map(submission => ({
+        ...submission,
+        answers: submission.answers?.map(answer => {
+          const { statementAnswers: _statementAnswers, ...rest } = answer;
+          return rest;
+        }),
+      })),
       progressTrend,
       subjectPerformance,
       availableSubjects,

@@ -24,6 +24,7 @@ export const StudentQuizTakingPage: React.FC = () => {
     answers,
     essayAnswers,
     essayTextAnswers,
+    statementAnswers,
     flaggedQuestionIds,
     remainingSeconds,
     initQuizTaking,
@@ -32,6 +33,7 @@ export const StudentQuizTakingPage: React.FC = () => {
     addEssayAnswer,
     removeEssayAnswer,
     setEssayTextAnswer,
+    setStatementAnswer,
     toggleFlagQuestion,
     nextQuestion,
     prevQuestion,
@@ -141,6 +143,12 @@ export const StudentQuizTakingPage: React.FC = () => {
           selectedOptionIds: answers[q.id] || [],
           essayImageUrl: essayArr.join('|||'),
           essayText: essayTextAnswers[q.id] || '',
+          ...(q.type === 'MULTIPLE_TRUE_FALSE' ? {
+            statementAnswers: q.options.flatMap(statement => {
+              const answer = statementAnswers?.[q.id]?.[statement.id];
+              return typeof answer === 'boolean' ? [{ statementId: statement.id, answer }] : [];
+            }),
+          } : {}),
         };
       });
 
@@ -169,7 +177,7 @@ export const StudentQuizTakingPage: React.FC = () => {
       });
       setIsSubmitting(false);
     }
-  }, [id, currentQuiz, isSubmitting, answers, essayAnswers, essayTextAnswers, questions, remainingSeconds, addToast, resetExam, navigate]);
+  }, [id, currentQuiz, isSubmitting, answers, essayAnswers, essayTextAnswers, statementAnswers, questions, remainingSeconds, addToast, resetExam, navigate]);
 
   const handleTimeExpired = useCallback(() => {
     addToast({
@@ -195,7 +203,7 @@ export const StudentQuizTakingPage: React.FC = () => {
   const selectedOptions = answers[currentQ.id] || [];
   const isFlagged = flaggedQuestionIds.includes(currentQ.id);
 
-  const answerState = { answers, essayAnswers, essayTextAnswers };
+  const answerState = { answers, essayAnswers, essayTextAnswers, statementAnswers };
   const answeredCount = questions.filter((q) =>
     isQuestionAnswered(q, answerState),
   ).length;
@@ -269,6 +277,8 @@ export const StudentQuizTakingPage: React.FC = () => {
             }
             essayText={essayTextAnswers[currentQ.id] || ''}
             onEssayTextChange={(text) => setEssayTextAnswer(currentQ.id, text)}
+            statementAnswers={statementAnswers?.[currentQ.id] || {}}
+            onStatementAnswer={(statementId, answer) => setStatementAnswer(currentQ.id, statementId, answer)}
             onToggleFlag={() => toggleFlagQuestion(currentQ.id)}
           />
 

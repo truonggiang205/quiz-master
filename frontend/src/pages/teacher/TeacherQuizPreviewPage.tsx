@@ -14,6 +14,7 @@ export const TeacherQuizPreviewPage: React.FC = () => {
   const [currentIndex, setCurrentIndex] = useState(0);
   const [selectedAnswers, setSelectedAnswers] = useState<Record<string, string[]>>({});
   const [flaggedIds, setFlaggedIds] = useState<string[]>([]);
+  const [statementAnswers, setStatementAnswers] = useState<Record<string, Record<string, boolean>>>({});
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -106,6 +107,9 @@ export const TeacherQuizPreviewPage: React.FC = () => {
         isFlagged={isFlagged}
         onSelectOption={handleSelectOption}
         onToggleFlag={handleToggleFlag}
+        showStatementCorrectAnswers
+        statementAnswers={statementAnswers[currentQ.id] || {}}
+        onStatementAnswer={(statementId, answer) => setStatementAnswers(previous => ({ ...previous, [currentQ.id]: { ...previous[currentQ.id], [statementId]: answer } }))}
       />
 
       <div className="flex items-center justify-between pt-2">

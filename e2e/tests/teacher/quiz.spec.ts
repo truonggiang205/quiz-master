@@ -128,7 +128,7 @@ test.describe('Teacher Module — Quiz Management', () => {
 
     // Chờ dữ liệu bài thi VÀ câu hỏi được load đầy đủ vào form
     await expect(quizFormPage.titleInput).toHaveValue(initialTitle, { timeout: 10000 });
-    await expect(page.locator('textarea[placeholder="Nhập nội dung câu hỏi..."]').first()).toBeVisible({ timeout: 10000 });
+    await expect(page.getByLabel('Nội dung câu hỏi', { exact: true }).first()).toBeVisible({ timeout: 10000 });
 
     // Cập nhật tiêu đề mới
     await quizFormPage.titleInput.fill(updatedTitle);

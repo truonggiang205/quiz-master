@@ -10,6 +10,7 @@ interface QuizTakingState {
   answers: Record<string, string[]>; // questionId -> array of selected optionIds
   essayAnswers: Record<string, string[]>; // questionId -> array of uploaded image urls
   essayTextAnswers: Record<string, string>; // questionId -> text answer
+  statementAnswers: Record<string, Record<string, boolean>>;
   flaggedQuestionIds: string[]; // questionIds marked for review
   remainingSeconds: number;
   startedAtMs: number | null; // Epoch ms when the exam was started (wall clock)
@@ -23,6 +24,7 @@ interface QuizTakingState {
   addEssayAnswer: (questionId: string, url: string) => void;
   removeEssayAnswer: (questionId: string, index: number) => void;
   setEssayTextAnswer: (questionId: string, text: string) => void;
+  setStatementAnswer: (questionId: string, statementId: string, answer: boolean) => void;
   toggleFlagQuestion: (questionId: string) => void;
   goToQuestion: (index: number) => void;
   nextQuestion: () => void;
@@ -41,6 +43,7 @@ export const useQuizStore = create<QuizTakingState>()(
   answers: {},
   essayAnswers: {},
   essayTextAnswers: {},
+  statementAnswers: {},
   flaggedQuestionIds: [],
   remainingSeconds: 0,
   startedAtMs: null,
@@ -69,6 +72,7 @@ export const useQuizStore = create<QuizTakingState>()(
       answers: {},
       essayAnswers: {},
       essayTextAnswers: {},
+      statementAnswers: {},
       flaggedQuestionIds: [],
       remainingSeconds: totalSeconds,
       startedAtMs: nowMs,
@@ -138,6 +142,10 @@ export const useQuizStore = create<QuizTakingState>()(
     }));
   },
 
+  setStatementAnswer: (questionId, statementId, answer) => set(state => ({
+    statementAnswers: { ...state.statementAnswers, [questionId]: { ...state.statementAnswers?.[questionId], [statementId]: answer } },
+  })),
+
   toggleFlagQuestion: (questionId: string) => {
     const list = get().flaggedQuestionIds;
     const updated = list.includes(questionId)
@@ -186,6 +194,7 @@ export const useQuizStore = create<QuizTakingState>()(
       answers: {},
       essayAnswers: {},
       essayTextAnswers: {},
+      statementAnswers: {},
       flaggedQuestionIds: [],
       remainingSeconds: 0,
       startedAtMs: null,
@@ -204,6 +213,7 @@ export const useQuizStore = create<QuizTakingState>()(
         answers: state.answers,
         essayAnswers: state.essayAnswers,
         essayTextAnswers: state.essayTextAnswers,
+        statementAnswers: state.statementAnswers,
         flaggedQuestionIds: state.flaggedQuestionIds,
         remainingSeconds: state.remainingSeconds,
         startedAtMs: state.startedAtMs,

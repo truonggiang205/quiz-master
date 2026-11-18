@@ -17,6 +17,14 @@ import * as cheerio from 'cheerio';
 
 @Injectable()
 export class QuestionsService {
+  private validateStatements(type: string, options?: { id?: string; text: string; isCorrect?: boolean }[]) {
+    if (type !== 'MULTIPLE_TRUE_FALSE') return;
+    if (!Array.isArray(options) || options.length < 2 ||
+        options.some(option => !option.id?.trim() || !option.text?.trim() || typeof option.isCorrect !== 'boolean') ||
+        new Set(options.map(option => option.id)).size !== options.length) {
+      throw new BadRequestException('Câu đúng/sai nhiều nhận định cần ít nhất hai nhận định hợp lệ với ID duy nhất');
+    }
+  }
   constructor(
     @InjectRepository(QuestionEntity)
     private readonly questionRepo: Repository<QuestionEntity>,
@@ -46,7 +54,7 @@ export class QuestionsService {
     });
 
     // ALWAYS mask answers and explanation for students
-    const isTeacher = userRole?.toUpperCase() === 'TEACHER';
+    const isTeacher = ['TEACHER', 'ADMIN'].includes(userRole?.toUpperCase() || '');
     if (!isTeacher) {
       return questions.map((q) => ({
         id: q.id,
@@ -75,6 +83,7 @@ export class QuestionsService {
   }
 
   async saveToBank(teacherId: string, dto: CreateQuestionDto) {
+    this.validateStatements(dto.type, dto.options);
     const optionsWithIds: QuestionOption[] = (dto.options || []).map((opt, idx) => ({
       id: opt.id || `opt-${Date.now()}-${idx}`,
       text: opt.text,
@@ -143,6 +152,7 @@ export class QuestionsService {
   }
 
   async createQuestion(quizId: string, dto: CreateQuestionDto, teacherId?: string) {
+    this.validateStatements(dto.type, dto.options);
     const optionsWithIds: QuestionOption[] = (dto.options || []).map((opt, idx) => ({
       id: opt.id || `opt-${Date.now()}-${idx}`,
       text: opt.text,
@@ -189,6 +199,7 @@ export class QuestionsService {
     if (!question) {
       throw new NotFoundException('Không tìm thấy câu hỏi để cập nhật');
     }
+    this.validateStatements(dto.type ?? question.type, dto.options ?? question.options);
 
     const submissionsCount = await this.submissionRepo.count({ where: { quizId: question.quizId } });
     const hasSubmissions = submissionsCount > 0;
@@ -289,6 +300,7 @@ export class QuestionsService {
 
         for (let i = 0; i < dto.created.length; i++) {
           const cDto = dto.created[i];
+          this.validateStatements(cDto.type, cDto.options);
           const optionsWithIds: QuestionOption[] = (cDto.options || []).map((opt, idx) => ({
             id: opt.id || `opt-${Date.now()}-${i}-${idx}`,
             text: opt.text,
@@ -339,6 +351,7 @@ export class QuestionsService {
         for (const q of existingQuestions) {
           const changes = updateMap.get(q.id);
           if (!changes) continue;
+          this.validateStatements(changes.type ?? q.type, changes.options ?? q.options);
 
           if (!hasSubmissions) {
             if (changes.score !== undefined && changes.score !== q.score) {

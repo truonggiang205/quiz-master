@@ -8,6 +8,7 @@ export interface StudentAnswer {
   isCorrect?: boolean;
   scoreAwarded: number;
   isManuallyGraded?: boolean;
+  statementAnswers?: { statementId: string; text: string; answer: boolean | null; correctAnswer: boolean; isCorrect: boolean }[];
 }
 
 @Entity('submissions')

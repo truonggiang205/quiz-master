@@ -72,7 +72,21 @@ export class AppealsService {
       qb.where('appeal.studentId = :userId', { userId });
     }
 
-    return await qb.getMany();
+    const appeals = await qb.getMany();
+    if (role === 'TEACHER' || role === 'ADMIN') return appeals;
+    return appeals.map(appeal => {
+      if (!appeal.submission?.answers) return appeal;
+      return {
+        ...appeal,
+        submission: {
+          ...appeal.submission,
+          answers: appeal.submission.answers.map(answer => {
+            const { statementAnswers: _statementAnswers, ...rest } = answer;
+            return rest;
+          }),
+        },
+      };
+    });
   }
 
   async replyAppeal(teacherId: string, appealId: string, status: AppealStatus, reply: string) {

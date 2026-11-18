@@ -10,11 +10,12 @@ export const QuestionPalette: React.FC = () => {
     answers,
     essayAnswers,
     essayTextAnswers,
+    statementAnswers,
     flaggedQuestionIds,
     goToQuestion,
   } = useQuizStore();
 
-  const answerState = { answers, essayAnswers, essayTextAnswers };
+  const answerState = { answers, essayAnswers, essayTextAnswers, statementAnswers };
 
   const answeredCount = questions.filter((q) =>
     isQuestionAnswered(q, answerState),

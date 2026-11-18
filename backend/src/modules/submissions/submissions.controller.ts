@@ -62,8 +62,8 @@ export class SubmissionsController {
 
   @Get('quizzes/:quizId/results')
   @ApiOperation({ summary: 'Xem bảng kết quả và thống kê học sinh (Teacher)' })
-  async getQuizResults(@Param('quizId') quizId: string) {
-    const res = await this.submissionsService.getQuizResults(quizId);
+  async getQuizResults(@Param('quizId') quizId: string, @CurrentUser() user: any) {
+    const res = await this.submissionsService.getQuizResults(quizId, user.role);
     return createSuccessResponse(res);
   }
 

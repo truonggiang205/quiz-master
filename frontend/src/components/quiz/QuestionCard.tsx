@@ -9,6 +9,7 @@ import { resolveImageUrl } from '../../utils/image.util';
 import 'katex/dist/katex.min.css';
 import Latex from 'react-latex-next';
 import { useUiStore } from '../../stores/ui.store';
+import { statementLabel } from '../../utils/quiz.utils';
 
 interface QuestionCardProps {
   question: Question;
@@ -23,6 +24,9 @@ interface QuestionCardProps {
   onUploadEssayImage?: (url: string) => void;
   onRemoveEssayImage?: (index: number) => void;
   onEssayTextChange?: (text: string) => void;
+  statementAnswers?: Record<string, boolean>;
+  onStatementAnswer?: (statementId: string, answer: boolean) => void;
+  showStatementCorrectAnswers?: boolean;
 }
 
 export const QuestionCard: React.FC<QuestionCardProps> = ({
@@ -38,6 +42,9 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
   onUploadEssayImage,
   onRemoveEssayImage,
   onEssayTextChange,
+  statementAnswers = {},
+  onStatementAnswer,
+  showStatementCorrectAnswers = false,
 }) => {
   const [isUploading, setIsUploading] = React.useState(false);
   const { addToast } = useUiStore();
@@ -47,6 +54,7 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
     SINGLE_CHOICE: 'Một đáp án đúng',
     MULTIPLE_CHOICE: 'Nhiều đáp án đúng',
     TRUE_FALSE: 'Đúng / Sai',
+    MULTIPLE_TRUE_FALSE: 'Đúng / Sai nhiều nhận định',
     ESSAY: 'Tự luận (Tải ảnh)',
   };
 
@@ -130,7 +138,19 @@ export const QuestionCard: React.FC<QuestionCardProps> = ({
         </div>
 
         {/* Answer Options or Essay Upload */}
-        {question.type === 'ESSAY' ? (
+        {question.type === 'MULTIPLE_TRUE_FALSE' ? (
+          <div className="space-y-3">
+            {question.options.map((statement, index) => (
+              <div key={statement.id} className="flex flex-wrap items-center gap-3 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                <span className="min-w-0 flex-1 whitespace-pre-wrap break-words"><strong>{statementLabel(index)}</strong> <Latex>{statement.text}</Latex></span>
+                <div className="flex gap-4">
+                  {[true, false].map(value => <label key={String(value)} className="flex items-center gap-1 text-sm"><input type="radio" name={`answer-${question.id}-${statement.id}`} checked={statementAnswers[statement.id] === value} onChange={() => onStatementAnswer?.(statement.id, value)} />{value ? 'Đúng' : 'Sai'}</label>)}
+                </div>
+                {showStatementCorrectAnswers && <span className="text-sm font-semibold">Đáp án: {statement.isCorrect ? 'Đúng' : 'Sai'}</span>}
+              </div>
+            ))}
+          </div>
+        ) : question.type === 'ESSAY' ? (
           <div className="space-y-4">
             <div className="space-y-2">
               <label className="text-sm font-semibold text-slate-700 dark:text-slate-300">Trả lời bằng văn bản (Tùy chọn):</label>

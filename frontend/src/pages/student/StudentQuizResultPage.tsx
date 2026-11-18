@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { statementLabel } from '../../utils/quiz.utils';
 import { useParams, useSearchParams, Link } from 'react-router-dom';
 import { submissionService } from '../../services/submission.service';
 import { appealService } from '../../services/appeal.service';
@@ -153,7 +154,9 @@ export const StudentQuizResultPage: React.FC = () => {
                       <span className="text-sm font-black text-sky-600 dark:text-sky-400">
                          Câu {idx + 1}
                        </span>
-                      {item.isCorrect === true ? (
+                      {item.statementAnswers ? (
+                        <Badge variant="sky">{((item.scoreAwarded || 0) / 100).toFixed(2)} / {(item.score / 100).toFixed(2)} điểm</Badge>
+                      ) : item.isCorrect === true ? (
                         <Badge variant="mint" size="sm">
                           <CheckCircle2 className="w-3.5 h-3.5" />
                           Chính xác (+{((item.scoreAwarded || 0) / 100).toFixed(2)} điểm)
@@ -188,7 +191,17 @@ export const StudentQuizResultPage: React.FC = () => {
 
                   {/* Options with colored feedback or Essay Image/Text */}
                   <div className="space-y-2 pt-1">
-                    {item.questionType === 'ESSAY' && (item.essayImageUrl || item.essayText) ? (
+                    {item.statementAnswers ? (
+                      <div className="space-y-2">
+                        {item.statementAnswers.map((statement, index) => (
+                          <div key={statement.statementId} className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
+                            <p className="whitespace-pre-wrap break-words">{statementLabel(index)} {statement.text}</p>
+                            <p>Trả lời: {statement.answer === null ? 'Chưa trả lời' : statement.answer ? 'Đúng' : 'Sai'} · Đáp án: {statement.correctAnswer ? 'Đúng' : 'Sai'} · {statement.answer === null ? 'Chưa trả lời' : statement.isCorrect ? 'Chính xác' : 'Chưa chính xác'}</p>
+                          </div>
+                        ))}
+                        <p>Điểm câu: {((item.scoreAwarded || 0) / 100).toFixed(2)} / {(item.score / 100).toFixed(2)}</p>
+                      </div>
+                    ) : item.questionType === 'ESSAY' && (item.essayImageUrl || item.essayText) ? (
                       <div className="mt-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 flex flex-col gap-4">
                         {item.essayText && (
                           <div>

@@ -7,6 +7,7 @@ import { rebalance } from '../../utils/points.util';
 import { useUiStore } from '../../stores/ui.store';
 import { resolveImageUrl } from '../../utils/image.util';
 import { NumberInput } from '../common/NumberInput';
+import { statementLabel } from '../../utils/quiz.utils';
 
 interface QuestionBuilderProps {
   questions: Question[];
@@ -139,11 +140,17 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
     onChange(safeRebalance(next));
   };
 
-  const handleTypeChange = (index: number, newType: QuestionType) => {
+  const handleTypeChange = async (index: number, newType: QuestionType) => {
     const q = questions[index];
+    if (newType !== q.type && (newType === 'MULTIPLE_TRUE_FALSE' || q.type === 'MULTIPLE_TRUE_FALSE')) {
+      const confirmed = await useUiStore.getState().confirm({ title: 'Thay đổi loại câu hỏi', description: 'Danh sách đáp án hiện tại sẽ được thay thế.', variant: 'warning' });
+      if (!confirmed) return;
+    }
     let newOptions: AnswerOption[] = [...q.options];
 
-    if (newType === 'TRUE_FALSE') {
+    if (newType === 'MULTIPLE_TRUE_FALSE') {
+      newOptions = Array.from({ length: 4 }, () => ({ id: crypto.randomUUID(), text: '', isCorrect: true }));
+    } else if (newType === 'TRUE_FALSE') {
       newOptions = [
         { id: `opt-${Date.now()}-1`, text: 'Đúng (True)', isCorrect: true },
         { id: `opt-${Date.now()}-2`, text: 'Sai (False)', isCorrect: false },
@@ -153,7 +160,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
       const currentRubric = q.essayRubric || { acceptedAnswers: [], criteria: [] };
       handleUpdateQuestion(index, { type: newType, options: newOptions, essayRubric: currentRubric });
       return;
-    } else if (q.type === 'TRUE_FALSE' || q.type === 'ESSAY') {
+    } else if (q.type === 'TRUE_FALSE' || q.type === 'ESSAY' || q.type === 'MULTIPLE_TRUE_FALSE') {
       newOptions = [
         { id: `opt-${Date.now()}-1`, text: 'Đáp án A', isCorrect: true },
         { id: `opt-${Date.now()}-2`, text: 'Đáp án B', isCorrect: false },
@@ -351,6 +358,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                     <option value="SINGLE_CHOICE">Một đáp án đúng</option>
                     <option value="MULTIPLE_CHOICE">Nhiều đáp án đúng</option>
                     <option value="TRUE_FALSE">Đúng / Sai</option>
+                    <option value="MULTIPLE_TRUE_FALSE">Trắc nghiệm Đúng/Sai nhiều nhận định</option>
                     <option value="ESSAY">Tự luận (Tải ảnh)</option>
                   </select>
                 </div>
@@ -479,7 +487,22 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
               </div>
 
               {/* Options List */}
-              {q.type !== 'ESSAY' && (
+              {q.type === 'MULTIPLE_TRUE_FALSE' && (
+                <div className="space-y-3">
+                  {q.options.map((statement, index) => (
+                    <div key={statement.id} className="flex flex-wrap items-start gap-2 rounded-xl border border-slate-200 p-3 dark:border-slate-700">
+                      <span className="pt-2 font-bold">{statementLabel(index)}</span>
+                      <textarea aria-label={`Nội dung nhận định ${statementLabel(index)}`} value={statement.text} onChange={event => handleOptionTextChange(qIndex, index, event.target.value)} className="min-w-0 flex-1 rounded-lg border p-2 dark:bg-slate-800" />
+                      <div className="flex gap-3 p-2">
+                        {[true, false].map(value => <label key={String(value)} className="flex items-center gap-1 text-sm"><input type="radio" name={`correct-${q.id}-${statement.id}`} checked={statement.isCorrect === value} onChange={() => handleUpdateQuestion(qIndex, { options: q.options.map(item => item.id === statement.id ? { ...item, isCorrect: value } : item) })} />{value ? 'Đúng' : 'Sai'}</label>)}
+                      </div>
+                      <button type="button" disabled={q.options.length <= 2} onClick={() => handleUpdateQuestion(qIndex, { options: q.options.filter(item => item.id !== statement.id) })} aria-label={`Xóa nhận định ${statementLabel(index)}`} className="p-2 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>
+                    </div>
+                  ))}
+                  <button type="button" onClick={() => handleUpdateQuestion(qIndex, { options: [...q.options, { id: crypto.randomUUID(), text: '', isCorrect: true }] })} className="text-sm font-semibold text-sky-600">Thêm nhận định</button>
+                </div>
+              )}
+              {q.type !== 'ESSAY' && q.type !== 'MULTIPLE_TRUE_FALSE' && (
               <div className="space-y-2.5">
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300">
                   Các lựa chọn đáp án (tích vào biểu tượng để chọn đáp án đúng):

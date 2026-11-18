@@ -12,7 +12,13 @@ export const submissionService = {
 
   async submitQuiz(
     quizId: string,
-    answers: { questionId: string; selectedOptionIds: string[] }[],
+    answers: {
+      questionId: string;
+      selectedOptionIds: string[];
+      essayImageUrl?: string;
+      essayText?: string;
+      statementAnswers?: { statementId: string; answer: boolean }[];
+    }[],
     timeUsedSeconds: number,
   ): Promise<Submission> {
     const res = await apiClient.post(`/quizzes/${quizId}/submit`, {

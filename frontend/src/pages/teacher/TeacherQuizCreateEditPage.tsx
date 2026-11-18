@@ -214,7 +214,12 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         return;
       }
 
-      if (q.type !== 'ESSAY') {
+      if (q.type === 'MULTIPLE_TRUE_FALSE') {
+        if (q.options.length < 2 || q.options.some(o => !o.id?.trim() || !o.text?.trim() || typeof o.isCorrect !== 'boolean') || new Set(q.options.map(o => o.id)).size !== q.options.length) {
+          addToast({ type: 'error', title: `Câu ${i + 1} cần ít nhất hai nhận định hợp lệ và ID duy nhất` });
+          return;
+        }
+      } else if (q.type !== 'ESSAY') {
         const validOpts = (q.options || []).filter(o => o.text && o.text.trim());
         if (validOpts.length < 2) {
           addToast({
@@ -1110,7 +1115,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                 />
                 <div>
                   <p className="text-sm font-semibold text-slate-800 dark:text-slate-200">Câu {idx + 1}: <Latex>{q.content}</Latex></p>
-                  <p className="text-xs text-slate-500 mt-1">Loại: {q.type === 'SINGLE_CHOICE' ? 'Một đáp án' : q.type === 'MULTIPLE_CHOICE' ? 'Nhiều đáp án' : q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : 'Tự luận'} • Điểm: {q.score}</p>
+                  <p className="text-xs text-slate-500 mt-1">Loại: {q.type === 'SINGLE_CHOICE' ? 'Một đáp án' : q.type === 'MULTIPLE_CHOICE' ? 'Nhiều đáp án' : q.type === 'TRUE_FALSE' ? 'Đúng/Sai' : q.type === 'MULTIPLE_TRUE_FALSE' ? 'Đúng/Sai nhiều nhận định' : 'Tự luận'} • Điểm: {q.score}</p>
                 </div>
               </label>
             ))}
@@ -1202,6 +1207,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                     <option value="SINGLE_CHOICE">Trắc nghiệm đơn</option>
                     <option value="MULTIPLE_CHOICE">Trắc nghiệm nhiều đáp án</option>
                     <option value="TRUE_FALSE">Đúng / Sai</option>
+                    <option value="MULTIPLE_TRUE_FALSE">Đúng / Sai nhiều nhận định</option>
                     <option value="ESSAY">Tự luận</option>
                   </select>
                 </div>
@@ -1302,6 +1308,8 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                             ? 'Nhiều đáp án'
                             : q.type === 'TRUE_FALSE'
                             ? 'Đúng / Sai'
+                            : q.type === 'MULTIPLE_TRUE_FALSE'
+                            ? 'Đúng / Sai nhiều nhận định'
                             : 'Tự luận'}
                         </span>
                       </div>

@@ -1,4 +1,4 @@
-export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'ESSAY';
+export type QuestionType = 'SINGLE_CHOICE' | 'MULTIPLE_CHOICE' | 'TRUE_FALSE' | 'ESSAY' | 'MULTIPLE_TRUE_FALSE';
 
 export interface AnswerOption {
   id: string;

@@ -24,8 +24,6 @@ export async function createQuizAttemptsTable() {
       name varchar(128) NOT NULL PRIMARY KEY,
       appliedAt datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)
     ) ENGINE=InnoDB`);
-    const [applied] = await connection.execute<any[]>('SELECT name FROM schema_migrations WHERE name = ?', ['20261118_quiz_attempts_v1']);
-    if (applied.length) return;
     await connection.execute(`CREATE TABLE IF NOT EXISTS quiz_attempts (
       id varchar(64) NOT NULL,
       quizId varchar(64) NOT NULL,
@@ -54,11 +52,24 @@ export async function createQuizAttemptsTable() {
     await ensureColumn('quiz_attempts', 'quizSnapshot', 'JSON NULL');
     await ensureColumn('quiz_attempts', 'draftAnswers', 'JSON NULL');
     await ensureColumn('submissions', 'answerReleaseAt', 'varchar(50) NULL');
-    const [columns] = await connection.execute<any[]>(`SELECT COLUMN_NAME FROM information_schema.COLUMNS
+    const [columns] = await connection.execute<any[]>(`SELECT COLUMN_NAME, DATA_TYPE FROM information_schema.COLUMNS
       WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quiz_attempts'
         AND COLUMN_NAME IN ('questionSnapshot', 'quizSnapshot', 'draftAnswers')`);
-    if (columns.length !== 3) throw new Error('quiz_attempts schema validation failed');
-    await connection.execute('INSERT INTO schema_migrations (name) VALUES (?)', ['20261118_quiz_attempts_v1']);
+    const expectedJsonColumns = new Set(['questionSnapshot', 'quizSnapshot', 'draftAnswers']);
+    if (columns.length !== expectedJsonColumns.size || columns.some(column => column.DATA_TYPE !== 'json' || !expectedJsonColumns.has(column.COLUMN_NAME))) {
+      throw new Error('quiz_attempts JSON snapshot schema validation failed');
+    }
+    const [indexes] = await connection.execute<any[]>(`SELECT DISTINCT INDEX_NAME FROM information_schema.STATISTICS
+      WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'quiz_attempts'
+        AND INDEX_NAME IN ('PRIMARY', 'UQ_quiz_attempt_student_number', 'UQ_quiz_attempt_submission')`);
+    if (indexes.length !== 3) throw new Error('quiz_attempts index schema validation failed');
+
+    // Do not trust a version row on its own: a manually altered or partially
+    // restored schema must fail closed instead of being silently accepted.
+    const [applied] = await connection.execute<any[]>('SELECT name FROM schema_migrations WHERE name = ?', ['20261118_quiz_attempts_v1']);
+    if (!applied.length) {
+      await connection.execute('INSERT INTO schema_migrations (name) VALUES (?)', ['20261118_quiz_attempts_v1']);
+    }
   } finally {
     await connection.end();
   }

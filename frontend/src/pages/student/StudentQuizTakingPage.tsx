@@ -61,7 +61,18 @@ export const StudentQuizTakingPage: React.FC = () => {
         // Verify start conditions (e.g. attempt limits)
         try {
           const attempt = await submissionService.startQuiz(id);
-          initQuizTaking(quizData, attempt.questions, attempt.attemptId, attempt.startedAt, attempt.draftAnswers);
+          // The attempt owns timing and marking metadata.  Keep the live quiz
+          // only for display fields that are not captured in the snapshot.
+          // Otherwise a teacher edit after start could change this client's
+          // timer or score scale while the server grades the original attempt.
+          initQuizTaking({
+            ...quizData,
+            id: attempt.quizId,
+            title: attempt.quizTitle,
+            durationMinutes: attempt.durationMinutes,
+            totalPoints: attempt.totalPoints,
+            answerReleaseAt: attempt.answerReleaseAt,
+          }, attempt.questions, attempt.attemptId, attempt.startedAt, attempt.draftAnswers);
         } catch (error: any) {
           addToast({ 
             type: 'error', 

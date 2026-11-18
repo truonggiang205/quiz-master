@@ -45,16 +45,9 @@ import { LoggerMiddleware } from './common/middleware/logger.middleware.js';
 
 dotenv.config();
 
-const schemaEnvironment = process.env.NODE_ENV || 'development';
-const schemaDatabase = process.env.DB_DATABASE || 'quizmaster';
-const localTestDatabases = new Set(['quizmaster', 'quizmaster_local', 'quizmaster_test', 'quizmaster_external_migration_test']);
 const synchronizeRequested = process.env.DB_SYNCHRONIZE === 'true';
-if (synchronizeRequested && (
-  !['development', 'test'].includes(schemaEnvironment) ||
-  !localTestDatabases.has(schemaDatabase) ||
-  process.env.DB_ALLOW_SCHEMA_SYNC !== 'true'
-)) {
-  throw new Error('DB_SYNCHRONIZE is only permitted for an explicitly confirmed local/test schema.');
+if (synchronizeRequested) {
+  throw new Error('DB_SYNCHRONIZE is disabled. Apply an explicit, reviewed migration to an independently verified local/test database instead.');
 }
 
 @Module({
@@ -92,9 +85,8 @@ if (synchronizeRequested && (
         TuitionPaymentEntity,
         TeacherStudentEntity,
       ],
-      // Schema changes must be deployed through explicit migrations.  This can only
-      // be enabled deliberately for an isolated local development database.
-      synchronize: synchronizeRequested,
+      // Schema changes must always be deployed through explicit migrations.
+      synchronize: false,
       logging: false,
     }),
     AuthModule,

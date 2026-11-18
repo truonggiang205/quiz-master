@@ -11,15 +11,20 @@ export async function createQuizAttemptsTable() {
   const port = Number(process.env.DB_PORT || 3306);
   const database = process.env.DB_DATABASE || 'quizmaster';
   const environment = process.env.NODE_ENV || '';
+  const expectedTestServerUuid = process.env.DB_MIGRATION_TEST_SERVER_UUID;
   const allowedDatabases = new Set(['quizmaster', 'quizmaster_local', 'quizmaster_test', 'quizmaster_external_migration_test']);
   if (!['localhost', '127.0.0.1', '::1'].includes(host) || !['development', 'test'].includes(environment) || !allowedDatabases.has(database) ||
-      process.env.DB_MIGRATION_CONFIRM !== 'quiz-attempts-v1') {
-    throw new Error('Refusing schema migration: require development/test, an allowlisted database, and DB_MIGRATION_CONFIRM=quiz-attempts-v1.');
+      process.env.DB_MIGRATION_CONFIRM !== 'quiz-attempts-v1' || !expectedTestServerUuid) {
+    throw new Error('Refusing schema migration: require development/test, an allowlisted database, DB_MIGRATION_CONFIRM=quiz-attempts-v1, and the verified DB_MIGRATION_TEST_SERVER_UUID.');
   }
   const connection = await mysql.createConnection({
     host, port, database, user: process.env.DB_USERNAME || 'root', password: process.env.DB_PASSWORD || '',
   });
   try {
+    const [serverIdentity] = await connection.query<any[]>('SELECT @@server_uuid AS serverUuid');
+    if (serverIdentity[0]?.serverUuid !== expectedTestServerUuid) {
+      throw new Error('Refusing schema migration: connected MySQL server does not match the verified local/test server identity.');
+    }
     await connection.execute(`CREATE TABLE IF NOT EXISTS schema_migrations (
       name varchar(128) NOT NULL PRIMARY KEY,
       appliedAt datetime(6) NOT NULL DEFAULT CURRENT_TIMESTAMP(6)

@@ -122,6 +122,23 @@ export class QuizzesService {
     }
   }
 
+  private isAssetInQuizFolder(url: string, quizFolder: string): boolean {
+    if (!url?.includes('cloudinary.com')) return false;
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
+    if (!match?.[1]) return false;
+    const publicId = decodeURIComponent(match[1]).replace(/\.[^/.]+$/, '');
+    return publicId.startsWith(`${quizFolder}/`);
+  }
+
+  private async retryCloudinaryCleanup(label: string, action: () => Promise<boolean>) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      if (await action()) return;
+    }
+    // The DB is already committed. Keep the failure visible for an operator;
+    // never resurrect quiz data just because an external delete failed.
+    console.error(`Cloudinary cleanup requires retry: ${label}`);
+  }
+
   async updateQuiz(id: string, dto: UpdateQuizDto, user: { id?: string; role?: string }) {
     const quiz = await this.quizRepo.findOneBy({ id });
     if (!quiz) {
@@ -141,36 +158,21 @@ export class QuizzesService {
     }
 
     this.assertQuizManager(quiz, user);
-    // Cascade delete questions, submissions and attempt snapshots consistently.
+    // Capture only assets proven to belong to this quiz. DB deletion is committed
+    // first; external Cloudinary cleanup must never precede it.
     const questions = await this.questionRepo.find({ where: { quizId: id } });
-    for (const q of questions) {
-      if (q.imageUrl) await this.uploadService.deleteFileByUrl(q.imageUrl);
-    }
-
-    const submissions = await this.submissionRepo.find({ where: { quizId: id } });
-    for (const sub of submissions) {
-      if (sub.answers) {
-        for (const ans of sub.answers) {
-          if (ans.essayImageUrl) {
-            const urls = ans.essayImageUrl.split('|||');
-            for (const url of urls) {
-              await this.uploadService.deleteFileByUrl(url);
-            }
-          }
-        }
-      }
-    }
-
     // Clean up empty folders in Cloudinary
     const rootDir = quiz.mode === 'PRACTICE' ? 'ôn tập' : 'bài thi';
     const subjectDir = (quiz.subject || 'khác').trim().toLowerCase();
     const titleDir = quiz.title.trim();
     const quizFolder = `quiz-master/${rootDir}/${subjectDir}/${titleDir}`;
     
-    // Cloudinary requires subfolders to be empty/deleted before parent can be deleted
-    await this.uploadService.deleteFolder(`${quizFolder}/đề bài`);
-    await this.uploadService.deleteFolder(`${quizFolder}/bài tập`);
-    await this.uploadService.deleteFolder(quizFolder);
+    // A folder name is not a durable ownership boundary (two quizzes can have
+    // the same title). Only remove a question image when no question belonging
+    // to another quiz references that exact URL. Submission JSON has no asset
+    // relation to prove exclusive ownership, so it is intentionally retained.
+    const candidateQuestionUrls = [...new Set(questions.map(question => question.imageUrl)
+      .filter((url): url is string => this.isAssetInQuizFolder(url || '', quizFolder)))];
 
     await this.attemptRepo.manager.transaction(async manager => {
       await manager.getRepository(QuizAttemptEntity).delete({ quizId: id });
@@ -178,6 +180,13 @@ export class QuizzesService {
       await manager.getRepository(SubmissionEntity).delete({ quizId: id });
       await manager.getRepository(QuizEntity).delete({ id });
     });
+
+    for (const url of candidateQuestionUrls) {
+      const references = await this.questionRepo.count({ where: { imageUrl: url } });
+      if (references === 0) {
+        await this.retryCloudinaryCleanup(`file ${url}`, () => this.uploadService.deleteFileByUrl(url));
+      }
+    }
 
     return { id, deleted: true };
   }

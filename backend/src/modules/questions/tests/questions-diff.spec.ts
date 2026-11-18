@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QuestionsService } from '../questions.service.js';
+import type { Repository } from 'typeorm';
+import type { UserEntity } from '../../../entities/user.entity.js';
 
 describe('QuestionsService Diff & Bank Sync', () => {
   let service: QuestionsService;
@@ -49,6 +51,7 @@ describe('QuestionsService Diff & Bank Sync', () => {
       mockRubricRepo,
       mockQuizzesService,
       mockUploadService,
+      { findOne: vi.fn() } as unknown as Repository<UserEntity>,
     );
   });
 

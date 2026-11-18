@@ -46,41 +46,44 @@ export class UploadService {
     });
   }
 
-  async deleteFileByUrl(url: string): Promise<void> {
-    if (!url || !url.includes('cloudinary.com')) return;
+  async deleteFileByUrl(url: string): Promise<boolean> {
+    if (!url || !url.includes('cloudinary.com')) return false;
     try {
       const matches = url.match(/\/upload\/(?:v\d+\/)?([^\.]+)/);
       if (matches && matches[1]) {
         const publicId = decodeURIComponent(matches[1]);
-        await new Promise((resolve) => {
+        return await new Promise<boolean>((resolve) => {
           cloudinary.uploader.destroy(publicId, (error, result) => {
             if (error) {
               console.error('Cloudinary Delete Error:', error);
+              return resolve(false);
             }
-            resolve(result);
+            resolve(Boolean(result));
           });
         });
       }
     } catch (e) {
       console.error('Error deleting from Cloudinary:', e);
     }
+    return false;
   }
 
-  async deleteFolder(folderPath: string): Promise<void> {
+  async deleteFolder(folderPath: string): Promise<boolean> {
     try {
-      await new Promise((resolve, reject) => {
+      return await new Promise<boolean>((resolve) => {
         cloudinary.api.delete_folder(folderPath, (error: any, result: any) => {
           if (error) {
             // Ignore if folder doesn't exist (404)
-            if (error.http_code === 404) return resolve(result);
+            if (error.http_code === 404) return resolve(true);
             console.error('Cloudinary Delete Folder Error:', error);
-            return reject(error);
+            return resolve(false);
           }
-          resolve(result);
+          resolve(Boolean(result));
         });
       });
     } catch (e) {
       console.error('Error deleting folder from Cloudinary:', e);
+      return false;
     }
   }
 }

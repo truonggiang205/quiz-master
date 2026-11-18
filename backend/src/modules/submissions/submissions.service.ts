@@ -104,7 +104,7 @@ export class SubmissionsService {
     return `quiz-master/${rootDir}/${subjectDir}/${titleDir}/bai-tap`;
   }
 
-  async startQuiz(quizId: string, student: { id: string; name: string }) {
+  async startQuiz(quizId: string, student: { id: string; name: string }, retriedAfterDeadlock = false): Promise<Record<string, unknown>> {
     const quiz = await this.quizRepo.findOneBy({ id: quizId });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
@@ -133,11 +133,19 @@ export class SubmissionsService {
       });
     } catch (error: any) {
       // The unique attempt number constraint is the final database backstop for
-      // concurrent starts. Convert the losing request into a normal resume.
-      if (error?.code === 'ER_DUP_ENTRY') {
+      // concurrent starts. MySQL wraps duplicate/deadlock errors in
+      // QueryFailedError.driverError, so normalize both forms and resume the
+      // winning active attempt instead of leaking a 500 to the student.
+      const databaseErrorCode = error?.code || error?.driverError?.code;
+      if (databaseErrorCode === 'ER_DUP_ENTRY' || databaseErrorCode === 'ER_LOCK_DEADLOCK') {
         const active = await this.attemptRepo.findOne({ where: { quizId, studentId: student.id, status: 'IN_PROGRESS' as any }, order: { createdAt: 'DESC' } });
         if (active && new Date(active.expiresAt) > new Date()) {
           return { ...this.publicAttempt(active, quiz), studentId: student.id, studentName: student.name };
+        }
+        // A deadlock victim can be released before the winning transaction has
+        // committed. Retry once without delay so the next read sees that row.
+        if (databaseErrorCode === 'ER_LOCK_DEADLOCK' && !retriedAfterDeadlock) {
+          return this.startQuiz(quizId, student, true);
         }
       }
       throw error;
@@ -160,14 +168,20 @@ export class SubmissionsService {
   }
 
   async saveAttemptAnswers(quizId: string, attemptId: string, studentId: string, answers: any[]) {
-    return this.attemptRepo.manager.transaction(async manager => {
+    const result = await this.attemptRepo.manager.transaction(async manager => {
       const repo = manager.getRepository(QuizAttemptEntity);
       const attempt = await repo.createQueryBuilder('attempt').setLock('pessimistic_write')
         .where('attempt.id = :attemptId AND attempt.quizId = :quizId AND attempt.studentId = :studentId', { attemptId, quizId, studentId })
         .getOne();
       if (!attempt) throw new UnauthorizedException('Attempt không hợp lệ');
       if (attempt.status !== 'IN_PROGRESS' || new Date(attempt.expiresAt) < new Date()) {
-        if (attempt.status === 'IN_PROGRESS') { attempt.status = 'EXPIRED'; await repo.save(attempt); }
+        // Returning normally commits the EXPIRED transition. Throwing here
+        // would roll it back with the draft transaction.
+        if (attempt.status === 'IN_PROGRESS') {
+          attempt.status = 'EXPIRED';
+          await repo.save(attempt);
+          return { expired: true as const };
+        }
         throw new BadRequestException('Attempt này không còn khả dụng');
       }
       const snapshot = attempt.quizSnapshot?.questions || attempt.questionSnapshot;
@@ -177,8 +191,10 @@ export class SubmissionsService {
       }
       attempt.draftAnswers = JSON.parse(JSON.stringify(answers));
       await repo.save(attempt);
-      return { attemptId: attempt.id, answers: attempt.draftAnswers };
+      return { expired: false as const, attemptId: attempt.id, answers: attempt.draftAnswers };
     });
+    if (result.expired) throw new BadRequestException('Attempt này không còn khả dụng');
+    return { attemptId: result.attemptId, answers: result.answers };
   }
 
   async submitQuiz(
@@ -456,7 +472,7 @@ export class SubmissionsService {
       if (new Date(lockedAttempt.expiresAt) < new Date()) {
         lockedAttempt.status = 'EXPIRED';
         await manager.getRepository(QuizAttemptEntity).save(lockedAttempt);
-        throw new BadRequestException('Đã hết thời gian làm bài');
+        return null;
       }
       const result = await manager.getRepository(SubmissionEntity).save(submission);
       lockedAttempt.status = 'SUBMITTED';
@@ -465,6 +481,7 @@ export class SubmissionsService {
       await manager.getRepository(QuizAttemptEntity).save(lockedAttempt);
       return result;
     });
+    if (!saved) throw new BadRequestException('Đã hết thời gian làm bài');
     const answerReleased = isAnswerReleased(attemptSnapshot.answerReleaseAt);
     return answerReleased ? saved : { ...saved, answers: saved.answers.map(answer => this.maskAnswerForStudent(answer)) };
   }

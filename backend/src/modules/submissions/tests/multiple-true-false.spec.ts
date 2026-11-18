@@ -8,10 +8,10 @@ describe('MULTIPLE_TRUE_FALSE submission', () => {
     { id: 'c', text: 'C', isCorrect: true },
   ];
 
-  function setup() {
+  function setup(statementSet = statements, points = 100) {
     let saved: any;
     const quiz = { id: 'quiz', title: 'Quiz', teacherId: 'teacher', totalPoints: 100, totalAttempts: 1, answerReleaseAt: '2999-01-01' };
-    const question = { id: 'question', quizId: 'quiz', type: 'MULTIPLE_TRUE_FALSE', options: statements, points: 100 };
+    const question = { id: 'question', quizId: 'quiz', type: 'MULTIPLE_TRUE_FALSE', options: statementSet.map(statement => ({ ...statement })), points };
     const attempt: any = { id: 'attempt', quizId: 'quiz', studentId: 'student', status: 'IN_PROGRESS', expiresAt: '2999-01-01', questionSnapshot: [question] };
     const submissions: any = {
       count: vi.fn().mockResolvedValue(0),
@@ -68,6 +68,48 @@ describe('MULTIPLE_TRUE_FALSE submission', () => {
     expect(student.detailedAnswers[0].statementAnswers?.[0]).not.toHaveProperty('isCorrect');
     const teacher = await service.getSubmissionById(getSaved().id, 'TEACHER', 'teacher');
     expect(teacher.detailedAnswers[0].statementAnswers?.[0].correctAnswer).toBe(true);
+  });
+
+  const fourStatements = [
+    { id: 'a', text: 'A', isCorrect: true }, { id: 'b', text: 'B', isCorrect: false },
+    { id: 'c', text: 'C', isCorrect: true }, { id: 'd', text: 'D', isCorrect: false },
+  ];
+  const responseFor = (items: typeof fourStatements, correctCount: number) => items.map((item, index) => ({
+    statementId: item.id, answer: index < correctCount ? item.isCorrect : !item.isCorrect,
+  }));
+
+  it.each([[4, 100], [3, 75], [2, 50], [1, 25], [0, 0]])('awards %i/4 statements as %i units', async (correctCount, expected) => {
+    const { submit } = setup(fourStatements);
+    expect((await submit(responseFor(fourStatements, correctCount))).score).toBe(expected);
+  });
+
+  it.each([[3, 60], [5, 100], [0, 0]])('awards %i/5 statements as %i units', async (correctCount, expected) => {
+    const five = [...fourStatements, { id: 'e', text: 'E', isCorrect: true }];
+    const { submit } = setup(five);
+    expect((await submit(responseFor(five, correctCount))).score).toBe(expected);
+  });
+
+  it.each([[200, 2, 100], [1000, 3, 750]])('respects question points %i with %i correct statements', async (points, correctCount, expected) => {
+    const { submit } = setup(fourStatements, points);
+    const result = await submit(responseFor(fourStatements, correctCount));
+    expect(result.score).toBe(expected);
+    expect(result.score).toBeLessThanOrEqual(points);
+  });
+
+  it('uses immutable attempt snapshot after live question mutation and option reorder', async () => {
+    const original = fourStatements.map(statement => ({ ...statement }));
+    const { submit } = setup(original, 100);
+    // This represents a teacher mutating the live question after start; submit
+    // only receives the snapshot held by the attempt mock above.
+    fourStatements.reverse().forEach(statement => { statement.isCorrect = !statement.isCorrect; });
+    const result = await submit(responseFor(original, 3));
+    expect(result.score).toBe(75);
+  });
+
+  it('does not award unanswered statements or divide by zero', async () => {
+    const { submit } = setup(fourStatements, 100);
+    expect((await submit([])).score).toBe(0);
+    await expect(setup([], 100).submit([])).resolves.toMatchObject({ score: 0 });
   });
 });
 

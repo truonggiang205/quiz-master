@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QuestionsService } from '../questions.service.js';
+import type { Repository } from 'typeorm';
+import type { UserEntity } from '../../../entities/user.entity.js';
 import { QuestionEntity, SubmissionEntity } from '../../../entities/index.js';
 import { BadRequestException } from '@nestjs/common';
 
@@ -52,6 +54,7 @@ describe('QuestionsService - Essay Rubric and Submission Handling', () => {
       mockRubricRepo,
       mockQuizzesService,
       mockUploadService,
+      { findOne: vi.fn() } as unknown as Repository<UserEntity>,
     );
   });
 

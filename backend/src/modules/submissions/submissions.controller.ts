@@ -54,6 +54,23 @@ export class SubmissionsController {
     return createSuccessResponse(submission, 'Nộp bài thi thành công');
   }
 
+  @Get('quizzes/:quizId/attempts/:attemptId')
+  @Roles('STUDENT')
+  async getAttempt(@Param('quizId') quizId: string, @Param('attemptId') attemptId: string, @CurrentUser() user: any) {
+    return createSuccessResponse(await this.submissionsService.getAttempt(quizId, attemptId, user.id));
+  }
+
+  @Post('quizzes/:quizId/attempts/:attemptId/answers')
+  @Roles('STUDENT')
+  async saveAttemptAnswers(
+    @Param('quizId') quizId: string,
+    @Param('attemptId') attemptId: string,
+    @Body('answers') answers: any[],
+    @CurrentUser() user: any,
+  ) {
+    return createSuccessResponse(await this.submissionsService.saveAttemptAnswers(quizId, attemptId, user.id, answers));
+  }
+
   @Get('submissions/:id')
   @ApiOperation({ summary: 'Xem chi tiết kết quả bài nộp (có kiểm tra answer release)' })
   async getSubmission(

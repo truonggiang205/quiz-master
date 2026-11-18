@@ -5,6 +5,7 @@ import { AppealEntity, AppealStatus } from '../../entities/appeal.entity.js';
 import { SubmissionEntity } from '../../entities/submission.entity.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { QuizEntity } from '../../entities/quiz.entity.js';
+import { isAnswerReleased, sanitizeStudentAnswerData } from '../../common/utils/submission-visibility.util.js';
 
 @Injectable()
 export class AppealsService {
@@ -77,19 +78,12 @@ export class AppealsService {
     return Promise.all(appeals.map(async appeal => {
       if (!appeal.submission?.answers) return appeal;
       const quiz = await this.quizRepo.findOneBy({ id: appeal.submission.quizId });
-      if (quiz?.answerReleaseAt && new Date(quiz.answerReleaseAt) <= new Date()) return appeal;
+      if (isAnswerReleased(appeal.submission.answerReleaseAt ?? quiz?.answerReleaseAt)) return appeal;
       return {
         ...appeal,
         submission: {
           ...appeal.submission,
-          answers: appeal.submission.answers.map(answer => {
-            const { isCorrect: _isCorrect, scoreAwarded: _scoreAwarded, statementAnswers, questionOptions, ...rest } = answer;
-            return {
-              ...rest,
-              questionOptions: questionOptions?.map(({ isCorrect: _correct, ...option }: any) => option),
-              statementAnswers: statementAnswers?.map(({ correctAnswer: _correct, isCorrect: _statementCorrect, ...statement }: any) => statement),
-            };
-          }),
+          answers: appeal.submission.answers.map(answer => sanitizeStudentAnswerData(answer)),
         },
       };
     }));

@@ -10,26 +10,23 @@ import {
   UserEntity,
   QuizAttemptEntity,
   AttemptQuestionSnapshot,
+  AttemptQuizSnapshot,
 } from '../../entities/index.js';
 import { SubmitQuizDto } from './dto/submit-quiz.dto.js';
 import { UploadService } from '../upload/upload.service.js';
 import { EssayRubricEntity } from '../grading/entities/essay-rubric.entity.js';
 import { gradeWithRubric } from '../grading/rubric/rubric-grader.js';
 import { DEFAULT_GRADING_CONFIG } from '../grading/grading.config.js';
+import { isAnswerReleased, sanitizeStudentAnswerData } from '../../common/utils/submission-visibility.util.js';
 
 @Injectable()
 export class SubmissionsService {
   private maskAnswerForStudent(answer: StudentAnswer): any {
-    const { isCorrect: _isCorrect, scoreAwarded: _scoreAwarded, questionOptions, questionExplanation: _explanation, statementAnswers, ...rest } = answer;
-    return {
-      ...rest,
-      questionOptions: questionOptions?.map(({ isCorrect: _correct, ...option }) => option),
-      statementAnswers: statementAnswers?.map(({ correctAnswer: _correct, isCorrect: _isCorrectStatement, ...statement }) => statement),
-    };
+    return sanitizeStudentAnswerData(answer);
   }
 
   private isAnswerReleased(quiz?: QuizEntity | null): boolean {
-    return Boolean(quiz?.answerReleaseAt && new Date(quiz.answerReleaseAt) <= new Date());
+    return isAnswerReleased(quiz?.answerReleaseAt);
   }
 
   private async assertStudentCanAttempt(quiz: QuizEntity, studentId: string) {
@@ -55,6 +52,34 @@ export class SubmissionsService {
     return snapshot.map(({ options, essayRubric: _rubric, explanation: _explanation, ...question }) => ({
       ...question, options: options.map(({ isCorrect: _correct, ...option }) => option),
     }));
+  }
+
+  private createAttemptSnapshot(quiz: QuizEntity, questions: QuestionEntity[]): AttemptQuizSnapshot {
+    return {
+      version: 1, quizId: quiz.id, quizTitle: quiz.title, durationMinutes: quiz.durationMinutes,
+      totalPoints: quiz.totalPoints, answerReleaseAt: quiz.answerReleaseAt,
+      showScoreImmediately: quiz.showScoreImmediately, showCorrectAnswers: quiz.showCorrectAnswers,
+      showExplanation: quiz.showExplanation, questions: this.snapshotQuestions(questions),
+    };
+  }
+
+  private getAttemptSnapshot(attempt: QuizAttemptEntity, quiz: QuizEntity): AttemptQuizSnapshot {
+    return attempt.quizSnapshot || {
+      version: 1, quizId: quiz.id, quizTitle: quiz.title, durationMinutes: quiz.durationMinutes,
+      totalPoints: quiz.totalPoints, answerReleaseAt: quiz.answerReleaseAt,
+      showScoreImmediately: quiz.showScoreImmediately, showCorrectAnswers: quiz.showCorrectAnswers,
+      showExplanation: quiz.showExplanation, questions: attempt.questionSnapshot || [],
+    };
+  }
+
+  private publicAttempt(attempt: QuizAttemptEntity, quiz: QuizEntity) {
+    const snapshot = this.getAttemptSnapshot(attempt, quiz);
+    return {
+      quizId: snapshot.quizId, quizTitle: snapshot.quizTitle, durationMinutes: snapshot.durationMinutes,
+      totalPoints: snapshot.totalPoints, answerReleaseAt: snapshot.answerReleaseAt, startedAt: attempt.startedAt,
+      expiresAt: attempt.expiresAt, attemptId: attempt.id, totalQuestions: snapshot.questions.length,
+      questions: this.publicQuestions(snapshot.questions), draftAnswers: attempt.draftAnswers || [],
+    };
   }
   constructor(
     @InjectRepository(SubmissionEntity)
@@ -86,28 +111,73 @@ export class SubmissionsService {
     }
 
     await this.assertStudentCanAttempt(quiz, student.id);
-    return this.attemptRepo.manager.transaction(async manager => {
+    try {
+      return await this.attemptRepo.manager.transaction(async manager => {
       const attemptRepo = manager.getRepository(QuizAttemptEntity);
       const now = new Date();
       const active = await attemptRepo.createQueryBuilder('attempt').setLock('pessimistic_write')
         .where('attempt.quizId = :quizId AND attempt.studentId = :studentId AND attempt.status = :status', { quizId, studentId: student.id, status: 'IN_PROGRESS' }).getOne();
       if (active && new Date(active.expiresAt) > now) {
-        return { quizId: quiz.id, quizTitle: quiz.title, durationMinutes: quiz.durationMinutes, startedAt: active.startedAt,
-          expiresAt: active.expiresAt, attemptId: active.id, studentId: student.id, studentName: student.name,
-          totalQuestions: active.questionSnapshot.length, questions: this.publicQuestions(active.questionSnapshot) };
+        return { ...this.publicAttempt(active, quiz), studentId: student.id, studentName: student.name };
       }
       if (active) { active.status = 'EXPIRED'; await attemptRepo.save(active); }
       const attempts = await attemptRepo.count({ where: { quizId, studentId: student.id } });
       if (attempts >= (quiz.totalAttempts || 1)) throw new BadRequestException('Bạn đã hết số lần làm bài cho phép');
       const questions = await manager.getRepository(QuestionEntity).find({ where: { quizId }, order: { order: 'ASC' } });
-      const snapshot = this.snapshotQuestions(questions);
-      const expiresAt = new Date(Math.min(now.getTime() + quiz.durationMinutes * 60_000, quiz.endTime ? new Date(quiz.endTime).getTime() : Number.MAX_SAFE_INTEGER));
+      const quizSnapshot = this.createAttemptSnapshot(quiz, questions);
+      const expiresAt = new Date(Math.min(now.getTime() + quizSnapshot.durationMinutes * 60_000, quiz.endTime ? new Date(quiz.endTime).getTime() : Number.MAX_SAFE_INTEGER));
       const attempt = attemptRepo.create({ id: `attempt-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`, quizId, studentId: student.id,
-        attemptNumber: attempts + 1, status: 'IN_PROGRESS', questionSnapshot: snapshot, startedAt: now.toISOString(), expiresAt: expiresAt.toISOString() });
+        attemptNumber: attempts + 1, status: 'IN_PROGRESS', questionSnapshot: quizSnapshot.questions, quizSnapshot, draftAnswers: [], startedAt: now.toISOString(), expiresAt: expiresAt.toISOString() });
       await attemptRepo.save(attempt);
-      return { quizId: quiz.id, quizTitle: quiz.title, durationMinutes: quiz.durationMinutes, startedAt: attempt.startedAt,
-        expiresAt: attempt.expiresAt, attemptId: attempt.id, studentId: student.id, studentName: student.name,
-        totalQuestions: snapshot.length, questions: this.publicQuestions(snapshot) };
+      return { ...this.publicAttempt(attempt, quiz), studentId: student.id, studentName: student.name };
+      });
+    } catch (error: any) {
+      // The unique attempt number constraint is the final database backstop for
+      // concurrent starts. Convert the losing request into a normal resume.
+      if (error?.code === 'ER_DUP_ENTRY') {
+        const active = await this.attemptRepo.findOne({ where: { quizId, studentId: student.id, status: 'IN_PROGRESS' as any }, order: { createdAt: 'DESC' } });
+        if (active && new Date(active.expiresAt) > new Date()) {
+          return { ...this.publicAttempt(active, quiz), studentId: student.id, studentName: student.name };
+        }
+      }
+      throw error;
+    }
+  }
+
+  async getAttempt(quizId: string, attemptId: string, studentId: string) {
+    const [quiz, attempt] = await Promise.all([
+      this.quizRepo.findOneBy({ id: quizId }),
+      this.attemptRepo.findOneBy({ id: attemptId, quizId, studentId }),
+    ]);
+    if (!quiz || !attempt) throw new UnauthorizedException('Attempt không hợp lệ');
+    if (attempt.status !== 'IN_PROGRESS') throw new BadRequestException('Attempt này không còn khả dụng');
+    if (new Date(attempt.expiresAt) < new Date()) {
+      attempt.status = 'EXPIRED';
+      await this.attemptRepo.save(attempt);
+      throw new BadRequestException('Đã hết thời gian làm bài');
+    }
+    return this.publicAttempt(attempt, quiz);
+  }
+
+  async saveAttemptAnswers(quizId: string, attemptId: string, studentId: string, answers: any[]) {
+    return this.attemptRepo.manager.transaction(async manager => {
+      const repo = manager.getRepository(QuizAttemptEntity);
+      const attempt = await repo.createQueryBuilder('attempt').setLock('pessimistic_write')
+        .where('attempt.id = :attemptId AND attempt.quizId = :quizId AND attempt.studentId = :studentId', { attemptId, quizId, studentId })
+        .getOne();
+      if (!attempt) throw new UnauthorizedException('Attempt không hợp lệ');
+      if (attempt.status !== 'IN_PROGRESS' || new Date(attempt.expiresAt) < new Date()) {
+        if (attempt.status === 'IN_PROGRESS') { attempt.status = 'EXPIRED'; await repo.save(attempt); }
+        throw new BadRequestException('Attempt này không còn khả dụng');
+      }
+      const snapshot = attempt.quizSnapshot?.questions || attempt.questionSnapshot;
+      const questionIds = new Set(snapshot.map(question => question.id));
+      if (!Array.isArray(answers) || answers.some(answer => !answer || !questionIds.has(answer.questionId))) {
+        throw new BadRequestException('Dữ liệu bài làm không hợp lệ');
+      }
+      attempt.draftAnswers = JSON.parse(JSON.stringify(answers));
+      await repo.save(attempt);
+      return { attemptId: attempt.id, answers: attempt.draftAnswers };
     });
   }
 
@@ -130,7 +200,8 @@ export class SubmissionsService {
       await this.attemptRepo.save(attempt);
       throw new BadRequestException('Đã hết thời gian làm bài');
     }
-    const quizQuestions = attempt.questionSnapshot;
+    const attemptSnapshot = this.getAttemptSnapshot(attempt, quiz);
+    const quizQuestions = attemptSnapshot.questions;
 
     const statementResponses = (dto.answers || []).filter(answer => answer.statementAnswers !== undefined);
     if (statementResponses.some(answer => !quizQuestions.some(question => question.id === answer.questionId && question.type === 'MULTIPLE_TRUE_FALSE') ||
@@ -347,14 +418,14 @@ export class SubmissionsService {
       }
     }
 
-    const maxScore = quiz.totalPoints || quizQuestions.reduce((sum, q) => sum + (Number(q.points) || 0), 0) || 1000;
+    const maxScore = attemptSnapshot.totalPoints || quizQuestions.reduce((sum, q) => sum + (Number(q.points) || 0), 0) || 1000;
     const percentage = maxScore > 0 ? Number(((totalScore / maxScore) * 100).toFixed(1)) : 0;
     const scaledScore = totalScore; // store raw points
 
     const submission = this.submissionRepo.create({
       id: `sub-${Date.now()}`,
       quizId,
-      quizTitle: quiz.title,
+      quizTitle: attemptSnapshot.quizTitle,
       studentId: student.id,
       studentName: student.name,
       studentEmail: student.email,
@@ -373,6 +444,7 @@ export class SubmissionsService {
           questionExplanation: question.explanation, questionEssayRubric: question.essayRubric };
       }),
       submittedAt: new Date().toISOString(),
+      answerReleaseAt: attemptSnapshot.answerReleaseAt || null,
     });
 
     const saved = await this.submissionRepo.manager.transaction(async manager => {
@@ -393,7 +465,7 @@ export class SubmissionsService {
       await manager.getRepository(QuizAttemptEntity).save(lockedAttempt);
       return result;
     });
-    const answerReleased = this.isAnswerReleased(quiz);
+    const answerReleased = isAnswerReleased(attemptSnapshot.answerReleaseAt);
     return answerReleased ? saved : { ...saved, answers: saved.answers.map(answer => this.maskAnswerForStudent(answer)) };
   }
 
@@ -412,7 +484,7 @@ export class SubmissionsService {
     }
 
     const isTeacher = userRole === 'TEACHER' || userRole === 'ADMIN';
-    const canViewAnswers = isTeacher || this.isAnswerReleased(quiz);
+    const canViewAnswers = isTeacher || isAnswerReleased(sub.answerReleaseAt ?? quiz?.answerReleaseAt);
 
     const detailedAnswers = sub.answers.map((ans) => {
       // New submissions carry a full immutable question snapshot.  Old rows keep
@@ -535,7 +607,7 @@ export class SubmissionsService {
       const hasUngradedEssay = sub.answers?.some(a => a.isCorrect === undefined && a.scoreAwarded === 0);
       result.push({
         ...sub,
-        answers: this.isAnswerReleased(quiz) ? sub.answers : sub.answers.map(answer => this.maskAnswerForStudent(answer)),
+        answers: isAnswerReleased(sub.answerReleaseAt ?? quiz?.answerReleaseAt) ? sub.answers : sub.answers.map(answer => this.maskAnswerForStudent(answer)),
         quizType: quiz?.mode || 'QUIZ',
         isFullyGraded: !hasUngradedEssay,
       });

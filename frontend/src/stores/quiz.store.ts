@@ -19,7 +19,7 @@ interface QuizTakingState {
   attemptId: string | null;
 
   // Actions
-  initQuizTaking: (quiz: Quiz, questions: Question[], attemptId: string, startedAt?: string) => void;
+  initQuizTaking: (quiz: Quiz, questions: Question[], attemptId: string, startedAt?: string, draftAnswers?: any[]) => void;
   selectSingleAnswer: (questionId: string, optionId: string) => void;
   toggleMultipleAnswer: (questionId: string, optionId: string) => void;
   addEssayAnswer: (questionId: string, url: string) => void;
@@ -52,7 +52,7 @@ export const useQuizStore = create<QuizTakingState>()(
   isSubmitModalOpen: false,
   attemptId: null,
 
-  initQuizTaking: (quiz: Quiz, questions: Question[], attemptId: string, startedAt?: string) => {
+  initQuizTaking: (quiz: Quiz, questions: Question[], attemptId: string, startedAt?: string, draftAnswers?: any[]) => {
     const current = get();
     const nowMs = Date.now();
     const totalSeconds = quiz.durationMinutes * 60;
@@ -66,15 +66,28 @@ export const useQuizStore = create<QuizTakingState>()(
       return;
     }
 
-    // Brand-new attempt
+    const restored = (draftAnswers || []).reduce((state, answer) => {
+      if (!answer?.questionId) return state;
+      state.answers[answer.questionId] = answer.selectedOptionIds || [];
+      if (answer.essayImageUrl) state.essayAnswers[answer.questionId] = String(answer.essayImageUrl).split('|||').filter(Boolean);
+      if (answer.essayText) state.essayTextAnswers[answer.questionId] = answer.essayText;
+      if (Array.isArray(answer.statementAnswers)) {
+        state.statementAnswers[answer.questionId] = Object.fromEntries(answer.statementAnswers
+          .filter((statement: any) => typeof statement?.answer === 'boolean')
+          .map((statement: any) => [statement.statementId, statement.answer]));
+      }
+      return state;
+    }, { answers: {} as Record<string, string[]>, essayAnswers: {} as Record<string, string[]>, essayTextAnswers: {} as Record<string, string>, statementAnswers: {} as Record<string, Record<string, boolean>> });
+
+    // Brand-new attempt or server-side restored work
     set({
       currentQuiz: quiz,
       questions,
       currentQuestionIndex: 0,
-      answers: {},
-      essayAnswers: {},
-      essayTextAnswers: {},
-      statementAnswers: {},
+      answers: restored.answers,
+      essayAnswers: restored.essayAnswers,
+      essayTextAnswers: restored.essayTextAnswers,
+      statementAnswers: restored.statementAnswers,
       flaggedQuestionIds: [],
       remainingSeconds: totalSeconds,
       startedAtMs: startedAt ? new Date(startedAt).getTime() : nowMs,

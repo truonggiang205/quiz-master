@@ -16,6 +16,19 @@ export interface AttemptQuestionSnapshot {
   order: number;
 }
 
+export interface AttemptQuizSnapshot {
+  version: 1;
+  quizId: string;
+  quizTitle: string;
+  durationMinutes: number;
+  totalPoints: number;
+  answerReleaseAt?: string | null;
+  showScoreImmediately: boolean;
+  showCorrectAnswers: boolean;
+  showExplanation: boolean;
+  questions: AttemptQuestionSnapshot[];
+}
+
 @Entity('quiz_attempts')
 @Unique('UQ_quiz_attempt_student_number', ['quizId', 'studentId', 'attemptNumber'])
 export class QuizAttemptEntity {
@@ -39,6 +52,13 @@ export class QuizAttemptEntity {
 
   @Column({ type: 'json' })
   questionSnapshot: AttemptQuestionSnapshot[];
+
+  @Column({ type: 'json', nullable: true })
+  quizSnapshot?: AttemptQuizSnapshot | null;
+
+  /** Student-provided work only; no marking data is written here. */
+  @Column({ type: 'json', nullable: true })
+  draftAnswers?: any[] | null;
 
   @Column({ type: 'varchar', length: 50 })
   startedAt: string;

@@ -61,7 +61,7 @@ export const StudentQuizTakingPage: React.FC = () => {
         // Verify start conditions (e.g. attempt limits)
         try {
           const attempt = await submissionService.startQuiz(id);
-          initQuizTaking(quizData, attempt.questions, attempt.attemptId, attempt.startedAt);
+          initQuizTaking(quizData, attempt.questions, attempt.attemptId, attempt.startedAt, attempt.draftAnswers);
         } catch (error: any) {
           addToast({ 
             type: 'error', 
@@ -86,6 +86,23 @@ export const StudentQuizTakingPage: React.FC = () => {
       // Don't reset exam if navigating to results
     };
   }, [id, initQuizTaking, navigate, addToast, resetExam]);
+
+  // Persist a response-only draft server-side so another device can resume it.
+  useEffect(() => {
+    if (!id || !attemptId || loading) return;
+    const timer = window.setTimeout(() => {
+      const draft = questions.map(q => ({
+        questionId: q.id,
+        selectedOptionIds: answers[q.id] || [],
+        essayImageUrl: (essayAnswers[q.id] || []).join('|||'),
+        essayText: essayTextAnswers[q.id] || '',
+        ...(q.type === 'MULTIPLE_TRUE_FALSE' ? { statementAnswers: Object.entries(statementAnswers?.[q.id] || {})
+          .map(([statementId, answer]) => ({ statementId, answer })) } : {}),
+      }));
+      submissionService.saveAttemptAnswers(id, attemptId, draft).catch(() => undefined);
+    }, 750);
+    return () => window.clearTimeout(timer);
+  }, [id, attemptId, loading, questions, answers, essayAnswers, essayTextAnswers, statementAnswers]);
 
   // Sync timer with wall clock on tab focus (handles cases where user was away)
   useEffect(() => {

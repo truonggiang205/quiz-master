@@ -10,6 +10,11 @@ export const submissionService = {
     throw new Error('Failed to start quiz');
   },
 
+  async saveAttemptAnswers(quizId: string, attemptId: string, answers: unknown[]) {
+    const res = await apiClient.post(`/quizzes/${quizId}/attempts/${attemptId}/answers`, { answers });
+    return res.data?.data;
+  },
+
   async submitQuiz(
     quizId: string,
     attemptId: string,

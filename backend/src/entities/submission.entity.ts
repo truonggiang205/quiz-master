@@ -78,6 +78,10 @@ export class SubmissionEntity {
   @Column({ type: 'varchar', length: 50, nullable: true })
   submittedAt: string;
 
+  /** Release policy frozen from the attempt snapshot. */
+  @Column({ type: 'varchar', length: 50, nullable: true })
+  answerReleaseAt?: string | null;
+
   @Index()
   @CreateDateColumn()
   createdAt: Date;

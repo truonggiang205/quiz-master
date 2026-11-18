@@ -1,6 +1,7 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Repository, In } from 'typeorm';
+import { isAnswerReleased, sanitizeStudentAnswerData } from '../../common/utils/submission-visibility.util.js';
 import { QuizEntity, SubmissionEntity, UserEntity } from '../../entities/index.js';
 import {
   TeacherDashboardQueryDto,
@@ -409,6 +410,11 @@ export class DashboardService {
     }
 
     const mySubmissions = await subQb.orderBy('sub.createdAt', 'DESC').getMany();
+    const submissionQuizIds = [...new Set(mySubmissions.map(submission => submission.quizId))];
+    const submissionQuizzes = submissionQuizIds.length
+      ? (await this.quizRepo.find({ where: { id: In(submissionQuizIds) } })) || []
+      : [];
+    const releaseByQuizId = new Map(submissionQuizzes.map(quiz => [quiz.id, quiz.answerReleaseAt]));
 
     const submissionCounts = mySubmissions.reduce(
       (acc, sub) => {
@@ -479,10 +485,11 @@ export class DashboardService {
       availableQuizzes: availableQuizzes.slice(0, 6),
       recentSubmissions: mySubmissions.slice(0, 6).map(submission => ({
         ...submission,
-        answers: submission.answers?.map(answer => {
-          const { statementAnswers: _statementAnswers, ...rest } = answer;
-          return rest;
-        }),
+        // Dashboard is a student endpoint and must never bypass answer-release
+        // filtering through nested submission snapshots.
+        answers: isAnswerReleased(submission.answerReleaseAt ?? releaseByQuizId.get(submission.quizId))
+          ? submission.answers
+          : submission.answers?.map(answer => sanitizeStudentAnswerData(answer)),
       })),
       progressTrend,
       subjectPerformance,

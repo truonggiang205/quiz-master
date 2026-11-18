@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { QuizEntity, QuizStatus, QuestionEntity, SubmissionEntity, ClassEntity, UserEntity } from '../../entities/index.js';
+import { QuizEntity, QuizStatus, QuestionEntity, SubmissionEntity, ClassEntity, UserEntity, QuizAttemptEntity } from '../../entities/index.js';
 import { CreateQuizDto } from './dto/create-quiz.dto.js';
 import { UpdateQuizDto } from './dto/update-quiz.dto.js';
 import { UploadService } from '../upload/upload.service.js';
@@ -20,6 +20,8 @@ export class QuizzesService {
     private readonly userRepo: Repository<UserEntity>,
     @InjectRepository(ClassEntity)
     private readonly classRepo: Repository<ClassEntity>,
+    @InjectRepository(QuizAttemptEntity)
+    private readonly attemptRepo: Repository<QuizAttemptEntity>,
     private readonly uploadService: UploadService,
     private readonly notificationsService: NotificationsService,
   ) {}
@@ -113,23 +115,33 @@ export class QuizzesService {
     return this.quizRepo.save(newQuiz);
   }
 
-  async updateQuiz(id: string, dto: UpdateQuizDto) {
+  private assertQuizManager(quiz: QuizEntity, user: { id?: string; role?: string }) {
+    if (user?.role === 'ADMIN') return;
+    if (user?.role !== 'TEACHER' || quiz.teacherId !== user.id) {
+      throw new ForbiddenException('Bạn không có quyền thao tác với bài kiểm tra này');
+    }
+  }
+
+  async updateQuiz(id: string, dto: UpdateQuizDto, user: { id?: string; role?: string }) {
     const quiz = await this.quizRepo.findOneBy({ id });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra để cập nhật');
     }
 
-    Object.assign(quiz, dto);
+    this.assertQuizManager(quiz, user);
+    const { teacherId: _teacherId, teacherName: _teacherName, ...safeDto } = dto as any;
+    Object.assign(quiz, safeDto);
     return this.quizRepo.save(quiz);
   }
 
-  async deleteQuiz(id: string) {
+  async deleteQuiz(id: string, user: { id?: string; role?: string }) {
     const quiz = await this.quizRepo.findOneBy({ id });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra để xóa');
     }
 
-    // Cascade delete questions and submissions
+    this.assertQuizManager(quiz, user);
+    // Cascade delete questions, submissions and attempt snapshots consistently.
     const questions = await this.questionRepo.find({ where: { quizId: id } });
     for (const q of questions) {
       if (q.imageUrl) await this.uploadService.deleteFileByUrl(q.imageUrl);
@@ -160,19 +172,23 @@ export class QuizzesService {
     await this.uploadService.deleteFolder(`${quizFolder}/bài tập`);
     await this.uploadService.deleteFolder(quizFolder);
 
-    await this.questionRepo.delete({ quizId: id });
-    await this.submissionRepo.delete({ quizId: id });
-    await this.quizRepo.delete({ id });
+    await this.attemptRepo.manager.transaction(async manager => {
+      await manager.getRepository(QuizAttemptEntity).delete({ quizId: id });
+      await manager.getRepository(QuestionEntity).delete({ quizId: id });
+      await manager.getRepository(SubmissionEntity).delete({ quizId: id });
+      await manager.getRepository(QuizEntity).delete({ id });
+    });
 
     return { id, deleted: true };
   }
 
-  async publishQuiz(id: string) {
+  async publishQuiz(id: string, user: { id?: string; role?: string }) {
     const quiz = await this.quizRepo.findOneBy({ id });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
     }
 
+    this.assertQuizManager(quiz, user);
     // BE validate: tổng điểm các câu phải bằng total_points khi xuất bản, điểm mỗi câu >= 0 và là số nguyên.
     const questions = await this.questionRepo.find({ where: { quizId: id } });
     let currentTotalPoints = 0;
@@ -222,11 +238,12 @@ export class QuizzesService {
     return quiz;
   }
 
-  async unpublishQuiz(id: string) {
+  async unpublishQuiz(id: string, user: { id?: string; role?: string }) {
     const quiz = await this.quizRepo.findOneBy({ id });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
     }
+    this.assertQuizManager(quiz, user);
     quiz.status = 'DRAFT';
     return this.quizRepo.save(quiz);
   }

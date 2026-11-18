@@ -27,6 +27,7 @@ export const StudentQuizTakingPage: React.FC = () => {
     statementAnswers,
     flaggedQuestionIds,
     remainingSeconds,
+    attemptId,
     initQuizTaking,
     selectSingleAnswer,
     toggleMultipleAnswer,
@@ -49,10 +50,7 @@ export const StudentQuizTakingPage: React.FC = () => {
     if (!id) return;
     const load = async () => {
       try {
-        const [quizData, questionsData] = await Promise.all([
-          quizService.getQuizById(id),
-          quizService.getQuestions(id, true), // examMode = true masks answers!
-        ]);
+        const quizData = await quizService.getQuizById(id);
 
         if (!quizData) {
           addToast({ type: 'error', title: 'Không tìm thấy bài kiểm tra' });
@@ -62,7 +60,8 @@ export const StudentQuizTakingPage: React.FC = () => {
 
         // Verify start conditions (e.g. attempt limits)
         try {
-          await submissionService.startQuiz(id);
+          const attempt = await submissionService.startQuiz(id);
+          initQuizTaking(quizData, attempt.questions, attempt.attemptId, attempt.startedAt);
         } catch (error: any) {
           addToast({ 
             type: 'error', 
@@ -73,7 +72,6 @@ export const StudentQuizTakingPage: React.FC = () => {
           return;
         }
 
-        initQuizTaking(quizData, questionsData);
       } catch (err: any) {
         addToast({ type: 'error', title: 'Không tìm thấy bài kiểm tra', message: 'Bài thi này đã bị xóa hoặc không còn khả dụng.' });
         resetExam();
@@ -128,7 +126,7 @@ export const StudentQuizTakingPage: React.FC = () => {
   };
 
   const handleDoSubmit = useCallback(async () => {
-    if (!id || !currentQuiz || isSubmitting) return;
+    if (!id || !currentQuiz || !attemptId || isSubmitting) return;
 
     setIsSubmitting(true);
     addToast({ type: 'info', title: 'Đang nộp bài...', message: 'Hệ thống đang xử lý bài làm của bạn, vui lòng không tắt trang' });
@@ -157,6 +155,7 @@ export const StudentQuizTakingPage: React.FC = () => {
 
       const submission = await submissionService.submitQuiz(
         id,
+        attemptId,
         formattedAnswers,
         timeUsed,
       );
@@ -177,7 +176,7 @@ export const StudentQuizTakingPage: React.FC = () => {
       });
       setIsSubmitting(false);
     }
-  }, [id, currentQuiz, isSubmitting, answers, essayAnswers, essayTextAnswers, statementAnswers, questions, remainingSeconds, addToast, resetExam, navigate]);
+  }, [id, currentQuiz, attemptId, isSubmitting, answers, essayAnswers, essayTextAnswers, statementAnswers, questions, remainingSeconds, addToast, resetExam, navigate]);
 
   const handleTimeExpired = useCallback(() => {
     addToast({

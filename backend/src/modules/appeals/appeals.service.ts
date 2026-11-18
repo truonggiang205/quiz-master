@@ -74,19 +74,25 @@ export class AppealsService {
 
     const appeals = await qb.getMany();
     if (role === 'TEACHER' || role === 'ADMIN') return appeals;
-    return appeals.map(appeal => {
+    return Promise.all(appeals.map(async appeal => {
       if (!appeal.submission?.answers) return appeal;
+      const quiz = await this.quizRepo.findOneBy({ id: appeal.submission.quizId });
+      if (quiz?.answerReleaseAt && new Date(quiz.answerReleaseAt) <= new Date()) return appeal;
       return {
         ...appeal,
         submission: {
           ...appeal.submission,
           answers: appeal.submission.answers.map(answer => {
-            const { statementAnswers: _statementAnswers, ...rest } = answer;
-            return rest;
+            const { isCorrect: _isCorrect, scoreAwarded: _scoreAwarded, statementAnswers, questionOptions, ...rest } = answer;
+            return {
+              ...rest,
+              questionOptions: questionOptions?.map(({ isCorrect: _correct, ...option }: any) => option),
+              statementAnswers: statementAnswers?.map(({ correctAnswer: _correct, isCorrect: _statementCorrect, ...statement }: any) => statement),
+            };
           }),
         },
       };
-    });
+    }));
   }
 
   async replyAppeal(teacherId: string, appealId: string, status: AppealStatus, reply: string) {

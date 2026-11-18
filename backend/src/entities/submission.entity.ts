@@ -2,13 +2,27 @@ import { Entity, PrimaryColumn, Column, CreateDateColumn, UpdateDateColumn, Inde
 
 export interface StudentAnswer {
   questionId: string;
+  questionType?: string;
+  questionContent?: string;
+  questionImageUrl?: string;
+  questionPoints?: number;
+  questionMaxScore?: number;
+  questionOptions?: QuestionOptionSnapshot[];
+  questionExplanation?: string;
+  questionEssayRubric?: any;
   selectedOptionIds?: string[];
   essayImageUrl?: string;
   essayText?: string;
   isCorrect?: boolean;
   scoreAwarded: number;
   isManuallyGraded?: boolean;
-  statementAnswers?: { statementId: string; text: string; answer: boolean | null; correctAnswer: boolean; isCorrect: boolean }[];
+  statementAnswers?: { statementId: string; text: string; answer: boolean | null; correctAnswer?: boolean; isCorrect?: boolean }[];
+}
+
+export interface QuestionOptionSnapshot {
+  id: string;
+  text: string;
+  isCorrect?: boolean;
 }
 
 @Entity('submissions')

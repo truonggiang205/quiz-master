@@ -16,9 +16,10 @@ interface QuizTakingState {
   startedAtMs: number | null; // Epoch ms when the exam was started (wall clock)
   isTimerRunning: boolean;
   isSubmitModalOpen: boolean;
+  attemptId: string | null;
 
   // Actions
-  initQuizTaking: (quiz: Quiz, questions: Question[]) => void;
+  initQuizTaking: (quiz: Quiz, questions: Question[], attemptId: string, startedAt?: string) => void;
   selectSingleAnswer: (questionId: string, optionId: string) => void;
   toggleMultipleAnswer: (questionId: string, optionId: string) => void;
   addEssayAnswer: (questionId: string, url: string) => void;
@@ -49,14 +50,15 @@ export const useQuizStore = create<QuizTakingState>()(
   startedAtMs: null,
   isTimerRunning: false,
   isSubmitModalOpen: false,
+  attemptId: null,
 
-  initQuizTaking: (quiz: Quiz, questions: Question[]) => {
+  initQuizTaking: (quiz: Quiz, questions: Question[], attemptId: string, startedAt?: string) => {
     const current = get();
     const nowMs = Date.now();
     const totalSeconds = quiz.durationMinutes * 60;
 
     // Resume same quiz in progress
-    if (current.currentQuiz?.id === quiz.id && current.isTimerRunning && current.startedAtMs) {
+    if (current.currentQuiz?.id === quiz.id && current.attemptId === attemptId && current.isTimerRunning && current.startedAtMs) {
       // Recalculate remaining based on wall clock to correct for offline time
       const elapsedSeconds = Math.floor((nowMs - current.startedAtMs) / 1000);
       const correctedRemaining = Math.max(0, totalSeconds - elapsedSeconds);
@@ -75,9 +77,10 @@ export const useQuizStore = create<QuizTakingState>()(
       statementAnswers: {},
       flaggedQuestionIds: [],
       remainingSeconds: totalSeconds,
-      startedAtMs: nowMs,
+      startedAtMs: startedAt ? new Date(startedAt).getTime() : nowMs,
       isTimerRunning: true,
       isSubmitModalOpen: false,
+      attemptId,
     });
   },
 
@@ -200,6 +203,7 @@ export const useQuizStore = create<QuizTakingState>()(
       startedAtMs: null,
       isTimerRunning: false,
       isSubmitModalOpen: false,
+      attemptId: null,
     });
   },
     }),
@@ -218,6 +222,7 @@ export const useQuizStore = create<QuizTakingState>()(
         remainingSeconds: state.remainingSeconds,
         startedAtMs: state.startedAtMs,
         isTimerRunning: state.isTimerRunning,
+        attemptId: state.attemptId,
       }),
     }
   )

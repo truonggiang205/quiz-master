@@ -40,6 +40,11 @@ export class SubmittedAnswerDto {
 }
 
 export class SubmitQuizDto {
+  @ApiProperty({ example: 'attempt-123', description: 'Attempt returned by startQuiz' })
+  @IsString()
+  @IsNotEmpty()
+  attemptId!: string;
+
   @ApiProperty({ type: [SubmittedAnswerDto] })
   @IsArray()
   @ValidateNested({ each: true })

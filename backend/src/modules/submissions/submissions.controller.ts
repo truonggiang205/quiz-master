@@ -12,14 +12,17 @@ import { SubmitQuizDto } from './dto/submit-quiz.dto.js';
 import { createSuccessResponse } from '../../common/dto/api-response.dto.js';
 import { JwtAuthGuard } from '../../common/guards/jwt-auth.guard.js';
 import { CurrentUser } from '../../common/decorators/current-user.decorator.js';
+import { Roles } from '../../common/decorators/roles.decorator.js';
+import { RolesGuard } from '../../common/guards/roles.guard.js';
 
 @ApiTags('Submissions')
 @Controller()
-@UseGuards(JwtAuthGuard)
+@UseGuards(JwtAuthGuard, RolesGuard)
 export class SubmissionsController {
   constructor(private readonly submissionsService: SubmissionsService) {}
 
   @Post('quizzes/:quizId/start')
+  @Roles('STUDENT')
   @ApiOperation({ summary: 'Học sinh bắt đầu làm bài kiểm tra' })
   async startQuiz(
     @Param('quizId') quizId: string,
@@ -34,6 +37,7 @@ export class SubmissionsController {
   }
 
   @Post('quizzes/:quizId/submit')
+  @Roles('STUDENT')
   @ApiOperation({ summary: 'Nộp bài kiểm tra và tính điểm tự động' })
   async submitQuiz(
     @Param('quizId') quizId: string,
@@ -62,12 +66,14 @@ export class SubmissionsController {
 
   @Get('quizzes/:quizId/results')
   @ApiOperation({ summary: 'Xem bảng kết quả và thống kê học sinh (Teacher)' })
+  @Roles('TEACHER', 'ADMIN')
   async getQuizResults(@Param('quizId') quizId: string, @CurrentUser() user: any) {
-    const res = await this.submissionsService.getQuizResults(quizId, user.role);
+    const res = await this.submissionsService.getQuizResults(quizId, user.role, user.id);
     return createSuccessResponse(res);
   }
 
   @Get('student/submissions')
+  @Roles('STUDENT')
   @ApiOperation({ summary: 'Lấy lịch sử làm bài của học sinh' })
   async getMySubmissions(@CurrentUser() user: any) {
     const res = await this.submissionsService.getStudentSubmissions(user.id);
@@ -75,6 +81,7 @@ export class SubmissionsController {
   }
 
   @Post('submissions/:id/grade')
+  @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Chấm điểm tự luận cho học sinh' })
   async gradeSubmission(
     @Param('id') id: string,
@@ -86,9 +93,10 @@ export class SubmissionsController {
   }
 
   @Post('quizzes/:quizId/regrade-essays')
+  @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Tự động chấm lại toàn bộ câu hỏi tự luận theo đáp án của giáo viên' })
-  async regradeEssays(@Param('quizId') quizId: string) {
-    const res = await this.submissionsService.regradeQuizEssays(quizId);
+  async regradeEssays(@Param('quizId') quizId: string, @CurrentUser() user: any) {
+    const res = await this.submissionsService.regradeQuizEssays(quizId, user.id, user.role);
     return createSuccessResponse(res, res.message);
   }
 }

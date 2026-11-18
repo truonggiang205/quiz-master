@@ -6,6 +6,7 @@ import {
   QuizEntity,
   QuestionEntity,
   SubmissionEntity,
+  QuizAttemptEntity,
   ClassEntity,
 } from './entities/index.js';
 import { NotificationEntity } from './entities/notification.entity.js';
@@ -61,6 +62,7 @@ dotenv.config();
         QuizEntity,
         QuestionEntity,
         SubmissionEntity,
+        QuizAttemptEntity,
         ClassEntity,
         NotificationEntity,
         AppealEntity,
@@ -78,7 +80,9 @@ dotenv.config();
         TuitionPaymentEntity,
         TeacherStudentEntity,
       ],
-      synchronize: true, // Auto creates and syncs tables with Aiven MySQL
+      // Schema changes must be deployed through explicit migrations.  This can only
+      // be enabled deliberately for an isolated local development database.
+      synchronize: process.env.DB_SYNCHRONIZE === 'true',
       logging: false,
     }),
     AuthModule,

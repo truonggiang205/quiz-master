@@ -4,40 +4,17 @@ import { json, urlencoded } from 'express';
 import { SwaggerModule, DocumentBuilder } from '@nestjs/swagger';
 import { AppModule } from './app.module.js';
 import { AllExceptionsFilter } from './common/filters/http-exception.filter.js';
+import { createCorsOptions } from './common/config/cors.config.js';
 
 async function bootstrap() {
-  // Pre-flight legacy data reconciliation before TypeORM initializes schema
-  try {
-    const { runExternalStudentLegacyBackfill } = await import(
-      './migrations/external-student-legacy-backfill.js'
-    );
-    await runExternalStudentLegacyBackfill();
-  } catch (err: unknown) {
-    console.error('❌ FATAL: Pre-flight migration failed!');
-    console.error('Error type:', typeof err);
-
-    if (err instanceof Error) {
-      console.error('Error name:', err.name);
-      console.error('Error message:', err.message);
-      console.error('Error stack:', err.stack);
-    } else {
-      console.error('Raw error:', err);
-    }
-
-    process.exit(1);
-  }
-
+  // Schema/data migrations are deliberately separate operational commands.
+  // Starting an application instance must never change production data or DDL.
   const app = await NestFactory.create(AppModule);
 
   // Global prefix
   app.setGlobalPrefix('api');
 
-  // CORS
-  app.enableCors({
-    origin: true, // Cho phép mọi domain (đặc biệt là Vercel) gọi API
-    methods: 'GET,HEAD,PUT,PATCH,POST,DELETE,OPTIONS',
-    credentials: true,
-  });
+  app.enableCors(createCorsOptions());
 
   // Global Pipes & Filters
   app.useGlobalPipes(

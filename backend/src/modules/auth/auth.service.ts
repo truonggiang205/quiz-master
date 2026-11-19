@@ -4,6 +4,7 @@ import {
   OnModuleInit,
   NotFoundException,
   BadRequestException,
+  ServiceUnavailableException,
 } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository } from 'typeorm';
@@ -190,8 +191,11 @@ export class AuthService implements OnModuleInit {
 
     const isProduction = process.env.NODE_ENV === 'production';
     if (!emailSent) {
+      if (isProduction) {
+        throw new ServiceUnavailableException('Dịch vụ email chưa sẵn sàng. Vui lòng thử lại sau.');
+      }
       // In production, never leak devOtp
-      if (!isProduction && process.env.ALLOW_DEV_OTP !== 'false') {
+      if (process.env.ALLOW_DEV_OTP !== 'false') {
         return {
           requireOtp: true,
           email: user.email,
@@ -272,7 +276,10 @@ export class AuthService implements OnModuleInit {
 
     const isProduction = process.env.NODE_ENV === 'production';
     if (!emailSent) {
-      if (!isProduction && process.env.ALLOW_DEV_OTP !== 'false') {
+      if (isProduction) {
+        throw new ServiceUnavailableException('Dịch vụ email chưa sẵn sàng. Vui lòng thử lại sau.');
+      }
+      if (process.env.ALLOW_DEV_OTP !== 'false') {
         return { requireOtp: true, email: user.email, devOtp: otpCode };
       }
     }

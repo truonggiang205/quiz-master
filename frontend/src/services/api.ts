@@ -1,8 +1,8 @@
 import axios from 'axios';
 import { useUiStore } from '../stores/ui.store';
+import { getApiBaseUrl } from '../config/api-url';
 
-const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-export const API_BASE_URL = rawApiUrl.replace(/\/+$/, '');
+export const API_BASE_URL = getApiBaseUrl();
 
 export const apiClient = axios.create({
   baseURL: API_BASE_URL,

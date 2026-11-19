@@ -28,8 +28,16 @@ export interface MigrationResult {
   error?: string;
 }
 
+export interface LegacyBackfillOptions {
+  /** Validate that the command can connect and see the expected source tables without mutating data or DDL. */
+  dryRun?: boolean;
+  /** An advisory-lock namespace.  Keep stable across every worker/deployment. */
+  lockName?: string;
+}
+
 export async function runExternalStudentLegacyBackfill(
   customConfig?: mysql.ConnectionOptions,
+  options: LegacyBackfillOptions = {},
 ): Promise<MigrationResult> {
   const dbHost = process.env.DB_HOST || 'localhost';
   const dbPort = Number(process.env.DB_PORT || 3306);
@@ -77,6 +85,8 @@ export async function runExternalStudentLegacyBackfill(
 
   let connection: mysql.Connection | null = null;
   let inTransaction = false;
+  let advisoryLockHeld = false;
+  const lockName = options.lockName || 'quizmaster:external-student-legacy-backfill:v1';
 
   try {
     console.log('[Migration] Starting External Student Legacy Backfill Migration...');
@@ -91,6 +101,29 @@ export async function runExternalStudentLegacyBackfill(
 
     connection = await mysql.createConnection(config);
     console.log('[Migration] Connected to database successfully.');
+
+    // Backfills are an operator task.  A dry run is intentionally read-only so
+    // it can be used before scheduling the real command against a verified DB.
+    if (options.dryRun) {
+      const [tablesRaw] = await connection.query('SHOW TABLES;');
+      const tables = (tablesRaw as any[]).map((r) => Object.values(r)[0] as string);
+      const required = ['users', 'teacher_students', 'class_students'];
+      const missing = required.filter((table) => !tables.includes(table));
+      if (missing.length) {
+        throw new Error(`[Migration] Dry run aborted: missing required tables: ${missing.join(', ')}`);
+      }
+      result.success = true;
+      console.log('[Migration] Dry run completed: source tables are present; no DDL or data was changed.');
+      return result;
+    }
+
+    // MySQL advisory locks are connection-scoped and protect concurrent Render
+    // jobs/manual invocations.  Do not continue if another run owns the lock.
+    const [lockRows] = await connection.query<any[]>('SELECT GET_LOCK(?, 0) AS acquired', [lockName]);
+    if (Number(lockRows[0]?.acquired) !== 1) {
+      throw new Error('[Migration] Another legacy backfill is already running.');
+    }
+    advisoryLockHeld = true;
 
     // Safe session lock wait timeouts (fail fast instead of hanging on lock waits)
     try {
@@ -673,6 +706,13 @@ export async function runExternalStudentLegacyBackfill(
     throw err;
   } finally {
     if (connection) {
+      if (advisoryLockHeld) {
+        try {
+          await connection.query('SELECT RELEASE_LOCK(?)', [lockName]);
+        } catch {
+          // The connection close below also releases MySQL advisory locks.
+        }
+      }
       await connection.end();
     }
   }
@@ -680,7 +720,11 @@ export async function runExternalStudentLegacyBackfill(
 
 // Standalone CLI runner
 if (process.argv[1] && process.argv[1].includes('external-student-legacy-backfill')) {
-  runExternalStudentLegacyBackfill()
+  const dryRun = process.argv.includes('--dry-run');
+  if (process.env.BACKFILL_CONFIRM !== 'external-student-legacy-v1') {
+    console.error('Refusing legacy backfill: set BACKFILL_CONFIRM=external-student-legacy-v1. Use --dry-run first.');
+    process.exitCode = 1;
+  } else runExternalStudentLegacyBackfill(undefined, { dryRun })
     .then((res) => {
       console.log('Migration Result:', JSON.stringify(res, null, 2));
       process.exit(0);

@@ -42,8 +42,18 @@ import {
 import { TeacherStudentEntity } from './modules/students/entities/teacher-student.entity.js';
 import { TeachingModule } from './modules/teaching/teaching.module.js';
 import { LoggerMiddleware } from './common/middleware/logger.middleware.js';
+import { AppController } from './app.controller.js';
+import { AppService } from './app.service.js';
 
 dotenv.config();
+
+if (process.env.NODE_ENV === 'production') {
+  const missing = ['DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_DATABASE', 'JWT_SECRET']
+    .filter((name) => !process.env[name]?.trim());
+  if (missing.length) {
+    throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
+  }
+}
 
 const synchronizeRequested = process.env.DB_SYNCHRONIZE === 'true';
 if (synchronizeRequested) {
@@ -51,6 +61,8 @@ if (synchronizeRequested) {
 }
 
 @Module({
+  controllers: [AppController],
+  providers: [AppService],
   imports: [
     TypeOrmModule.forRoot({
       type: 'mysql',

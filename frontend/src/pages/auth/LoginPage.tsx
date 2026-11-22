@@ -4,6 +4,7 @@ import { useAuthStore } from '../../stores/auth.store';
 import { useUiStore } from '../../stores/ui.store';
 import { Lock, Eye, EyeOff, Plus, Mail } from 'lucide-react';
 import { AuthService } from '../../services/auth.service';
+import { ThemeToggle } from '../../components/common/ThemeToggle';
 
 export const LoginPage: React.FC = () => {
   const [email, setEmail] = useState('');
@@ -66,7 +67,8 @@ export const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="fixed inset-0 bg-neumorph-bg flex items-center justify-center font-sans overflow-hidden z-50 selection:bg-blue-500 selection:text-white">
+    <div className="auth-screen fixed inset-0 bg-neumorph-bg flex items-center justify-center font-sans overflow-hidden z-50 selection:bg-blue-500 selection:text-white dark:text-slate-100">
+      <div className="absolute top-5 right-5 z-20"><ThemeToggle /></div>
       {/* Background Animated Circles */}
       <div className="absolute top-[10%] left-[20%] w-[350px] h-[350px] rounded-full bg-neumorph-bg shadow-neumorph animate-floating -z-10" style={{ animationDelay: '0s' }}></div>
       <div className="absolute bottom-[5%] right-[15%] w-[250px] h-[250px] rounded-full bg-neumorph-bg shadow-neumorph animate-floating -z-10" style={{ animationDelay: '2s', animationDuration: '8s' }}></div>
@@ -81,8 +83,8 @@ export const LoginPage: React.FC = () => {
         </div>
 
         {/* Titles */}
-        <h2 className="text-[28px] font-bold text-slate-800 mb-1">Chào mừng</h2>
-        <p className="text-[13px] text-slate-500 mb-8">Đăng nhập để tiếp tục</p>
+        <h2 className="text-[28px] font-bold text-slate-800 dark:text-white mb-1">Chào mừng</h2>
+        <p className="text-[13px] text-slate-500 dark:text-slate-400 mb-8">Đăng nhập để tiếp tục</p>
 
         {/* Form */}
         <form onSubmit={handleFormSubmit} className="w-full space-y-5">

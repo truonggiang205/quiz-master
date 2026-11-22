@@ -825,12 +825,13 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1">
                   Lời giải thích chi tiết (hiển thị khi công bố đáp án)
                 </label>
-                <input
-                  type="text"
+                <textarea
+                  rows={3}
                   aria-label="Lời giải thích chi tiết"
                   value={q.explanation || ''}
                   onChange={(e) => handleUpdateQuestion(qIndex, { explanation: e.target.value })}
-                  className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
+                  placeholder="Nhập lời giải; nhấn Enter để xuống dòng…"
+                  className="w-full min-h-24 resize-y rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 p-2.5 text-xs leading-relaxed text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
                 />
               </div>
               </>}

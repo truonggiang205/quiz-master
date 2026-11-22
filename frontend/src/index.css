@@ -69,6 +69,36 @@
     radial-gradient(at 50% 50%, rgba(56, 189, 248, 0.1) 0px, transparent 50%);
 }
 
+/* Authentication screens use a neumorphic surface. Keep the light treatment
+ * scoped to those screens and supply an equivalent, readable dark surface. */
+.dark .auth-screen .bg-neumorph-bg {
+  background-color: #172033;
+}
+
+.dark .auth-screen .shadow-neumorph {
+  box-shadow: 14px 14px 28px rgba(2, 6, 23, 0.5), -10px -10px 24px rgba(71, 85, 105, 0.18);
+}
+
+.dark .auth-screen .shadow-neumorph-inset {
+  box-shadow: inset 7px 7px 14px rgba(2, 6, 23, 0.6), inset -6px -6px 13px rgba(71, 85, 105, 0.16);
+}
+
+.dark .auth-screen .shadow-neumorph-sm {
+  box-shadow: 5px 5px 10px rgba(2, 6, 23, 0.45), -4px -4px 9px rgba(71, 85, 105, 0.14);
+}
+
+.dark .auth-screen input,
+.dark .auth-screen select {
+  color: #e2e8f0;
+  caret-color: #7dd3fc;
+  color-scheme: dark;
+}
+
+.dark .auth-screen input:focus,
+.dark .auth-screen select:focus {
+  box-shadow: inset 4px 4px 8px rgba(2, 6, 23, 0.65), inset -4px -4px 8px rgba(71, 85, 105, 0.2);
+}
+
 /* Smooth custom scrollbars */
 ::-webkit-scrollbar {
   width: 6px;

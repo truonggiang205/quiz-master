@@ -253,6 +253,15 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
     window.setTimeout(() => document.getElementById(`question-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
   };
 
+  const toggleQuestion = (id: string, isExpanded: boolean) => {
+    setActiveQuestionId(isExpanded ? null : id);
+    // When opening a collapsed card, keep its header below the sticky points
+    // summary and question navigator instead of revealing it underneath them.
+    if (!isExpanded) {
+      window.setTimeout(() => document.getElementById(`question-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Sticky Points Bar */}
@@ -401,7 +410,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
-              className="bg-white/90 dark:bg-slate-800/90 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-700/80 shadow-xs space-y-4"
+              className="scroll-mt-56 bg-white/90 dark:bg-slate-800/90 rounded-3xl p-6 border border-slate-200/80 dark:border-slate-700/80 shadow-xs space-y-4"
             >
               {/* Question Header Bar */}
               <div className="flex flex-wrap items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-700/60">
@@ -412,7 +421,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
 
                   <button
                     type="button"
-                    onClick={() => setActiveQuestionId(isExpanded ? null : q.id)}
+                    onClick={() => toggleQuestion(q.id, isExpanded)}
                     aria-expanded={isExpanded}
                     className="flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
                   >

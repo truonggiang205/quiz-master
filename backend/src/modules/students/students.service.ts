@@ -9,6 +9,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { UserEntity } from '../../entities/user.entity.js';
 import { ClassEntity } from '../../entities/class.entity.js';
+import { QuizEntity } from '../../entities/quiz.entity.js';
 import { TeacherStudentEntity } from './entities/teacher-student.entity.js';
 import {
   LessonEntity,
@@ -414,6 +415,9 @@ export class StudentsService {
         find: (entity: any, opts: any) => {
           if (entity === ClassEntity && this.classRepo) return this.classRepo.find(opts);
           if (entity === UserEntity && this.userRepo) return this.userRepo.find(opts);
+          // The real transaction manager can load teacher-owned quizzes here.
+          // The fallback is intentionally empty for repository-only unit seams.
+          if (entity === QuizEntity) return [];
           return [];
         },
         findOne: (entity: any, opts: any) => {
@@ -454,6 +458,20 @@ export class StudentsService {
           if (cls.students.length !== originalCount) {
             await manager.save(ClassEntity, cls);
           }
+        }
+      }
+
+      // A direct assignment is a permission grant, not student history. Revoke
+      // it when the teacher deletes this relationship so linking the same
+      // account again does not resurrect old quizzes.  Remove both the profile
+      // ID used by older rows and the login-account ID used by current rows.
+      const teacherQuizzes = await manager.find(QuizEntity, { where: { teacherId } });
+      for (const quiz of teacherQuizzes) {
+        const assignedStudentIds = quiz.assignedStudentIds || [];
+        const remainingStudentIds = assignedStudentIds.filter((id: string) => !targetIds.includes(id));
+        if (remainingStudentIds.length !== assignedStudentIds.length) {
+          quiz.assignedStudentIds = remainingStudentIds;
+          await manager.save(QuizEntity, quiz);
         }
       }
 

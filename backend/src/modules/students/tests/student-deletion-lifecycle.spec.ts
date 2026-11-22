@@ -16,6 +16,7 @@ describe('Student Deletion Lifecycle & Anti-Resurrection Suite (TC-DEL-01 -> TC-
   let paymentStore: any[];
   let scoreStore: any[];
   let logStore: any[];
+  let quizStore: any[];
 
   let fakeUserRepo: any;
   let fakeProfileRepo: any;
@@ -45,6 +46,7 @@ describe('Student Deletion Lifecycle & Anti-Resurrection Suite (TC-DEL-01 -> TC-
     paymentStore = [];
     scoreStore = [];
     logStore = [];
+    quizStore = [];
 
     fakeUserRepo = {
       findOne: vi.fn(async (opts: any) => {
@@ -182,13 +184,46 @@ describe('Student Deletion Lifecycle & Anti-Resurrection Suite (TC-DEL-01 -> TC-
     };
 
     fakeQuizRepo = {
-      find: vi.fn(async () => []),
+      find: vi.fn(async (opts?: any) => quizStore.filter((quiz) => !opts?.where?.teacherId || quiz.teacherId === opts.where.teacherId)),
+      save: vi.fn(async (quiz: any) => {
+        const index = quizStore.findIndex((item) => item.id === quiz.id);
+        if (index >= 0) quizStore[index] = { ...quizStore[index], ...quiz };
+        else quizStore.push({ ...quiz });
+        return quiz;
+      }),
       count: vi.fn(async () => 0),
     };
 
     fakeSubmissionRepo = {
       find: vi.fn(async () => []),
     };
+
+    const transactionManager = {
+      find: (entity: any, opts: any) => {
+        if (entity?.name === 'QuizEntity') return fakeQuizRepo.find(opts);
+        if (entity?.name === 'ClassEntity') return fakeClassRepo.find(opts);
+        if (entity?.name === 'UserEntity') return fakeUserRepo.find(opts);
+        return [];
+      },
+      findOne: (entity: any, opts: any) => {
+        if (entity?.name === 'UserEntity') return fakeUserRepo.findOne(opts);
+        if (entity?.name === 'ClassEntity') return fakeClassRepo.findOne(opts);
+        return null;
+      },
+      count: async () => 0,
+      save: (entity: any, data: any) => {
+        if (entity?.name === 'QuizEntity') return fakeQuizRepo.save(data);
+        if (entity?.name === 'ClassEntity') return fakeClassRepo.save(data);
+        if (entity?.name === 'UserEntity') return fakeUserRepo.save(data);
+        return data;
+      },
+      remove: (entity: any, data: any) => {
+        if (entity?.name === 'TeacherStudentEntity') return fakeProfileRepo.remove(data);
+        if (entity?.name === 'ClassEntity') return fakeClassRepo.remove(data);
+        return data;
+      },
+    };
+    fakeProfileRepo.manager = { transaction: async (work: any) => work(transactionManager) };
 
     studentsService = new StudentsService(
       fakeProfileRepo,
@@ -266,6 +301,19 @@ describe('Student Deletion Lifecycle & Anti-Resurrection Suite (TC-DEL-01 -> TC-
     const userInDb = userStore.find((u) => u.id === 'student-1');
     expect(userInDb).toBeDefined();
     expect(userInDb.name).toBe('Hà Trường Giang');
+  });
+
+  it('TC-DEL-02A: xóa học sinh thu hồi giao đề trực tiếp để thêm lại không khôi phục đề cũ', async () => {
+    profileStore.push({ id: 'ts-1', teacherId: 'teacher-A', studentAccountId: 'student-1', fullName: 'Hà Trường Giang' });
+    quizStore.push(
+      { id: 'quiz-A', teacherId: 'teacher-A', assignedStudentIds: ['ts-1', 'student-1', 'student-2'] },
+      { id: 'quiz-B', teacherId: 'teacher-B', assignedStudentIds: ['student-1'] },
+    );
+
+    await studentsService.deleteStudent('teacher-A', 'ts-1');
+
+    expect(quizStore.find((quiz) => quiz.id === 'quiz-A').assignedStudentIds).toEqual(['student-2']);
+    expect(quizStore.find((quiz) => quiz.id === 'quiz-B').assignedStudentIds).toEqual(['student-1']);
   });
 
   // TC-DEL-03: Logout -> Login / GET /teacher/students không trả về student đã bị xóa

@@ -205,6 +205,9 @@ describe('DashboardService', () => {
       expect(result.stats.highestScore).toBeNull();
       expect(result.progressTrend).toHaveLength(0);
       expect(result.subjectPerformance).toHaveLength(0);
+      const accessCondition = mockQuizQb.andWhere.mock.calls[0][0];
+      expect(accessCondition).toContain('JSON_CONTAINS(quiz.assignedStudentIds');
+      expect(accessCondition).not.toContain('quiz.classId IS NULL');
     });
 
     it('should calculate progress trend and subject performance when student has submissions', async () => {

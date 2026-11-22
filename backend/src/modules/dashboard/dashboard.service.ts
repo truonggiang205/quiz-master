@@ -3,6 +3,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import { isAnswerReleased, sanitizeStudentAnswerData } from '../../common/utils/submission-visibility.util.js';
 import { QuizEntity, SubmissionEntity, UserEntity } from '../../entities/index.js';
+import { TeacherStudentEntity } from '../students/entities/teacher-student.entity.js';
 import {
   TeacherDashboardQueryDto,
   TeacherSubmissionsQueryDto,
@@ -19,6 +20,8 @@ export class DashboardService {
     private readonly submissionRepo: Repository<SubmissionEntity>,
     @InjectRepository(UserEntity)
     private readonly userRepo: Repository<UserEntity>,
+    @InjectRepository(TeacherStudentEntity)
+    private readonly teacherStudentRepo?: Repository<TeacherStudentEntity>,
   ) {}
 
   private formatDayLabel(d: Date): string {
@@ -373,20 +376,27 @@ export class DashboardService {
     });
 
     const classIds = student?.classes?.map((c) => c.id) || [];
+    const profiles = this.teacherStudentRepo
+      ? await this.teacherStudentRepo.find({ where: { studentAccountId: studentId }, select: { id: true } })
+      : [];
+    const assignmentIds = [studentId, ...profiles.map(profile => profile.id)];
+    const directAssignmentCondition = assignmentIds
+      .map((_, index) => `JSON_CONTAINS(quiz.assignedStudentIds, :assignedStudentId${index})`)
+      .join(' OR ');
 
-    // All published quizzes accessible to this student
+    // Match the quiz list's access policy exactly. An empty assignment list is
+    // not a public quiz: it can result from revoking a deleted student's grant.
     const quizQb = this.quizRepo
       .createQueryBuilder('quiz')
       .where('quiz.status = :status', { status: 'PUBLISHED' })
       .andWhere(
         `(
-          (quiz.classId IS NULL AND (quiz.assignedStudentIds IS NULL OR JSON_LENGTH(quiz.assignedStudentIds) = 0)) OR
           (quiz.classId IN (:...classIds)) OR
-          (JSON_CONTAINS(quiz.assignedStudentIds, :studentIdStr))
+          (${directAssignmentCondition})
         )`,
         {
           classIds: classIds.length ? classIds : ['DUMMY_ID'],
-          studentIdStr: `"${studentId}"`,
+          ...Object.fromEntries(assignmentIds.map((id, index) => [`assignedStudentId${index}`, `"${id}"`])),
         },
       );
 

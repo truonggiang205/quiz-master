@@ -78,7 +78,7 @@ export class AppealsService {
     return Promise.all(appeals.map(async appeal => {
       if (!appeal.submission?.answers) return appeal;
       const quiz = await this.quizRepo.findOneBy({ id: appeal.submission.quizId });
-      if (isAnswerReleased(appeal.submission.answerReleaseAt ?? quiz?.answerReleaseAt)) return appeal;
+      if (isAnswerReleased(quiz?.answerReleaseAt)) return appeal;
       return {
         ...appeal,
         submission: {

@@ -494,7 +494,6 @@ export class SubmissionsService {
           questionExplanation: question.explanation, questionEssayRubric: question.essayRubric };
       }),
       submittedAt: new Date().toISOString(),
-      answerReleaseAt: attemptSnapshot.answerReleaseAt || null,
     });
 
     const saved = await this.submissionRepo.manager.transaction(async manager => {
@@ -546,7 +545,7 @@ export class SubmissionsService {
       ?? this.requiresManualEssayGrading(snapshot?.questions || []);
     const answerReleaseAt = requiresManualEssayGrading
       ? null
-      : (sub.answerReleaseAt ?? snapshot?.answerReleaseAt ?? quiz?.answerReleaseAt);
+      : (snapshot?.answerReleaseAt ?? quiz?.answerReleaseAt);
     const answerReleased = !requiresManualEssayGrading && isAnswerReleased(answerReleaseAt);
     const canViewAnswers = isTeacher || (answerReleased && (snapshot?.showCorrectAnswers ?? quiz?.showCorrectAnswers ?? true));
     const canViewExplanation = isTeacher || (answerReleased && (snapshot?.showExplanation ?? quiz?.showExplanation ?? true));
@@ -678,7 +677,7 @@ export class SubmissionsService {
       const hasUngradedEssay = sub.answers?.some(a => a.questionType === 'ESSAY' && a.isCorrect === undefined);
       result.push({
         ...sub,
-        answers: !hasUngradedEssay && isAnswerReleased(sub.answerReleaseAt ?? quiz?.answerReleaseAt)
+        answers: !hasUngradedEssay && isAnswerReleased(quiz?.answerReleaseAt)
           ? sub.answers
           : sub.answers.map(answer => this.maskAnswerForStudent(answer)),
         quizType: quiz?.mode || 'QUIZ',

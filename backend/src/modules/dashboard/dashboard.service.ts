@@ -487,7 +487,7 @@ export class DashboardService {
         ...submission,
         // Dashboard is a student endpoint and must never bypass answer-release
         // filtering through nested submission snapshots.
-        answers: isAnswerReleased(submission.answerReleaseAt ?? releaseByQuizId.get(submission.quizId))
+        answers: isAnswerReleased(releaseByQuizId.get(submission.quizId))
           ? submission.answers
           : submission.answers?.map(answer => sanitizeStudentAnswerData(answer)),
       })),

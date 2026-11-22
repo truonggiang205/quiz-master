@@ -16,7 +16,7 @@ export interface Quiz {
   showScoreImmediately: boolean;
   showCorrectAnswers: boolean;
   showExplanation: boolean;
-  answerReleaseAt: string; // ISO String
+  answerReleaseAt?: string | null; // ISO String; null when manual grading is required
   teacherId: string;
   teacherName: string;
   questionCount: number;
@@ -42,6 +42,6 @@ export interface CreateQuizInput {
   showScoreImmediately?: boolean;
   showCorrectAnswers?: boolean;
   showExplanation?: boolean;
-  answerReleaseAt?: string;
+  answerReleaseAt?: string | null;
   totalPoints?: number;
 }

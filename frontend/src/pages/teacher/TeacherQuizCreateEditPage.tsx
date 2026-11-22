@@ -16,6 +16,14 @@ import { rebalance } from '../../utils/points.util';
 import { NumberInput } from '../../components/common/NumberInput';
 import { Modal } from '../../components/common/Modal';
 
+const hasAutomaticEssayGrading = (question: Question) => {
+  if (question.type !== 'ESSAY') return true;
+  const acceptedAnswers = question.essayRubric?.acceptedAnswers || [];
+  const criteria = question.essayRubric?.criteria || [];
+  return acceptedAnswers.some(answer => answer.trim().length > 0)
+    || criteria.some(criterion => (criterion?.keywords || []).some(keyword => keyword.trim().length > 0));
+};
+
 export const TeacherQuizCreateEditPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
   const isEditing = Boolean(id);
@@ -77,6 +85,11 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
   const savedSignatureRef = useRef<string>('');
   const hasCheckedLocalDraftRef = useRef(false);
   const localDraftKey = `quiz-authoring-draft:${id || 'new'}`;
+  const manualEssayQuestionNumbers = questions
+    .map((question, index) => ({ question, number: index + 1 }))
+    .filter(({ question }) => question.type === 'ESSAY' && !hasAutomaticEssayGrading(question))
+    .map(({ number }) => number);
+  const requiresManualEssayGrading = manualEssayQuestionNumbers.length > 0;
 
   const editorSignature = JSON.stringify({
     title, description, subject, mode, durationMinutes, totalAttempts, totalPoints,
@@ -275,12 +288,12 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
       return;
     }
 
-    if (releaseMode === 'AFTER_CLOSE' && !endTime) {
+    if (!requiresManualEssayGrading && releaseMode === 'AFTER_CLOSE' && !endTime) {
       addToast({ type: 'error', title: 'Thiếu thời điểm đóng đề', message: 'Chọn hạn chót nộp bài để công bố đáp án khi đề đóng.' });
       return;
     }
 
-    if (releaseMode === 'CUSTOM' && (!customReleaseDate || Number.isNaN(new Date(customReleaseDate).getTime()))) {
+    if (!requiresManualEssayGrading && releaseMode === 'CUSTOM' && (!customReleaseDate || Number.isNaN(new Date(customReleaseDate).getTime()))) {
       addToast({ type: 'error', title: 'Thời điểm công bố không hợp lệ', message: 'Hãy chọn ngày và giờ công bố đáp án.' });
       return;
     }
@@ -363,7 +376,9 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
     });
 
     try {
-      const releaseTime = computeReleaseDate();
+      // Manual essays are released only after the teacher has graded them.
+      // Send an explicit null so the backend does not apply its legacy default.
+      const releaseTime = requiresManualEssayGrading ? null : computeReleaseDate();
       const cleanClassId = assignMode === 'CLASS' && classId?.trim() ? classId.trim() : undefined;
       const cleanAssignedStudentIds = assignMode === 'STUDENTS' && assignedStudentIds?.length ? assignedStudentIds : undefined;
 
@@ -378,8 +393,8 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         shuffleQuestions,
         shuffleAnswers,
         showScoreImmediately,
-        showCorrectAnswers,
-        showExplanation,
+        showCorrectAnswers: requiresManualEssayGrading ? false : showCorrectAnswers,
+        showExplanation: requiresManualEssayGrading ? false : showExplanation,
         answerReleaseAt: releaseTime,
         startTime: parsedStartTime,
         endTime: parsedEndTime,
@@ -1050,7 +1065,9 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         </div>
 
         {/* Answer Release Settings */}
-        <div className="p-4 sm:p-5 rounded-2xl bg-gradient-to-br from-sky-50/70 to-sky-50/70 dark:from-slate-900/60 dark:to-sky-950/40 border border-sky-100 dark:border-sky-900/60 space-y-3">
+        <div className={`p-4 sm:p-5 rounded-2xl border space-y-3 ${requiresManualEssayGrading
+          ? 'bg-slate-100/80 dark:bg-slate-900/50 border-slate-200 dark:border-slate-700'
+          : 'bg-gradient-to-br from-sky-50/70 to-sky-50/70 dark:from-slate-900/60 dark:to-sky-950/40 border-sky-100 dark:border-sky-900/60'}`}>
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-sky-600 dark:text-sky-400" />
             <h3 className="text-xs sm:text-sm font-bold text-sky-950 dark:text-sky-200">
@@ -1058,10 +1075,20 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             </h3>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+          {requiresManualEssayGrading && (
+            <div className="rounded-xl border border-amber-200 bg-amber-50 p-3 text-xs leading-relaxed text-amber-900 dark:border-amber-900/60 dark:bg-amber-950/30 dark:text-amber-200">
+              <p className="font-bold">Đang chờ chấm thủ công</p>
+              <p className="mt-1">
+                Câu tự luận {manualEssayQuestionNumbers.map(number => `#${number}`).join(', ')} chưa có đáp án hoặc từ khóa để tự chấm, nên không thể đặt lịch công bố đáp án/lời giải. Bạn vẫn có thể lưu và xuất bản đề; sau khi học sinh nộp bài, vào <strong>Kết quả → Chấm bài</strong> để cho điểm thủ công.
+              </p>
+            </div>
+          )}
+
+          <div className={`grid grid-cols-1 sm:grid-cols-3 gap-2 ${requiresManualEssayGrading ? 'opacity-45' : ''}`}>
             <button
               type="button"
               onClick={() => setReleaseMode('AFTER_SUBMISSION')}
+              disabled={requiresManualEssayGrading}
               className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${
                 releaseMode === 'AFTER_SUBMISSION'
                   ? 'bg-sky-600 text-white border-sky-600'
@@ -1073,6 +1100,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setReleaseMode('AFTER_CLOSE')}
+              disabled={requiresManualEssayGrading}
               className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${
                 releaseMode === 'AFTER_CLOSE'
                   ? 'bg-sky-600 text-white border-sky-600'
@@ -1084,6 +1112,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             <button
               type="button"
               onClick={() => setReleaseMode('CUSTOM')}
+              disabled={requiresManualEssayGrading}
               className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${
                 releaseMode === 'CUSTOM'
                   ? 'bg-sky-600 text-white border-sky-600'
@@ -1094,7 +1123,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             </button>
           </div>
 
-          {releaseMode === 'CUSTOM' && (
+          {!requiresManualEssayGrading && releaseMode === 'CUSTOM' && (
             <div className="pt-2">
               <label className="block text-[11px] font-semibold text-slate-600 dark:text-slate-300 mb-1">
                 Chọn ngày và giờ mở đáp án:
@@ -1107,7 +1136,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               />
             </div>
           )}
-          {releaseMode !== 'CUSTOM' && (
+          {!requiresManualEssayGrading && releaseMode !== 'CUSTOM' && (
             <p className="text-[11px] leading-relaxed text-sky-700 dark:text-sky-300">
               {releaseMode === 'AFTER_SUBMISSION'
                 ? 'Học sinh được xem nội dung bạn cho phép ngay sau khi nộp bài.'
@@ -1118,7 +1147,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
 
         {/* Toggles */}
         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3 pt-2 text-xs">
-          <label className="flex items-center gap-2 text-slate-700 dark:text-slate-300 cursor-pointer">
+          <label className={`flex items-center gap-2 ${requiresManualEssayGrading ? 'cursor-not-allowed text-slate-400 dark:text-slate-500' : 'cursor-pointer text-slate-700 dark:text-slate-300'}`}>
             <input
               type="checkbox"
               checked={shuffleQuestions}
@@ -1150,15 +1179,17 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               type="checkbox"
               checked={showCorrectAnswers}
               onChange={(e) => setShowCorrectAnswers(e.target.checked)}
+              disabled={requiresManualEssayGrading}
               className="rounded-md text-sky-600 focus:ring-sky-400"
             />
             <span>Cho xem đáp án đúng khi công bố</span>
           </label>
-          <label className="flex items-center gap-2 text-slate-700 dark:text-slate-300 cursor-pointer">
+          <label className={`flex items-center gap-2 ${requiresManualEssayGrading ? 'cursor-not-allowed text-slate-400 dark:text-slate-500' : 'cursor-pointer text-slate-700 dark:text-slate-300'}`}>
             <input
               type="checkbox"
               checked={showExplanation}
               onChange={(e) => setShowExplanation(e.target.checked)}
+              disabled={requiresManualEssayGrading}
               className="rounded-md text-sky-600 focus:ring-sky-400"
             />
             <span>Cho xem lời giải khi công bố</span>

@@ -54,21 +54,53 @@ export class SubmissionsService {
     }));
   }
 
+  private requiresManualEssayGrading(questions: AttemptQuestionSnapshot[]): boolean {
+    return questions.some(question => {
+      if (question.type !== 'ESSAY') return false;
+      const acceptedAnswers = question.essayRubric?.acceptedAnswers || [];
+      const criteria = question.essayRubric?.criteria || [];
+      const hasAcceptedAnswer = acceptedAnswers.some((answer: unknown) => typeof answer === 'string' && answer.trim().length > 0);
+      const hasKeywordCriterion = criteria.some((criterion: any) =>
+        Array.isArray(criterion?.keywords) && criterion.keywords.some((keyword: unknown) => typeof keyword === 'string' && keyword.trim().length > 0),
+      );
+      return !hasAcceptedAnswer && !hasKeywordCriterion;
+    });
+  }
+
   private createAttemptSnapshot(quiz: QuizEntity, questions: QuestionEntity[]): AttemptQuizSnapshot {
+    const snapshotQuestions = this.snapshotQuestions(questions);
+    const requiresManualEssayGrading = this.requiresManualEssayGrading(snapshotQuestions);
     return {
       version: 1, quizId: quiz.id, quizTitle: quiz.title, durationMinutes: quiz.durationMinutes,
-      totalPoints: quiz.totalPoints, answerReleaseAt: quiz.answerReleaseAt,
-      showScoreImmediately: quiz.showScoreImmediately, showCorrectAnswers: quiz.showCorrectAnswers,
-      showExplanation: quiz.showExplanation, questions: this.snapshotQuestions(questions),
+      totalPoints: quiz.totalPoints, answerReleaseAt: requiresManualEssayGrading ? null : quiz.answerReleaseAt,
+      showScoreImmediately: quiz.showScoreImmediately, showCorrectAnswers: requiresManualEssayGrading ? false : quiz.showCorrectAnswers,
+      showExplanation: requiresManualEssayGrading ? false : quiz.showExplanation,
+      requiresManualEssayGrading, questions: snapshotQuestions,
     };
   }
 
   private getAttemptSnapshot(attempt: QuizAttemptEntity, quiz: QuizEntity): AttemptQuizSnapshot {
-    return attempt.quizSnapshot || {
+    if (attempt.quizSnapshot) {
+      const requiresManualEssayGrading = attempt.quizSnapshot.requiresManualEssayGrading
+        ?? this.requiresManualEssayGrading(attempt.quizSnapshot.questions || []);
+      return {
+        ...attempt.quizSnapshot,
+        requiresManualEssayGrading,
+        answerReleaseAt: requiresManualEssayGrading ? null : attempt.quizSnapshot.answerReleaseAt,
+        showCorrectAnswers: requiresManualEssayGrading ? false : attempt.quizSnapshot.showCorrectAnswers,
+        showExplanation: requiresManualEssayGrading ? false : attempt.quizSnapshot.showExplanation,
+      };
+    }
+    const requiresManualEssayGrading = this.requiresManualEssayGrading(attempt.questionSnapshot || []);
+    return {
       version: 1, quizId: quiz.id, quizTitle: quiz.title, durationMinutes: quiz.durationMinutes,
-      totalPoints: quiz.totalPoints, answerReleaseAt: quiz.answerReleaseAt,
-      showScoreImmediately: quiz.showScoreImmediately, showCorrectAnswers: quiz.showCorrectAnswers,
-      showExplanation: quiz.showExplanation, questions: attempt.questionSnapshot || [],
+      totalPoints: quiz.totalPoints,
+      answerReleaseAt: requiresManualEssayGrading ? null : quiz.answerReleaseAt,
+      showScoreImmediately: quiz.showScoreImmediately,
+      showCorrectAnswers: requiresManualEssayGrading ? false : quiz.showCorrectAnswers,
+      showExplanation: requiresManualEssayGrading ? false : quiz.showExplanation,
+      requiresManualEssayGrading,
+      questions: attempt.questionSnapshot || [],
     };
   }
 
@@ -76,7 +108,9 @@ export class SubmissionsService {
     const snapshot = this.getAttemptSnapshot(attempt, quiz);
     return {
       quizId: snapshot.quizId, quizTitle: snapshot.quizTitle, durationMinutes: snapshot.durationMinutes,
-      totalPoints: snapshot.totalPoints, answerReleaseAt: snapshot.answerReleaseAt, startedAt: attempt.startedAt,
+      totalPoints: snapshot.totalPoints,
+      answerReleaseAt: snapshot.requiresManualEssayGrading ? null : snapshot.answerReleaseAt,
+      startedAt: attempt.startedAt,
       expiresAt: attempt.expiresAt, attemptId: attempt.id, totalQuestions: snapshot.questions.length,
       questions: this.publicQuestions(snapshot.questions), draftAnswers: attempt.draftAnswers || [],
     };
@@ -482,7 +516,7 @@ export class SubmissionsService {
       return result;
     });
     if (!saved) throw new BadRequestException('Đã hết thời gian làm bài');
-    const answerReleased = isAnswerReleased(attemptSnapshot.answerReleaseAt);
+    const answerReleased = !attemptSnapshot.requiresManualEssayGrading && isAnswerReleased(attemptSnapshot.answerReleaseAt);
     const canViewCorrectAnswers = answerReleased && attemptSnapshot.showCorrectAnswers;
     if (!canViewCorrectAnswers) return { ...saved, answers: saved.answers.map(answer => this.maskAnswerForStudent(answer)) };
     if (!attemptSnapshot.showExplanation) {
@@ -508,7 +542,12 @@ export class SubmissionsService {
     const isTeacher = userRole === 'TEACHER' || userRole === 'ADMIN';
     const attempt = await this.attemptRepo.findOneBy({ submissionId: sub.id });
     const snapshot = attempt && quiz ? this.getAttemptSnapshot(attempt, quiz) : undefined;
-    const answerReleased = isAnswerReleased(sub.answerReleaseAt ?? snapshot?.answerReleaseAt ?? quiz?.answerReleaseAt);
+    const requiresManualEssayGrading = snapshot?.requiresManualEssayGrading
+      ?? this.requiresManualEssayGrading(snapshot?.questions || []);
+    const answerReleaseAt = requiresManualEssayGrading
+      ? null
+      : (sub.answerReleaseAt ?? snapshot?.answerReleaseAt ?? quiz?.answerReleaseAt);
+    const answerReleased = !requiresManualEssayGrading && isAnswerReleased(answerReleaseAt);
     const canViewAnswers = isTeacher || (answerReleased && (snapshot?.showCorrectAnswers ?? quiz?.showCorrectAnswers ?? true));
     const canViewExplanation = isTeacher || (answerReleased && (snapshot?.showExplanation ?? quiz?.showExplanation ?? true));
     const studentVisibleAnswers = !canViewAnswers
@@ -548,7 +587,8 @@ export class SubmissionsService {
       quiz,
       detailedAnswers,
       isAnswerReleased: answerReleased,
-      answerReleaseAt: sub.answerReleaseAt ?? snapshot?.answerReleaseAt ?? quiz?.answerReleaseAt,
+      answerReleaseAt,
+      isFullyGraded: !sub.answers.some(answer => answer.questionType === 'ESSAY' && answer.isCorrect === undefined),
     };
   }
 
@@ -635,10 +675,12 @@ export class SubmissionsService {
     const result = [];
     for (const sub of submissions) {
       const quiz = await this.quizRepo.findOneBy({ id: sub.quizId });
-      const hasUngradedEssay = sub.answers?.some(a => a.isCorrect === undefined && a.scoreAwarded === 0);
+      const hasUngradedEssay = sub.answers?.some(a => a.questionType === 'ESSAY' && a.isCorrect === undefined);
       result.push({
         ...sub,
-        answers: isAnswerReleased(sub.answerReleaseAt ?? quiz?.answerReleaseAt) ? sub.answers : sub.answers.map(answer => this.maskAnswerForStudent(answer)),
+        answers: !hasUngradedEssay && isAnswerReleased(sub.answerReleaseAt ?? quiz?.answerReleaseAt)
+          ? sub.answers
+          : sub.answers.map(answer => this.maskAnswerForStudent(answer)),
         quizType: quiz?.mode || 'QUIZ',
         isFullyGraded: !hasUngradedEssay,
       });

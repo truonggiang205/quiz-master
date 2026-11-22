@@ -53,7 +53,9 @@ export class InMemoryQuizzesRepository implements IQuizzesRepository {
       showScoreImmediately: dto.showScoreImmediately ?? true,
       showCorrectAnswers: dto.showCorrectAnswers ?? true,
       showExplanation: dto.showExplanation ?? true,
-      answerReleaseAt: dto.answerReleaseAt || new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      answerReleaseAt: dto.answerReleaseAt === undefined
+        ? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+        : dto.answerReleaseAt,
       teacherId: teacher.id,
       teacherName: teacher.name,
       questionCount: 0,

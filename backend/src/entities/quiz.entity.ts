@@ -52,7 +52,7 @@ export class QuizEntity {
   showExplanation: boolean;
 
   @Column({ type: 'varchar', length: 50, nullable: true })
-  answerReleaseAt: string;
+  answerReleaseAt: string | null;
 
   @Index()
   @Column({ type: 'varchar', length: 64 })

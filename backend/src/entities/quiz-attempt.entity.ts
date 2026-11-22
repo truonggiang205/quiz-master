@@ -26,6 +26,8 @@ export interface AttemptQuizSnapshot {
   showScoreImmediately: boolean;
   showCorrectAnswers: boolean;
   showExplanation: boolean;
+  /** True when at least one essay has no answer/rubric for automatic grading. */
+  requiresManualEssayGrading?: boolean;
   questions: AttemptQuestionSnapshot[];
 }
 

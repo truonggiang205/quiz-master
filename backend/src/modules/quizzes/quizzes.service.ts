@@ -103,7 +103,11 @@ export class QuizzesService {
       showScoreImmediately: dto.showScoreImmediately ?? true,
       showCorrectAnswers: dto.showCorrectAnswers ?? true,
       showExplanation: dto.showExplanation ?? true,
-      answerReleaseAt: dto.answerReleaseAt || new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString(),
+      // Undefined keeps the legacy default. Null is an explicit policy for
+      // manually graded essays: do not publish an answer-release schedule.
+      answerReleaseAt: dto.answerReleaseAt === undefined
+        ? new Date(Date.now() + 2 * 60 * 60 * 1000).toISOString()
+        : dto.answerReleaseAt,
       teacherId: teacher.id,
       teacherName: teacher.name,
       questionCount: 0,

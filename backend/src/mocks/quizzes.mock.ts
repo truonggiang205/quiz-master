@@ -15,7 +15,7 @@ export interface MockQuiz {
   showScoreImmediately: boolean;
   showCorrectAnswers: boolean;
   showExplanation: boolean;
-  answerReleaseAt: string;
+  answerReleaseAt: string | null;
   teacherId: string;
   teacherName: string;
   questionCount: number;

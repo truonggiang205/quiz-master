@@ -14,8 +14,9 @@ export const ResultOverview: React.FC<ResultOverviewProps> = ({ submission }) =>
     return `${mins} phút ${secs} giây`;
   };
 
-  const isHigh = submission.percentage >= 80;
-  const isPass = submission.percentage >= 50;
+  const isFullyGraded = submission.isFullyGraded ?? true;
+  const isHigh = isFullyGraded && submission.percentage >= 80;
+  const isPass = isFullyGraded && submission.percentage >= 50;
 
   return (
     <div className="bg-white/90 dark:bg-slate-800/90 rounded-3xl p-6 md:p-8 border border-slate-200/80 dark:border-slate-700/80 shadow-sm backdrop-blur-sm">
@@ -31,14 +32,22 @@ export const ResultOverview: React.FC<ResultOverviewProps> = ({ submission }) =>
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, type: 'spring' }}
           >
-            <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
-              {(submission.score / 100).toFixed(2)}
-            </span>
-            <span className="text-slate-400 text-sm font-semibold"> / {(submission.maxScore / 100).toFixed(2)}</span>
+            {isFullyGraded ? (
+              <>
+                <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
+                  {(submission.score / 100).toFixed(2)}
+                </span>
+                <span className="text-slate-400 text-sm font-semibold"> / {(submission.maxScore / 100).toFixed(2)}</span>
+              </>
+            ) : (
+              <span className="text-lg font-black text-amber-700 dark:text-amber-300">Đang chờ chấm</span>
+            )}
           </motion.div>
 
-          <div className="mt-2 text-xs font-bold uppercase tracking-wider text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/80 px-3 py-1 rounded-full">
-            Đạt {submission.percentage}%
+          <div className={`mt-2 text-xs font-bold tracking-wider px-3 py-1 rounded-full ${isFullyGraded
+            ? 'uppercase text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/80'
+            : 'text-amber-700 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-950/60'}`}>
+            {isFullyGraded ? `Đạt ${submission.percentage}%` : 'Giáo viên sẽ công bố điểm sau khi chấm xong'}
           </div>
         </div>
 

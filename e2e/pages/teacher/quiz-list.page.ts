@@ -25,9 +25,9 @@ export class QuizListPage extends BasePage {
     this.filterDraftBtn = page.locator('.p-1 button').filter({ hasText: /Bản thảo/i }).first();
     this.emptyNotice = page.locator('text=Không tìm thấy bài kiểm tra nào');
 
-    this.deleteModal = page.locator('.fixed.inset-0.z-50').filter({ hasText: /Xác nhận xóa bài kiểm tra/i });
+    this.deleteModal = page.locator('.fixed.inset-0').filter({ hasText: /Xác nhận xóa bài kiểm tra/i });
     this.deleteConfirmBtn = page.getByRole('button', { name: 'Xóa vĩnh viễn' });
-    this.deleteCancelBtn = page.getByRole('button', { name: 'Hủy' });
+    this.deleteCancelBtn = page.getByRole('button', { name: 'Hủy bỏ' });
   }
 
   async goto() {

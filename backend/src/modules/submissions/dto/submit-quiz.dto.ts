@@ -1,6 +1,15 @@
-import { IsNotEmpty, IsArray, ValidateNested, IsString, IsNumber, Min, IsOptional } from 'class-validator';
+import { IsNotEmpty, IsArray, ValidateNested, IsString, IsNumber, Min, IsOptional, IsBoolean } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+
+export class StatementAnswerDto {
+  @IsString()
+  @IsNotEmpty()
+  statementId!: string;
+
+  @IsBoolean()
+  answer!: boolean;
+}
 
 export class SubmittedAnswerDto {
   @ApiProperty({ example: 'q-js-1' })
@@ -12,6 +21,12 @@ export class SubmittedAnswerDto {
   @IsOptional()
   @IsArray()
   selectedOptionIds?: string[];
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => StatementAnswerDto)
+  statementAnswers?: StatementAnswerDto[];
 
   @ApiPropertyOptional({ example: '/uploads/img-123.png' })
   @IsOptional()
@@ -25,6 +40,11 @@ export class SubmittedAnswerDto {
 }
 
 export class SubmitQuizDto {
+  @ApiProperty({ example: 'attempt-123', description: 'Attempt returned by startQuiz' })
+  @IsString()
+  @IsNotEmpty()
+  attemptId!: string;
+
   @ApiProperty({ type: [SubmittedAnswerDto] })
   @IsArray()
   @ValidateNested({ each: true })

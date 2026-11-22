@@ -25,8 +25,8 @@ export class QuizFormPage extends BasePage {
   constructor(page: Page) {
     super(page);
     this.pageHeading = page.locator('h2').filter({ hasText: /Thiết Lập Bài Kiểm Tra Mới|Chỉnh Sửa Bài Kiểm Tra/i });
-    this.titleInput = page.getByPlaceholder('VD: Kiểm tra Toán Giải Tích 12 - Khảo sát hàm số');
-    this.descriptionInput = page.getByPlaceholder('Nhập ghi chú hoặc yêu cầu đối với học sinh...');
+    this.titleInput = page.getByLabel('Tiêu đề bài kiểm tra');
+    this.descriptionInput = page.getByLabel('Mô tả ngắn & hướng dẫn làm bài');
     this.subjectInput = page.locator('input').filter({ has: page.locator('xpath=preceding-sibling::label[contains(text(), "Môn học")] | ancestor::div[label[contains(text(), "Môn học")]]/input') }).first();
     this.durationInput = page.locator('input[type="number"]').first();
     this.attemptsInput = page.locator('input[type="number"]').nth(1);
@@ -70,11 +70,11 @@ export class QuizFormPage extends BasePage {
    * Soạn thảo câu hỏi thứ index (0-based)
    */
   async fillQuestion(index: number, content: string, optionTexts: string[] = ['Lựa chọn A', 'Lựa chọn B', 'Lựa chọn C', 'Lựa chọn D']) {
-    const contentTextarea = this.page.locator('textarea[placeholder="Nhập nội dung câu hỏi..."]').nth(index);
+    const contentTextarea = this.page.getByLabel('Nội dung câu hỏi', { exact: true }).nth(index);
     await expect(contentTextarea).toBeVisible({ timeout: 10000 });
     await contentTextarea.fill(content);
 
-    const optionInputs = this.page.locator('input[placeholder*="Nội dung lựa chọn"]');
+    const optionInputs = this.page.locator('input[aria-label^="Nội dung lựa chọn"]');
     for (let i = 0; i < optionTexts.length; i++) {
       const opt = optionInputs.nth(index * 4 + i);
       if (await opt.isVisible()) {

@@ -2,37 +2,37 @@ import mysql from 'mysql2/promise';
 import bcrypt from 'bcrypt';
 import dotenv from 'dotenv';
 import path from 'path';
+import { verifyE2eDatabaseIdentity } from './test-environment';
 
 dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 dotenv.config({ path: path.resolve(__dirname, '../../backend/.env') });
 
 export async function seedTestAccounts() {
-  const isAiven = (process.env.DB_HOST || '').includes('aivencloud.com');
+  await verifyE2eDatabaseIdentity();
   const connection = await mysql.createConnection({
-    host: process.env.DB_HOST || 'localhost',
-    port: Number(process.env.DB_PORT || 3306),
-    user: process.env.DB_USERNAME || 'root',
-    password: process.env.DB_PASSWORD || '',
-    database: process.env.DB_DATABASE || 'quizmaster',
-    ssl: (process.env.DB_SSL === 'true' || isAiven) ? { rejectUnauthorized: false } : undefined,
+    host: process.env.E2E_DB_HOST,
+    port: Number(process.env.E2E_DB_PORT),
+    user: process.env.E2E_DB_USERNAME,
+    password: process.env.E2E_DB_PASSWORD,
+    database: process.env.E2E_DB_DATABASE,
   });
 
   try {
     const accounts = [
       {
-        email: process.env.E2E_ADMIN_EMAIL || 'admin@quizmaster.com',
+        email: process.env.E2E_ADMIN_EMAIL || 'e2e-admin@quizmaster.test',
         password: process.env.E2E_ADMIN_PASSWORD || 'Password@123',
         name: 'Quản Trị Viên Hệ Thống',
         role: 'ADMIN',
       },
       {
-        email: process.env.E2E_TEACHER_EMAIL || 'teacher@quizmaster.com',
+        email: process.env.E2E_TEACHER_EMAIL || 'e2e-teacher@quizmaster.test',
         password: process.env.E2E_TEACHER_PASSWORD || 'Password@123',
         name: 'Giáo Viên Kiểm Thử E2E',
         role: 'TEACHER',
       },
       {
-        email: process.env.E2E_STUDENT_EMAIL || 'student@quizmaster.com',
+        email: process.env.E2E_STUDENT_EMAIL || 'e2e-student@quizmaster.test',
         password: process.env.E2E_STUDENT_PASSWORD || 'Password@123',
         name: 'Học Sinh Kiểm Thử E2E',
         role: 'STUDENT',

@@ -5,6 +5,7 @@ import { AppealEntity, AppealStatus } from '../../entities/appeal.entity.js';
 import { SubmissionEntity } from '../../entities/submission.entity.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
 import { QuizEntity } from '../../entities/quiz.entity.js';
+import { isAnswerReleased, sanitizeStudentAnswerData } from '../../common/utils/submission-visibility.util.js';
 
 @Injectable()
 export class AppealsService {
@@ -72,7 +73,20 @@ export class AppealsService {
       qb.where('appeal.studentId = :userId', { userId });
     }
 
-    return await qb.getMany();
+    const appeals = await qb.getMany();
+    if (role === 'TEACHER' || role === 'ADMIN') return appeals;
+    return Promise.all(appeals.map(async appeal => {
+      if (!appeal.submission?.answers) return appeal;
+      const quiz = await this.quizRepo.findOneBy({ id: appeal.submission.quizId });
+      if (isAnswerReleased(appeal.submission.answerReleaseAt ?? quiz?.answerReleaseAt)) return appeal;
+      return {
+        ...appeal,
+        submission: {
+          ...appeal.submission,
+          answers: appeal.submission.answers.map(answer => sanitizeStudentAnswerData(answer)),
+        },
+      };
+    }));
   }
 
   async replyAppeal(teacherId: string, appealId: string, status: AppealStatus, reply: string) {

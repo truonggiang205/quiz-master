@@ -59,32 +59,32 @@ export class QuizzesController {
   @Patch(':id')
   @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Cập nhật bài kiểm tra (Teacher)' })
-  async updateQuiz(@Param('id') id: string, @Body() dto: UpdateQuizDto) {
-    const updated = await this.quizzesService.updateQuiz(id, dto);
+  async updateQuiz(@Param('id') id: string, @Body() dto: UpdateQuizDto, @CurrentUser() user: any) {
+    const updated = await this.quizzesService.updateQuiz(id, dto, user);
     return createSuccessResponse(updated, 'Cập nhật bài kiểm tra thành công');
   }
 
   @Delete(':id')
   @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Xóa bài kiểm tra (Teacher)' })
-  async deleteQuiz(@Param('id') id: string) {
-    const res = await this.quizzesService.deleteQuiz(id);
+  async deleteQuiz(@Param('id') id: string, @CurrentUser() user: any) {
+    const res = await this.quizzesService.deleteQuiz(id, user);
     return createSuccessResponse(res, 'Xóa bài kiểm tra thành công');
   }
 
   @Post(':id/publish')
   @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Xuất bản bài kiểm tra (Teacher)' })
-  async publishQuiz(@Param('id') id: string) {
-    const updated = await this.quizzesService.publishQuiz(id);
+  async publishQuiz(@Param('id') id: string, @CurrentUser() user: any) {
+    const updated = await this.quizzesService.publishQuiz(id, user);
     return createSuccessResponse(updated, 'Xuất bản bài kiểm tra thành công');
   }
 
   @Post(':id/unpublish')
   @Roles('TEACHER', 'ADMIN')
   @ApiOperation({ summary: 'Gỡ bài kiểm tra về trạng thái bản thảo (Teacher)' })
-  async unpublishQuiz(@Param('id') id: string) {
-    const updated = await this.quizzesService.unpublishQuiz(id);
+  async unpublishQuiz(@Param('id') id: string, @CurrentUser() user: any) {
+    const updated = await this.quizzesService.unpublishQuiz(id, user);
     return createSuccessResponse(updated, 'Đã chuyển bài kiểm tra về bản thảo');
   }
 }

@@ -4,6 +4,15 @@ export interface AnswerState {
   answers?: Record<string, string[]>;
   essayAnswers?: Record<string, string[] | string>;
   essayTextAnswers?: Record<string, string>;
+  statementAnswers?: Record<string, Record<string, boolean>>;
+}
+
+export function statementLabel(index: number): string {
+  let label = '';
+  for (let n = index + 1; n > 0; n = Math.floor((n - 1) / 26)) {
+    label = String.fromCharCode(97 + (n - 1) % 26) + label;
+  }
+  return `${label})`;
 }
 
 /**
@@ -17,6 +26,11 @@ export function isQuestionAnswered(
 ): boolean {
   if (!question || !question.id || !answerState) {
     return false;
+  }
+
+  if (question.type === 'MULTIPLE_TRUE_FALSE') {
+    const answers = answerState.statementAnswers?.[question.id] || {};
+    return question.options.length > 0 && question.options.every(option => typeof answers[option.id] === 'boolean');
   }
 
   if (question.type === 'ESSAY') {

@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QuestionsService } from '../questions.service.js';
+import type { Repository } from 'typeorm';
+import type { UserEntity } from '../../../entities/user.entity.js';
 import { QuestionEntity, SubmissionEntity } from '../../../entities/index.js';
 import { BadRequestException } from '@nestjs/common';
 
@@ -37,7 +39,7 @@ describe('QuestionsService - Essay Rubric and Submission Handling', () => {
     };
 
     mockQuizzesService = {
-      getQuizById: vi.fn(),
+      getQuizById: vi.fn().mockResolvedValue({ id: 'quiz-1', teacherId: 'teacher-1', subject: 'Toán' }),
       updateQuestionStats: vi.fn(),
     };
 
@@ -52,6 +54,7 @@ describe('QuestionsService - Essay Rubric and Submission Handling', () => {
       mockRubricRepo,
       mockQuizzesService,
       mockUploadService,
+      { findOne: vi.fn() } as unknown as Repository<UserEntity>,
     );
   });
 
@@ -88,7 +91,7 @@ describe('QuestionsService - Essay Rubric and Submission Handling', () => {
           { id: 'crit-1', description: 'Nêu đúng Hà Nội', keywords: ['Hà Nội'], maxPoints: 1000 },
         ],
       },
-    });
+    }, { id: 'teacher-1', role: 'TEACHER' });
 
     expect(result).toBeDefined();
     expect(result.essayRubric).toEqual({
@@ -102,7 +105,7 @@ describe('QuestionsService - Essay Rubric and Submission Handling', () => {
     expect(result.score).toBe(2.0);
   });
 
-  it('auto-grades existing pending student submissions when teacher fills in the essay rubric', async () => {
+  it('does not regrade existing submissions when teacher edits an essay rubric', async () => {
     const existingQuestion: QuestionEntity = {
       id: 'q-essay-1',
       quizId: 'quiz-1',
@@ -159,16 +162,11 @@ describe('QuestionsService - Essay Rubric and Submission Handling', () => {
           { id: 'c-1', description: 'Có nhắc đến Hà Nội', keywords: ['Hà Nội'], maxPoints: 1000 },
         ],
       },
-    });
+    }, { id: 'teacher-1', role: 'TEACHER' });
 
-    // Check that submissionRepo.save was called with auto-graded answer
-    expect(mockSubmissionRepo.save).toHaveBeenCalled();
-    const savedSub = mockSubmissionRepo.save.mock.calls[0][0];
-    expect(savedSub.answers[0].isCorrect).toBe(true);
-    expect(savedSub.answers[0].scoreAwarded).toBe(1000);
-    expect(savedSub.score).toBe(1000);
-    expect(savedSub.percentage).toBe(100);
-    expect(savedSub.correctCount).toBe(1);
+    // Existing result history is immutable; the changed rubric only affects
+    // future attempt snapshots.
+    expect(mockSubmissionRepo.save).not.toHaveBeenCalled();
   });
 
   it('prevents deleting questions when quiz already has student submissions', async () => {
@@ -192,6 +190,6 @@ describe('QuestionsService - Essay Rubric and Submission Handling', () => {
     mockQuestionRepo.findOneBy.mockResolvedValue(existingQuestion);
     mockSubmissionRepo.count.mockResolvedValue(3); // 3 submissions exist
 
-    await expect(service.deleteQuestion('q-1')).rejects.toThrow(BadRequestException);
+    await expect(service.deleteQuestion('q-1', { id: 'teacher-1', role: 'TEACHER' })).rejects.toThrow(BadRequestException);
   });
 });

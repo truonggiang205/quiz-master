@@ -2,7 +2,7 @@ import { Injectable, NotFoundException, BadRequestException, ForbiddenException 
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
 import crypto from 'crypto';
-import { QuestionEntity, QuestionOption, SubmissionEntity } from '../../entities/index.js';
+import { QuestionEntity, QuestionOption, SubmissionEntity, UserEntity } from '../../entities/index.js';
 import { EssayRubricEntity } from '../grading/entities/essay-rubric.entity.js';
 import { CreateQuestionDto } from './dto/create-question.dto.js';
 import { UpdateQuestionDto } from './dto/update-question.dto.js';
@@ -17,6 +17,14 @@ import * as cheerio from 'cheerio';
 
 @Injectable()
 export class QuestionsService {
+  private validateStatements(type: string, options?: { id?: string; text: string; isCorrect?: boolean }[]) {
+    if (type !== 'MULTIPLE_TRUE_FALSE') return;
+    if (!Array.isArray(options) || options.length < 2 ||
+        options.some(option => !option.id?.trim() || !option.text?.trim() || typeof option.isCorrect !== 'boolean') ||
+        new Set(options.map(option => option.id)).size !== options.length) {
+      throw new BadRequestException('Câu đúng/sai nhiều nhận định cần ít nhất hai nhận định hợp lệ với ID duy nhất');
+    }
+  }
   constructor(
     @InjectRepository(QuestionEntity)
     private readonly questionRepo: Repository<QuestionEntity>,
@@ -26,6 +34,8 @@ export class QuestionsService {
     private readonly rubricRepo: Repository<EssayRubricEntity>,
     private readonly quizzesService: QuizzesService,
     private readonly uploadService: UploadService,
+    @InjectRepository(UserEntity)
+    private readonly userRepo: Repository<UserEntity>,
   ) { }
 
   private async getQuestionFolder(quizId: string): Promise<string> {
@@ -39,14 +49,35 @@ export class QuestionsService {
     return `quiz-master/${rootDir}/${subjectDir}/${titleDir}/đề bài`;
   }
 
-  async getQuestionsByQuizId(quizId: string, userRole?: string, isExamMode?: boolean) {
+  private async assertQuizAccess(quizId: string, user: { id?: string; role?: string }, write = false) {
+    const quiz = await this.quizzesService.getQuizById(quizId, 'TEACHER');
+    const role = user?.role?.toUpperCase();
+    if (role === 'ADMIN') return quiz;
+    if (role === 'TEACHER' && quiz.teacherId === user.id) return quiz;
+    if (write) throw new ForbiddenException('Bạn không có quyền thao tác với bài kiểm tra này');
+    if (role !== 'STUDENT' || quiz.status !== 'PUBLISHED') {
+      throw new ForbiddenException('Bạn không có quyền xem câu hỏi của bài kiểm tra này');
+    }
+    const now = new Date();
+    if ((quiz.startTime && new Date(quiz.startTime) > now) || (quiz.endTime && new Date(quiz.endTime) < now)) {
+      throw new ForbiddenException('Bài kiểm tra hiện không trong thời gian làm bài');
+    }
+    const student = await this.userRepo.findOne({ where: { id: user.id }, relations: { classes: true } });
+    const inClass = Boolean(quiz.classId && student?.classes?.some(cls => cls.id === quiz.classId));
+    const directlyAssigned = Boolean(quiz.assignedStudentIds?.includes(user.id!));
+    if (!inClass && !directlyAssigned) throw new ForbiddenException('Bạn không được giao bài kiểm tra này');
+    return quiz;
+  }
+
+  async getQuestionsByQuizId(quizId: string, user: { id?: string; role?: string }, isExamMode?: boolean) {
+    await this.assertQuizAccess(quizId, user);
     const questions = await this.questionRepo.find({
       where: { quizId },
       order: { order: 'ASC' },
     });
 
     // ALWAYS mask answers and explanation for students
-    const isTeacher = userRole?.toUpperCase() === 'TEACHER';
+    const isTeacher = ['TEACHER', 'ADMIN'].includes(user?.role?.toUpperCase() || '');
     if (!isTeacher) {
       return questions.map((q) => ({
         id: q.id,
@@ -75,6 +106,7 @@ export class QuestionsService {
   }
 
   async saveToBank(teacherId: string, dto: CreateQuestionDto) {
+    this.validateStatements(dto.type, dto.options);
     const optionsWithIds: QuestionOption[] = (dto.options || []).map((opt, idx) => ({
       id: opt.id || `opt-${Date.now()}-${idx}`,
       text: opt.text,
@@ -110,7 +142,8 @@ export class QuestionsService {
     return this.questionRepo.save(newQuestion);
   }
 
-  async importFromBank(quizId: string, questionIds: string[]) {
+  async importFromBank(quizId: string, questionIds: string[], user: any) {
+    await this.assertQuizAccess(quizId, user, true);
     if (!questionIds.length) return [];
 
     const existingCount = await this.questionRepo.count({ where: { quizId } });
@@ -142,7 +175,9 @@ export class QuestionsService {
     return saved;
   }
 
-  async createQuestion(quizId: string, dto: CreateQuestionDto, teacherId?: string) {
+  async createQuestion(quizId: string, dto: CreateQuestionDto, user: any) {
+    const quiz = await this.assertQuizAccess(quizId, user, true);
+    this.validateStatements(dto.type, dto.options);
     const optionsWithIds: QuestionOption[] = (dto.options || []).map((opt, idx) => ({
       id: opt.id || `opt-${Date.now()}-${idx}`,
       text: opt.text,
@@ -176,7 +211,7 @@ export class QuestionsService {
       subject: dto.subject,
       explanation: dto.explanation || '',
       order: dto.order || existingCount + 1,
-      teacherId,
+      teacherId: quiz.teacherId,
     });
 
     const saved = await this.questionRepo.save(newQuestion);
@@ -184,11 +219,14 @@ export class QuestionsService {
     return saved;
   }
 
-  async updateQuestion(id: string, dto: UpdateQuestionDto) {
+  async updateQuestion(id: string, dto: UpdateQuestionDto, user: any) {
     const question = await this.questionRepo.findOneBy({ id });
     if (!question) {
       throw new NotFoundException('Không tìm thấy câu hỏi để cập nhật');
     }
+    if (!question.quizId) throw new ForbiddenException('Không thể cập nhật câu hỏi không thuộc bài kiểm tra qua endpoint này');
+    await this.assertQuizAccess(question.quizId, user, true);
+    this.validateStatements(dto.type ?? question.type, dto.options ?? question.options);
 
     const submissionsCount = await this.submissionRepo.count({ where: { quizId: question.quizId } });
     const hasSubmissions = submissionsCount > 0;
@@ -234,29 +272,25 @@ export class QuestionsService {
       await this.syncQuizStats(question.quizId);
     }
 
-    // Khi giáo viên điền/cập nhật đáp án tự luận:
-    // 1. Đồng bộ sang EssayRubricEntity
-    // 2. Tự động chấm điểm (auto-grade) cho các bài thi học sinh đã nộp trước đó!
+    // Keep the rubric for future attempts only. Submitted attempts own an
+    // immutable snapshot and must never be regraded by editing a live question.
     if (saved.type === 'ESSAY' && saved.essayRubric) {
       await this.syncEssayRubricEntity(saved);
-      if (hasSubmissions) {
-        await this.autoGradeExistingSubmissions(saved);
-      }
     }
 
     return saved;
   }
 
-  async updateQuestionInQuiz(quizId: string, questionId: string, dto: UpdateQuestionDto) {
+  async updateQuestionInQuiz(quizId: string, questionId: string, dto: UpdateQuestionDto, user: any) {
     const question = await this.questionRepo.findOneBy({ id: questionId });
     if (!question || question.quizId !== quizId) {
       throw new NotFoundException(`Không tìm thấy câu hỏi ${questionId} trong bài kiểm tra ${quizId}`);
     }
-    return this.updateQuestion(questionId, dto);
+    return this.updateQuestion(questionId, dto, user);
   }
 
-  async syncQuestionsDiff(quizId: string, dto: SyncQuestionsDiffDto, teacherId?: string) {
-    const quiz = await this.quizzesService.getQuizById(quizId, 'TEACHER');
+  async syncQuestionsDiff(quizId: string, dto: SyncQuestionsDiffDto, user: any) {
+    const quiz = await this.assertQuizAccess(quizId, user, true);
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra để đồng bộ câu hỏi');
     }
@@ -289,6 +323,7 @@ export class QuestionsService {
 
         for (let i = 0; i < dto.created.length; i++) {
           const cDto = dto.created[i];
+          this.validateStatements(cDto.type, cDto.options);
           const optionsWithIds: QuestionOption[] = (cDto.options || []).map((opt, idx) => ({
             id: opt.id || `opt-${Date.now()}-${i}-${idx}`,
             text: opt.text,
@@ -320,7 +355,7 @@ export class QuestionsService {
             subject: cDto.subject,
             explanation: cDto.explanation || '',
             order: cDto.order || existingCount + i + 1,
-            teacherId: teacherId || quiz.teacherId,
+            teacherId: quiz.teacherId,
           });
           newEntities.push(entity);
         }
@@ -339,6 +374,7 @@ export class QuestionsService {
         for (const q of existingQuestions) {
           const changes = updateMap.get(q.id);
           if (!changes) continue;
+          this.validateStatements(changes.type ?? q.type, changes.options ?? q.options);
 
           if (!hasSubmissions) {
             if (changes.score !== undefined && changes.score !== q.score) {
@@ -387,9 +423,6 @@ export class QuestionsService {
     // 5. Tự động chấm tự luận nếu bài thi đã có bài nộp
     for (const eq of essayQuestionsToGrade) {
       await this.syncEssayRubricEntity(eq);
-      if (hasSubmissions) {
-        await this.autoGradeExistingSubmissions(eq);
-      }
     }
 
     return {
@@ -478,9 +511,9 @@ export class QuestionsService {
     };
   }
 
-  async bulkUpdateQuestions(quizId: string, updates: { id: string; points?: number; isLocked?: boolean }[]) {
+  async bulkUpdateQuestions(quizId: string, updates: { id: string; points?: number; isLocked?: boolean }[], user: any) {
     // Check if the quiz exists
-    const quiz = await this.quizzesService.getQuizById(quizId, 'TEACHER');
+    const quiz = await this.assertQuizAccess(quizId, user, true);
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
     }
@@ -512,11 +545,13 @@ export class QuestionsService {
     return saved;
   }
 
-  async deleteQuestion(id: string) {
+  async deleteQuestion(id: string, user: any) {
     const question = await this.questionRepo.findOneBy({ id });
     if (!question) {
       throw new NotFoundException('Không tìm thấy câu hỏi để xóa');
     }
+    if (!question.quizId) throw new ForbiddenException('Không thể xóa câu hỏi không thuộc bài kiểm tra qua endpoint này');
+    await this.assertQuizAccess(question.quizId, user, true);
 
     if (question.quizId) {
       const submissionsCount = await this.submissionRepo.count({ where: { quizId: question.quizId } });

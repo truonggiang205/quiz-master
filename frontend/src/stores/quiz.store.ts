@@ -10,19 +10,22 @@ interface QuizTakingState {
   answers: Record<string, string[]>; // questionId -> array of selected optionIds
   essayAnswers: Record<string, string[]>; // questionId -> array of uploaded image urls
   essayTextAnswers: Record<string, string>; // questionId -> text answer
+  statementAnswers: Record<string, Record<string, boolean>>;
   flaggedQuestionIds: string[]; // questionIds marked for review
   remainingSeconds: number;
   startedAtMs: number | null; // Epoch ms when the exam was started (wall clock)
   isTimerRunning: boolean;
   isSubmitModalOpen: boolean;
+  attemptId: string | null;
 
   // Actions
-  initQuizTaking: (quiz: Quiz, questions: Question[]) => void;
+  initQuizTaking: (quiz: Quiz, questions: Question[], attemptId: string, startedAt?: string, draftAnswers?: any[]) => void;
   selectSingleAnswer: (questionId: string, optionId: string) => void;
   toggleMultipleAnswer: (questionId: string, optionId: string) => void;
   addEssayAnswer: (questionId: string, url: string) => void;
   removeEssayAnswer: (questionId: string, index: number) => void;
   setEssayTextAnswer: (questionId: string, text: string) => void;
+  setStatementAnswer: (questionId: string, statementId: string, answer: boolean) => void;
   toggleFlagQuestion: (questionId: string) => void;
   goToQuestion: (index: number) => void;
   nextQuestion: () => void;
@@ -41,19 +44,21 @@ export const useQuizStore = create<QuizTakingState>()(
   answers: {},
   essayAnswers: {},
   essayTextAnswers: {},
+  statementAnswers: {},
   flaggedQuestionIds: [],
   remainingSeconds: 0,
   startedAtMs: null,
   isTimerRunning: false,
   isSubmitModalOpen: false,
+  attemptId: null,
 
-  initQuizTaking: (quiz: Quiz, questions: Question[]) => {
+  initQuizTaking: (quiz: Quiz, questions: Question[], attemptId: string, startedAt?: string, draftAnswers?: any[]) => {
     const current = get();
     const nowMs = Date.now();
     const totalSeconds = quiz.durationMinutes * 60;
 
     // Resume same quiz in progress
-    if (current.currentQuiz?.id === quiz.id && current.isTimerRunning && current.startedAtMs) {
+    if (current.currentQuiz?.id === quiz.id && current.attemptId === attemptId && current.isTimerRunning && current.startedAtMs) {
       // Recalculate remaining based on wall clock to correct for offline time
       const elapsedSeconds = Math.floor((nowMs - current.startedAtMs) / 1000);
       const correctedRemaining = Math.max(0, totalSeconds - elapsedSeconds);
@@ -61,19 +66,34 @@ export const useQuizStore = create<QuizTakingState>()(
       return;
     }
 
-    // Brand-new attempt
+    const restored = (draftAnswers || []).reduce((state, answer) => {
+      if (!answer?.questionId) return state;
+      state.answers[answer.questionId] = answer.selectedOptionIds || [];
+      if (answer.essayImageUrl) state.essayAnswers[answer.questionId] = String(answer.essayImageUrl).split('|||').filter(Boolean);
+      if (answer.essayText) state.essayTextAnswers[answer.questionId] = answer.essayText;
+      if (Array.isArray(answer.statementAnswers)) {
+        state.statementAnswers[answer.questionId] = Object.fromEntries(answer.statementAnswers
+          .filter((statement: any) => typeof statement?.answer === 'boolean')
+          .map((statement: any) => [statement.statementId, statement.answer]));
+      }
+      return state;
+    }, { answers: {} as Record<string, string[]>, essayAnswers: {} as Record<string, string[]>, essayTextAnswers: {} as Record<string, string>, statementAnswers: {} as Record<string, Record<string, boolean>> });
+
+    // Brand-new attempt or server-side restored work
     set({
       currentQuiz: quiz,
       questions,
       currentQuestionIndex: 0,
-      answers: {},
-      essayAnswers: {},
-      essayTextAnswers: {},
+      answers: restored.answers,
+      essayAnswers: restored.essayAnswers,
+      essayTextAnswers: restored.essayTextAnswers,
+      statementAnswers: restored.statementAnswers,
       flaggedQuestionIds: [],
       remainingSeconds: totalSeconds,
-      startedAtMs: nowMs,
+      startedAtMs: startedAt ? new Date(startedAt).getTime() : nowMs,
       isTimerRunning: true,
       isSubmitModalOpen: false,
+      attemptId,
     });
   },
 
@@ -138,6 +158,10 @@ export const useQuizStore = create<QuizTakingState>()(
     }));
   },
 
+  setStatementAnswer: (questionId, statementId, answer) => set(state => ({
+    statementAnswers: { ...state.statementAnswers, [questionId]: { ...state.statementAnswers?.[questionId], [statementId]: answer } },
+  })),
+
   toggleFlagQuestion: (questionId: string) => {
     const list = get().flaggedQuestionIds;
     const updated = list.includes(questionId)
@@ -186,11 +210,13 @@ export const useQuizStore = create<QuizTakingState>()(
       answers: {},
       essayAnswers: {},
       essayTextAnswers: {},
+      statementAnswers: {},
       flaggedQuestionIds: [],
       remainingSeconds: 0,
       startedAtMs: null,
       isTimerRunning: false,
       isSubmitModalOpen: false,
+      attemptId: null,
     });
   },
     }),
@@ -204,10 +230,12 @@ export const useQuizStore = create<QuizTakingState>()(
         answers: state.answers,
         essayAnswers: state.essayAnswers,
         essayTextAnswers: state.essayTextAnswers,
+        statementAnswers: state.statementAnswers,
         flaggedQuestionIds: state.flaggedQuestionIds,
         remainingSeconds: state.remainingSeconds,
         startedAtMs: state.startedAtMs,
         isTimerRunning: state.isTimerRunning,
+        attemptId: state.attemptId,
       }),
     }
   )

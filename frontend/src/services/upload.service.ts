@@ -1,10 +1,5 @@
 import axios from 'axios';
-import { apiClient } from './api';
-
-const getBaseUrl = () => {
-  const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-  return apiUrl.replace(/\/+$/, '');
-};
+import { getApiBaseUrl } from '../config/api-url';
 
 export const uploadService = {
   async uploadFile(file: File | Blob, folder?: string): Promise<{ url: string }> {
@@ -17,7 +12,7 @@ export const uploadService = {
 
     const token = localStorage.getItem('quizmaster_auth_token');
     const response = await axios.post(
-      `${getBaseUrl()}/upload`,
+      `${getApiBaseUrl()}/upload`,
       formData,
       {
         headers: {
@@ -32,7 +27,7 @@ export const uploadService = {
   async uploadBase64(base64Str: string, folder?: string): Promise<{ url: string }> {
     const token = localStorage.getItem('quizmaster_auth_token');
     const response = await axios.post(
-      `${getBaseUrl()}/upload/base64`,
+      `${getApiBaseUrl()}/upload/base64`,
       { image: base64Str, folder },
       {
         headers: {
@@ -49,7 +44,7 @@ export const uploadService = {
 
     const token = localStorage.getItem('quizmaster_auth_token');
     const response = await axios.post(
-      `${getBaseUrl()}/upload/parse-document`,
+      `${getApiBaseUrl()}/upload/parse-document`,
       formData,
       {
         headers: {

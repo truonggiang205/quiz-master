@@ -5,6 +5,7 @@ import { useAuthStore } from '../../stores/auth.store';
 import { useUiStore } from '../../stores/ui.store';
 import { chatService, Conversation, Message, ChatUser } from '../../services/chat.service';
 import { UserAvatar } from './UserAvatar';
+import { getBackendOrigin } from '../../config/api-url';
 
 
 export const FloatingChat: React.FC = () => {
@@ -35,9 +36,7 @@ export const FloatingChat: React.FC = () => {
   useEffect(() => {
     if (!user) return;
     
-    // Fix Socket URL by stripping /api from backend URL
-    const apiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3000/api';
-    const socketUrl = apiUrl.replace(/\/api\/?$/, '');
+    const socketUrl = getBackendOrigin();
 
     // Initialize socket
     const newSocket = io(socketUrl, {

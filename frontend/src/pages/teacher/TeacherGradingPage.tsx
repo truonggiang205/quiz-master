@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { statementLabel } from '../../utils/quiz.utils';
 import { useParams, useNavigate, Link } from 'react-router-dom';
 import { submissionService } from '../../services/submission.service';
 import { Submission, DetailedAnswerReview } from '../../types/submission';
@@ -162,7 +163,16 @@ export const TeacherGradingPage: React.FC = () => {
               )}
             </div>
 
-            {ans.questionType === 'ESSAY' ? (
+            {ans.statementAnswers ? (
+              <div className="space-y-2">
+                {ans.statementAnswers.map((statement, index) => (
+                  <div key={statement.statementId} className="rounded-xl border border-slate-200 p-3 text-sm dark:border-slate-700">
+                    <p className="whitespace-pre-wrap break-words">{statementLabel(index)} {statement.text}</p>
+                    <p>Học sinh: {statement.answer === null ? 'Chưa trả lời' : statement.answer ? 'Đúng' : 'Sai'} · Đáp án: {statement.correctAnswer ? 'Đúng' : 'Sai'} · {statement.answer === null ? 'Chưa trả lời' : statement.isCorrect ? 'Chính xác' : 'Chưa chính xác'}</p>
+                  </div>
+                ))}
+              </div>
+            ) : ans.questionType === 'ESSAY' ? (
               <div className="bg-slate-50 dark:bg-slate-900/50 p-4 rounded-2xl border border-slate-100 dark:border-slate-800 flex flex-col gap-4">
                 <h4 className="text-xs font-bold text-slate-500 uppercase">Bài làm của học sinh:</h4>
                 

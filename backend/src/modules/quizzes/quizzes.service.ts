@@ -1,7 +1,7 @@
-import { Injectable, NotFoundException, BadRequestException } from '@nestjs/common';
+import { Injectable, NotFoundException, BadRequestException, ForbiddenException } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Repository, In } from 'typeorm';
-import { QuizEntity, QuizStatus, QuestionEntity, SubmissionEntity, ClassEntity, UserEntity } from '../../entities/index.js';
+import { QuizEntity, QuizStatus, QuestionEntity, SubmissionEntity, ClassEntity, UserEntity, QuizAttemptEntity } from '../../entities/index.js';
 import { CreateQuizDto } from './dto/create-quiz.dto.js';
 import { UpdateQuizDto } from './dto/update-quiz.dto.js';
 import { UploadService } from '../upload/upload.service.js';
@@ -20,6 +20,8 @@ export class QuizzesService {
     private readonly userRepo: Repository<UserEntity>,
     @InjectRepository(ClassEntity)
     private readonly classRepo: Repository<ClassEntity>,
+    @InjectRepository(QuizAttemptEntity)
+    private readonly attemptRepo: Repository<QuizAttemptEntity>,
     private readonly uploadService: UploadService,
     private readonly notificationsService: NotificationsService,
   ) {}
@@ -113,66 +115,89 @@ export class QuizzesService {
     return this.quizRepo.save(newQuiz);
   }
 
-  async updateQuiz(id: string, dto: UpdateQuizDto) {
+  private assertQuizManager(quiz: QuizEntity, user: { id?: string; role?: string }) {
+    if (user?.role === 'ADMIN') return;
+    if (user?.role !== 'TEACHER' || quiz.teacherId !== user.id) {
+      throw new ForbiddenException('Bạn không có quyền thao tác với bài kiểm tra này');
+    }
+  }
+
+  private isAssetInQuizFolder(url: string, quizFolder: string): boolean {
+    if (!url?.includes('cloudinary.com')) return false;
+    const match = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
+    if (!match?.[1]) return false;
+    const publicId = decodeURIComponent(match[1]).replace(/\.[^/.]+$/, '');
+    return publicId.startsWith(`${quizFolder}/`);
+  }
+
+  private async retryCloudinaryCleanup(label: string, action: () => Promise<boolean>) {
+    for (let attempt = 1; attempt <= 3; attempt++) {
+      if (await action()) return;
+    }
+    // The DB is already committed. Keep the failure visible for an operator;
+    // never resurrect quiz data just because an external delete failed.
+    console.error(`Cloudinary cleanup requires retry: ${label}`);
+  }
+
+  async updateQuiz(id: string, dto: UpdateQuizDto, user: { id?: string; role?: string }) {
     const quiz = await this.quizRepo.findOneBy({ id });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra để cập nhật');
     }
 
-    Object.assign(quiz, dto);
+    this.assertQuizManager(quiz, user);
+    const { teacherId: _teacherId, teacherName: _teacherName, ...safeDto } = dto as any;
+    Object.assign(quiz, safeDto);
     return this.quizRepo.save(quiz);
   }
 
-  async deleteQuiz(id: string) {
+  async deleteQuiz(id: string, user: { id?: string; role?: string }) {
     const quiz = await this.quizRepo.findOneBy({ id });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra để xóa');
     }
 
-    // Cascade delete questions and submissions
+    this.assertQuizManager(quiz, user);
+    // Capture only assets proven to belong to this quiz. DB deletion is committed
+    // first; external Cloudinary cleanup must never precede it.
     const questions = await this.questionRepo.find({ where: { quizId: id } });
-    for (const q of questions) {
-      if (q.imageUrl) await this.uploadService.deleteFileByUrl(q.imageUrl);
-    }
-
-    const submissions = await this.submissionRepo.find({ where: { quizId: id } });
-    for (const sub of submissions) {
-      if (sub.answers) {
-        for (const ans of sub.answers) {
-          if (ans.essayImageUrl) {
-            const urls = ans.essayImageUrl.split('|||');
-            for (const url of urls) {
-              await this.uploadService.deleteFileByUrl(url);
-            }
-          }
-        }
-      }
-    }
-
     // Clean up empty folders in Cloudinary
     const rootDir = quiz.mode === 'PRACTICE' ? 'ôn tập' : 'bài thi';
     const subjectDir = (quiz.subject || 'khác').trim().toLowerCase();
     const titleDir = quiz.title.trim();
     const quizFolder = `quiz-master/${rootDir}/${subjectDir}/${titleDir}`;
     
-    // Cloudinary requires subfolders to be empty/deleted before parent can be deleted
-    await this.uploadService.deleteFolder(`${quizFolder}/đề bài`);
-    await this.uploadService.deleteFolder(`${quizFolder}/bài tập`);
-    await this.uploadService.deleteFolder(quizFolder);
+    // A folder name is not a durable ownership boundary (two quizzes can have
+    // the same title). Only remove a question image when no question belonging
+    // to another quiz references that exact URL. Submission JSON has no asset
+    // relation to prove exclusive ownership, so it is intentionally retained.
+    const candidateQuestionUrls = [...new Set(questions.map(question => question.imageUrl)
+      .filter((url): url is string => this.isAssetInQuizFolder(url || '', quizFolder)))];
 
-    await this.questionRepo.delete({ quizId: id });
-    await this.submissionRepo.delete({ quizId: id });
-    await this.quizRepo.delete({ id });
+    await this.attemptRepo.manager.transaction(async manager => {
+      await manager.getRepository(QuizAttemptEntity).delete({ quizId: id });
+      await manager.getRepository(QuestionEntity).delete({ quizId: id });
+      await manager.getRepository(SubmissionEntity).delete({ quizId: id });
+      await manager.getRepository(QuizEntity).delete({ id });
+    });
+
+    for (const url of candidateQuestionUrls) {
+      const references = await this.questionRepo.count({ where: { imageUrl: url } });
+      if (references === 0) {
+        await this.retryCloudinaryCleanup(`file ${url}`, () => this.uploadService.deleteFileByUrl(url));
+      }
+    }
 
     return { id, deleted: true };
   }
 
-  async publishQuiz(id: string) {
+  async publishQuiz(id: string, user: { id?: string; role?: string }) {
     const quiz = await this.quizRepo.findOneBy({ id });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
     }
 
+    this.assertQuizManager(quiz, user);
     // BE validate: tổng điểm các câu phải bằng total_points khi xuất bản, điểm mỗi câu >= 0 và là số nguyên.
     const questions = await this.questionRepo.find({ where: { quizId: id } });
     let currentTotalPoints = 0;
@@ -222,11 +247,12 @@ export class QuizzesService {
     return quiz;
   }
 
-  async unpublishQuiz(id: string) {
+  async unpublishQuiz(id: string, user: { id?: string; role?: string }) {
     const quiz = await this.quizRepo.findOneBy({ id });
     if (!quiz) {
       throw new NotFoundException('Không tìm thấy bài kiểm tra');
     }
+    this.assertQuizManager(quiz, user);
     quiz.status = 'DRAFT';
     return this.quizRepo.save(quiz);
   }

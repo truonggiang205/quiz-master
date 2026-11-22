@@ -24,14 +24,17 @@ export const StudentQuizTakingPage: React.FC = () => {
     answers,
     essayAnswers,
     essayTextAnswers,
+    statementAnswers,
     flaggedQuestionIds,
     remainingSeconds,
+    attemptId,
     initQuizTaking,
     selectSingleAnswer,
     toggleMultipleAnswer,
     addEssayAnswer,
     removeEssayAnswer,
     setEssayTextAnswer,
+    setStatementAnswer,
     toggleFlagQuestion,
     nextQuestion,
     prevQuestion,
@@ -47,10 +50,7 @@ export const StudentQuizTakingPage: React.FC = () => {
     if (!id) return;
     const load = async () => {
       try {
-        const [quizData, questionsData] = await Promise.all([
-          quizService.getQuizById(id),
-          quizService.getQuestions(id, true), // examMode = true masks answers!
-        ]);
+        const quizData = await quizService.getQuizById(id);
 
         if (!quizData) {
           addToast({ type: 'error', title: 'Không tìm thấy bài kiểm tra' });
@@ -60,7 +60,19 @@ export const StudentQuizTakingPage: React.FC = () => {
 
         // Verify start conditions (e.g. attempt limits)
         try {
-          await submissionService.startQuiz(id);
+          const attempt = await submissionService.startQuiz(id);
+          // The attempt owns timing and marking metadata.  Keep the live quiz
+          // only for display fields that are not captured in the snapshot.
+          // Otherwise a teacher edit after start could change this client's
+          // timer or score scale while the server grades the original attempt.
+          initQuizTaking({
+            ...quizData,
+            id: attempt.quizId,
+            title: attempt.quizTitle,
+            durationMinutes: attempt.durationMinutes,
+            totalPoints: attempt.totalPoints,
+            answerReleaseAt: attempt.answerReleaseAt,
+          }, attempt.questions, attempt.attemptId, attempt.startedAt, attempt.draftAnswers);
         } catch (error: any) {
           addToast({ 
             type: 'error', 
@@ -71,7 +83,6 @@ export const StudentQuizTakingPage: React.FC = () => {
           return;
         }
 
-        initQuizTaking(quizData, questionsData);
       } catch (err: any) {
         addToast({ type: 'error', title: 'Không tìm thấy bài kiểm tra', message: 'Bài thi này đã bị xóa hoặc không còn khả dụng.' });
         resetExam();
@@ -86,6 +97,23 @@ export const StudentQuizTakingPage: React.FC = () => {
       // Don't reset exam if navigating to results
     };
   }, [id, initQuizTaking, navigate, addToast, resetExam]);
+
+  // Persist a response-only draft server-side so another device can resume it.
+  useEffect(() => {
+    if (!id || !attemptId || loading) return;
+    const timer = window.setTimeout(() => {
+      const draft = questions.map(q => ({
+        questionId: q.id,
+        selectedOptionIds: answers[q.id] || [],
+        essayImageUrl: (essayAnswers[q.id] || []).join('|||'),
+        essayText: essayTextAnswers[q.id] || '',
+        ...(q.type === 'MULTIPLE_TRUE_FALSE' ? { statementAnswers: Object.entries(statementAnswers?.[q.id] || {})
+          .map(([statementId, answer]) => ({ statementId, answer })) } : {}),
+      }));
+      submissionService.saveAttemptAnswers(id, attemptId, draft).catch(() => undefined);
+    }, 750);
+    return () => window.clearTimeout(timer);
+  }, [id, attemptId, loading, questions, answers, essayAnswers, essayTextAnswers, statementAnswers]);
 
   // Sync timer with wall clock on tab focus (handles cases where user was away)
   useEffect(() => {
@@ -126,7 +154,7 @@ export const StudentQuizTakingPage: React.FC = () => {
   };
 
   const handleDoSubmit = useCallback(async () => {
-    if (!id || !currentQuiz || isSubmitting) return;
+    if (!id || !currentQuiz || !attemptId || isSubmitting) return;
 
     setIsSubmitting(true);
     addToast({ type: 'info', title: 'Đang nộp bài...', message: 'Hệ thống đang xử lý bài làm của bạn, vui lòng không tắt trang' });
@@ -141,6 +169,12 @@ export const StudentQuizTakingPage: React.FC = () => {
           selectedOptionIds: answers[q.id] || [],
           essayImageUrl: essayArr.join('|||'),
           essayText: essayTextAnswers[q.id] || '',
+          ...(q.type === 'MULTIPLE_TRUE_FALSE' ? {
+            statementAnswers: q.options.flatMap(statement => {
+              const answer = statementAnswers?.[q.id]?.[statement.id];
+              return typeof answer === 'boolean' ? [{ statementId: statement.id, answer }] : [];
+            }),
+          } : {}),
         };
       });
 
@@ -149,6 +183,7 @@ export const StudentQuizTakingPage: React.FC = () => {
 
       const submission = await submissionService.submitQuiz(
         id,
+        attemptId,
         formattedAnswers,
         timeUsed,
       );
@@ -169,7 +204,7 @@ export const StudentQuizTakingPage: React.FC = () => {
       });
       setIsSubmitting(false);
     }
-  }, [id, currentQuiz, isSubmitting, answers, essayAnswers, essayTextAnswers, questions, remainingSeconds, addToast, resetExam, navigate]);
+  }, [id, currentQuiz, attemptId, isSubmitting, answers, essayAnswers, essayTextAnswers, statementAnswers, questions, remainingSeconds, addToast, resetExam, navigate]);
 
   const handleTimeExpired = useCallback(() => {
     addToast({
@@ -195,7 +230,7 @@ export const StudentQuizTakingPage: React.FC = () => {
   const selectedOptions = answers[currentQ.id] || [];
   const isFlagged = flaggedQuestionIds.includes(currentQ.id);
 
-  const answerState = { answers, essayAnswers, essayTextAnswers };
+  const answerState = { answers, essayAnswers, essayTextAnswers, statementAnswers };
   const answeredCount = questions.filter((q) =>
     isQuestionAnswered(q, answerState),
   ).length;
@@ -269,6 +304,8 @@ export const StudentQuizTakingPage: React.FC = () => {
             }
             essayText={essayTextAnswers[currentQ.id] || ''}
             onEssayTextChange={(text) => setEssayTextAnswer(currentQ.id, text)}
+            statementAnswers={statementAnswers?.[currentQ.id] || {}}
+            onStatementAnswer={(statementId, answer) => setStatementAnswer(currentQ.id, statementId, answer)}
             onToggleFlag={() => toggleFlagQuestion(currentQ.id)}
           />
 

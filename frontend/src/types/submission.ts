@@ -7,6 +7,7 @@ export interface StudentAnswer {
   essayText?: string;
   isCorrect?: boolean;
   scoreAwarded?: number;
+  statementAnswers?: { statementId: string; text: string; answer: boolean | null; correctAnswer: boolean; isCorrect: boolean }[];
 }
 
 export interface DetailedAnswerReview extends StudentAnswer {

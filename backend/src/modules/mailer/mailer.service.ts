@@ -7,30 +7,36 @@ dns.setDefaultResultOrder('ipv4first');
 
 @Injectable()
 export class MailerService {
-  private transporter: nodemailer.Transporter;
+  private readonly transporter: nodemailer.Transporter | null;
+  private readonly from: string | null;
   private readonly logger = new Logger(MailerService.name);
 
   constructor() {
-    // Ethereal fake SMTP configuration for testing. 
-    // In production, replace with real SMTP credentials (e.g. Gmail App Password, SendGrid, etc) via process.env
-    const port = Number(process.env.SMTP_PORT) || 587;
+    const host = process.env.SMTP_HOST?.trim();
+    const user = process.env.SMTP_USER?.trim();
+    const pass = process.env.SMTP_PASS;
+    const port = Number(process.env.SMTP_PORT || 587);
+    this.from = process.env.SMTP_FROM?.trim() || user || null;
+    if (!host || !user || !pass) {
+      this.transporter = null;
+      this.logger.warn('SMTP is not configured; email delivery is disabled.');
+      return;
+    }
     this.transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST || 'smtp.ethereal.email',
-      port: port,
-      secure: port === 465, // true for 465, false for 587
-      connectionTimeout: 10000, // 10 seconds max wait for connection
-      greetingTimeout: 10000, // 10 seconds max wait for greeting
-      auth: {
-        user: process.env.SMTP_USER || 'zwkprilkn3d5vcu5@ethereal.email', // Replace with a newly generated ethereal account if this fails, or use real SMTP
-        pass: process.env.SMTP_PASS || 'E8Qxz5sXp9FT7Kbbun'
-      },
+      host, port, secure: port === 465,
+      connectionTimeout: 10000, greetingTimeout: 10000,
+      auth: { user, pass },
     });
   }
 
   async sendMail(email: string, subject: string, html: string) {
+    if (!this.transporter || !this.from) {
+      this.logger.error('SMTP is not configured; unable to send email.');
+      return false;
+    }
     try {
       const info = await this.transporter.sendMail({
-        from: `"QuizMaster" <${process.env.SMTP_USER}>`,
+        from: `"QuizMaster" <${this.from}>`,
         to: email,
         subject,
         html,
@@ -38,9 +44,9 @@ export class MailerService {
       
       this.logger.log(`Email sent: ${info.messageId}`);
       return true;
-    } catch (error) {
-      this.logger.error('Error sending email', error);
-      throw error;
+    } catch {
+      this.logger.error('Error sending email.');
+      return false;
     }
   }
 
@@ -71,28 +77,24 @@ export class MailerService {
         </div>
       `;
 
+    if (!this.transporter || !this.from) {
+      this.logger.error('SMTP is not configured; unable to deliver OTP email.');
+      return false;
+    }
     try {
-      const info = await this.transporter.sendMail({
-        from: `"QuizMaster" <${process.env.SMTP_USER}>`,
+      await this.transporter.sendMail({
+        from: `"QuizMaster" <${this.from}>`,
         to: email,
         subject,
         text,
         html,
       });
       
-      this.logger.log(`Email sent: ${info.messageId}`);
+      this.logger.log('OTP email sent.');
       
-      const testUrl = nodemailer.getTestMessageUrl(info);
-      if (testUrl) {
-         this.logger.log(`[ETHEREAL MAIL URL] Click here to view OTP: ${testUrl}`);
-         // Also log the OTP directly so they don't even have to click the link
-         this.logger.warn(`[DEV OTP] OTP is: ${otp}`);
-      }
       return true;
-    } catch (error) {
-      this.logger.error('Error sending email. Please check your SMTP credentials.', error);
-      // Fallback for development: Print the OTP to the console so development is not blocked
-      this.logger.warn(`[DEV FALLBACK] Your OTP for ${email} is: ${otp}`);
+    } catch {
+      this.logger.error('Error sending OTP email.');
       return false;
     }
   }

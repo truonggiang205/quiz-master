@@ -310,7 +310,7 @@ test.describe('Batch 4 — Essay Auto/Manual Grading & Question Image Rendering'
     await examPage.expectTakingLoaded();
 
     // Nhập câu trả lời tự luận: "Hình vuông" (đáp án đúng)
-    const textarea = page.locator('textarea[placeholder*="Nhập câu trả lời"]').first();
+    const textarea = page.getByLabel('Trả lời bằng văn bản').first();
     await textarea.fill('Hình vuông');
 
     // Nộp bài

@@ -41,9 +41,9 @@ export class CreateQuestionDto {
 
   @ApiProperty({
     example: 'SINGLE_CHOICE',
-    enum: ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'ESSAY'],
+    enum: ['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'ESSAY', 'MULTIPLE_TRUE_FALSE'],
   })
-  @IsEnum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'ESSAY'])
+  @IsEnum(['SINGLE_CHOICE', 'MULTIPLE_CHOICE', 'TRUE_FALSE', 'ESSAY', 'MULTIPLE_TRUE_FALSE'])
   type!: string;
 
   @ApiPropertyOptional({ type: [AnswerOptionDto] })

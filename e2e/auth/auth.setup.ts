@@ -2,11 +2,16 @@ import { test as setup, expect } from '@playwright/test';
 import { LoginPage } from '../pages/auth/login.page';
 import { TEST_USERS, STORAGE_PATHS, TEST_CONFIG } from '../utils/constants';
 import fs from 'fs';
+import { seedTestAccounts } from '../utils/db-seed';
 
 // Ensure .auth directory exists
 if (!fs.existsSync(TEST_CONFIG.STORAGE_STATE_DIR)) {
   fs.mkdirSync(TEST_CONFIG.STORAGE_STATE_DIR, { recursive: true });
 }
+
+setup('Tạo hoặc tái sử dụng tài khoản E2E riêng trên MySQL test đã xác minh', async () => {
+  await seedTestAccounts();
+});
 
 setup('Xác thực tài khoản Admin và lưu Storage State', async ({ page }) => {
   const loginPage = new LoginPage(page);

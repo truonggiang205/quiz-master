@@ -1,5 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
 import { QuestionsService } from '../questions.service.js';
+import type { Repository } from 'typeorm';
+import type { UserEntity } from '../../../entities/user.entity.js';
 
 describe('QuestionsService Diff & Bank Sync', () => {
   let service: QuestionsService;
@@ -49,6 +51,7 @@ describe('QuestionsService Diff & Bank Sync', () => {
       mockRubricRepo,
       mockQuizzesService,
       mockUploadService,
+      { findOne: vi.fn() } as unknown as Repository<UserEntity>,
     );
   });
 
@@ -65,7 +68,7 @@ describe('QuestionsService Diff & Bank Sync', () => {
     mockQuestionRepo.findOneBy.mockResolvedValue({ ...existing });
     const syncSpy = vi.spyOn(service as any, 'syncQuizStats');
 
-    await service.updateQuestion('q-1', { content: 'Nội dung mới' });
+    await service.updateQuestion('q-1', { content: 'Nội dung mới' }, { id: 'teacher-1', role: 'TEACHER' });
 
     expect(mockQuestionRepo.save).toHaveBeenCalledTimes(1);
     expect(syncSpy).not.toHaveBeenCalled();
@@ -77,7 +80,7 @@ describe('QuestionsService Diff & Bank Sync', () => {
 
     const result = await service.syncQuestionsDiff('quiz-1', {
       updated: [{ id: 'q-1', changes: { content: 'Câu 1 đã sửa' } }],
-    });
+    }, { id: 'teacher-1', role: 'TEACHER' });
 
     expect(result.success).toBe(true);
     expect(result.updatedCount).toBe(1);

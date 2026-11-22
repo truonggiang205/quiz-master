@@ -1,3 +1,5 @@
+import { getBackendOrigin } from '../config/api-url';
+
 export const resolveImageUrl = (url?: string): string => {
   if (!url) return '';
   if (
@@ -8,7 +10,5 @@ export const resolveImageUrl = (url?: string): string => {
   ) {
     return url;
   }
-  const rawApiUrl = import.meta.env.VITE_API_URL || 'http://localhost:3333/api';
-  const apiBase = rawApiUrl.replace(/\/api\/?$/, '');
-  return `${apiBase}${url.startsWith('/') ? '' : '/'}${url}`;
+  return `${getBackendOrigin()}${url.startsWith('/') ? '' : '/'}${url}`;
 };

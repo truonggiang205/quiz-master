@@ -26,7 +26,7 @@ export class StudentExamPage extends BasePage {
     // Detail page
     this.detailTitle = page.locator('h1').first();
     this.startExamTriggerBtn = page.locator('#start-exam-confirm-trigger');
-    this.startConfirmModal = page.locator('.fixed.inset-0.z-50').filter({ hasText: /Xác nhận bắt đầu bài thi/i });
+    this.startConfirmModal = page.locator('.fixed.inset-0').filter({ hasText: /Xác nhận bắt đầu bài thi/i });
     this.startConfirmBtn = this.startConfirmModal.getByRole('button', { name: /Tôi đã sẵn sàng, bắt đầu!/i });
 
     // Taking page
@@ -38,7 +38,7 @@ export class StudentExamPage extends BasePage {
     this.flagBtn = page.locator('button[aria-label*="cờ câu hỏi"]');
 
     // Submit modal
-    this.submitModal = page.locator('.fixed.inset-0.z-50').filter({ hasText: /Bạn có chắc muốn nộp bài thi\?/i });
+    this.submitModal = page.locator('.fixed.inset-0').filter({ hasText: /Bạn có chắc muốn nộp bài thi\?/i });
     this.modalSubmitConfirmBtn = this.submitModal.getByRole('button', { name: /Xác nhận nộp bài/i });
     this.modalAnsweredCount = this.submitModal.locator('span:has-text("Đã trả lời")').locator('..').locator('span').first();
     this.modalUnansweredCount = this.submitModal.locator('span:has-text("Chưa trả lời")').locator('..').locator('span').first();

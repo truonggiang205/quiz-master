@@ -6,6 +6,7 @@ import {
   QuizEntity,
   QuestionEntity,
   SubmissionEntity,
+  QuizAttemptEntity,
   ClassEntity,
 } from './entities/index.js';
 import { NotificationEntity } from './entities/notification.entity.js';
@@ -41,10 +42,27 @@ import {
 import { TeacherStudentEntity } from './modules/students/entities/teacher-student.entity.js';
 import { TeachingModule } from './modules/teaching/teaching.module.js';
 import { LoggerMiddleware } from './common/middleware/logger.middleware.js';
+import { AppController } from './app.controller.js';
+import { AppService } from './app.service.js';
 
 dotenv.config();
 
+if (process.env.NODE_ENV === 'production') {
+  const missing = ['DB_HOST', 'DB_PORT', 'DB_USERNAME', 'DB_PASSWORD', 'DB_DATABASE', 'JWT_SECRET']
+    .filter((name) => !process.env[name]?.trim());
+  if (missing.length) {
+    throw new Error(`Missing required production environment variables: ${missing.join(', ')}`);
+  }
+}
+
+const synchronizeRequested = process.env.DB_SYNCHRONIZE === 'true';
+if (synchronizeRequested) {
+  throw new Error('DB_SYNCHRONIZE is disabled. Apply an explicit, reviewed migration to an independently verified local/test database instead.');
+}
+
 @Module({
+  controllers: [AppController],
+  providers: [AppService],
   imports: [
     TypeOrmModule.forRoot({
       type: 'mysql',
@@ -61,6 +79,7 @@ dotenv.config();
         QuizEntity,
         QuestionEntity,
         SubmissionEntity,
+        QuizAttemptEntity,
         ClassEntity,
         NotificationEntity,
         AppealEntity,
@@ -78,7 +97,8 @@ dotenv.config();
         TuitionPaymentEntity,
         TeacherStudentEntity,
       ],
-      synchronize: true, // Auto creates and syncs tables with Aiven MySQL
+      // Schema changes must always be deployed through explicit migrations.
+      synchronize: false,
       logging: false,
     }),
     AuthModule,

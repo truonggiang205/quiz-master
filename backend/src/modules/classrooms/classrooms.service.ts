@@ -454,17 +454,32 @@ export class ClassroomsService {
   async getClassesForStudent(studentId: string) {
     const student = await this.userRepo.findOne({
       where: { id: studentId },
-      relations: { classes: { teacher: true }, teachers: true },
+      relations: { classes: { teacher: true, students: true }, teachers: true },
     });
 
     if (!student) return [];
 
-    const normalClasses = (student.classes || []).map((c) => ({
-      ...c,
-      isPrivate: false,
-    }));
+    // Older installations represented a 1-1 relationship as a normal class
+    // named "Kèm 1-1: …". Keep that real class (it can own lessons and
+    // materials), but do not also render the newer virtual private class.
+    const legacyPrivateTeacherIds = new Set<string>();
+    const normalClasses = (student.classes || []).map((c) => {
+      const isLegacyPrivate = !c.isPrivate
+        && /^Kèm 1-1\s*:/i.test(c.name || '')
+        && (c.students || []).length === 1
+        && (c.students || []).some(member => member.id === studentId)
+        && Boolean(c.teacherId || c.teacher?.id);
 
-    const privateClasses = (student.teachers || []).map((t) => ({
+      if (isLegacyPrivate) legacyPrivateTeacherIds.add(c.teacherId || c.teacher!.id);
+      return {
+        ...c,
+        isPrivate: Boolean(c.isPrivate || isLegacyPrivate),
+      };
+    });
+
+    const privateClasses = (student.teachers || [])
+      .filter((t) => !legacyPrivateTeacherIds.has(t.id))
+      .map((t) => ({
       id: `private-${t.id}`,
       name: `Kèm 1-1: ${t.name}`,
       subject: 'Gia sư cá nhân',
@@ -475,7 +490,7 @@ export class ClassroomsService {
       createdAt: student.createdAt,
       updatedAt: student.updatedAt,
       isPrivate: true,
-    }));
+      }));
 
     return [...normalClasses, ...privateClasses].sort(
       (a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),

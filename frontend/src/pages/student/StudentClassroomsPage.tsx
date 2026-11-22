@@ -122,12 +122,12 @@ export const StudentClassroomsPage: React.FC = () => {
                     Vào lớp
                   </Link>
                 ) : (
-                  <button
-                    disabled
-                    className="block w-full py-2.5 px-4 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-400 text-center rounded-xl font-medium cursor-not-allowed"
+                  <Link
+                    to={`/student/classrooms/${cls.id}`}
+                    className="block w-full py-2.5 px-4 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 hover:border-amber-400 hover:text-amber-700 text-amber-700 dark:text-amber-300 text-center rounded-xl font-medium transition-all"
                   >
-                    Lớp kèm 1-1
-                  </button>
+                    Xem lớp kèm 1-1
+                  </Link>
                 )}
               </div>
             </div>

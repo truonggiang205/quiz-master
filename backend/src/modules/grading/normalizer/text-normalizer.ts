@@ -80,6 +80,11 @@ export function normalizeText(
   // ── Step 7: Normalise numbers ───────────────────────────────────────────
   if (config.normalizeNumbers) {
     s = normalizeNumbers(s);
+    // Students often omit the optional separator between a number and a
+    // measurement unit ("98amu", "1500ML").  This is formatting, not a
+    // different scientific answer.  Limit the rule to recognised units so
+    // chemical formulae and ordinary words are not split accidentally.
+    s = normalizeMeasurementSpacing(s);
     steps['normalizeNumbers'] = s;
   }
 
@@ -103,6 +108,15 @@ export function normalizeText(
   }
 
   return { original: text, normalized: s, steps };
+}
+
+/** Canonicalise the optional gap between a numeric value and common SI units. */
+function normalizeMeasurementSpacing(text: string): string {
+  const units = 'mmol|mol|kpa|mpa|amu|dalton|kg|mg|μg|ug|ml|cm|mm|km|pa|atm|ev|hz|nm|pm|ohm|l|g|m|s|k|c|n|j|w|v|a';
+  return text.replace(
+    new RegExp(`(\\d(?:[.,]\\d+)?)\\s*(${units})\\b`, 'giu'),
+    '$1 $2',
+  );
 }
 
 /** Escape special regex characters in a string */

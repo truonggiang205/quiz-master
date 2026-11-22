@@ -197,6 +197,32 @@ describe('Pipeline — Contractions in student answer', () => {
 
 // ── Number normalisation ──────────────────────────────────────────────────
 describe('Pipeline — Number normalisation', () => {
+  it('treats omitted spacing and casing in measurement units as an exact answer', () => {
+    const rubric: EssayRubric = {
+      questionId: 'q-unit-amu', acceptedAnswers: ['98 amu'], criteria: [], totalScore: 50,
+    };
+    const result = gradeWithRubric(
+      { questionId: rubric.questionId, submissionId: 'sub-unit-amu', studentAnswer: '98amu', rubric },
+      DEFAULT_GRADING_CONFIG,
+    );
+
+    expect(result.winningTier).toBe(1);
+    expect(result.score).toBe(50);
+  });
+
+  it('treats unit casing as formatting, not a different answer', () => {
+    const rubric: EssayRubric = {
+      questionId: 'q-unit-ml', acceptedAnswers: ['1500 mL'], criteria: [], totalScore: 50,
+    };
+    const result = gradeWithRubric(
+      { questionId: rubric.questionId, submissionId: 'sub-unit-ml', studentAnswer: '1500ML', rubric },
+      DEFAULT_GRADING_CONFIG,
+    );
+
+    expect(result.winningTier).toBe(1);
+    expect(result.score).toBe(50);
+  });
+
   it('needsReview is true when confidence is low (missing answer)', () => {
     const r = gradeWithRubric(
       makeInput(''),

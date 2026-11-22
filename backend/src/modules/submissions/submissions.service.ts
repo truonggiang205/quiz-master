@@ -764,22 +764,24 @@ export class SubmissionsService {
 
       for (const ans of sub.answers) {
         const q = quizQuestions.find((ques) => ques.id === ans.questionId);
-        // Snapshot-backed attempts are immutable; this legacy tool only handles
-        // rows created before snapshots existed.
-        if (ans.questionType || !q || q.type !== 'ESSAY') continue;
+        const isSnapshotEssay = ans.questionType === 'ESSAY';
+        if (!isSnapshotEssay && (!q || q.type !== 'ESSAY')) continue;
 
         // Bỏ qua nếu giáo viên đã chấm thủ công
         if (ans.isManuallyGraded) continue;
 
-        let rubric = q.essayRubric;
+        // Snapshot-backed submissions must be regraded from the rubric frozen
+        // at submit time. This fixes grading-engine defects without letting a
+        // later live-question edit rewrite a student's original assessment.
+        let rubric = ans.questionEssayRubric || q?.essayRubric;
         if (!rubric) {
           try {
-            const stored = await this.rubricRepo.findOneBy({ questionId: q.id });
+            const stored = q ? await this.rubricRepo.findOneBy({ questionId: q.id }) : null;
             if (stored) {
               rubric = {
                 acceptedAnswers: stored.acceptedAnswers || [],
                 criteria: stored.criteria || [],
-                totalScore: stored.totalScore || Number(q.points) || 100,
+                totalScore: stored.totalScore || Number(ans.questionPoints) || Number(q?.points) || 100,
               };
             }
           } catch (e) {}
@@ -794,8 +796,9 @@ export class SubmissionsService {
           );
         }
 
-        if (Array.isArray(q.options)) {
-          const correctOpts = q.options.filter((o) => o.isCorrect && o.text?.trim().length > 0);
+        const questionOptions = ans.questionOptions || q?.options || [];
+        if (Array.isArray(questionOptions)) {
+          const correctOpts = questionOptions.filter((o) => o.isCorrect && o.text?.trim().length > 0);
           for (const opt of correctOpts) {
             const trimmed = opt.text.trim();
             if (!acceptedAnswers.includes(trimmed)) {
@@ -812,7 +815,9 @@ export class SubmissionsService {
         if (!hasTeacherAnswer) continue;
 
         const studentText = (ans.essayText || '').trim();
-        const questionPoints = Number(q.points) || (Number(q.score) ? Math.round(Number(q.score) * 100) : 100);
+        const questionPoints = Number(ans.questionPoints)
+          || Number(q?.points)
+          || (Number(q?.score) ? Math.round(Number(q?.score) * 100) : 100);
 
         if (!studentText) {
           ans.scoreAwarded = 0;
@@ -821,11 +826,11 @@ export class SubmissionsService {
         } else {
           const gradeResult = gradeWithRubric(
             {
-              questionId: q.id,
+              questionId: ans.questionId,
               submissionId: sub.id,
               studentAnswer: studentText,
               rubric: {
-                questionId: q.id,
+                questionId: ans.questionId,
                 acceptedAnswers,
                 criteria,
                 totalScore: questionPoints,

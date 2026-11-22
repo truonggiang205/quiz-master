@@ -466,8 +466,6 @@ export class ClassroomsService {
     const normalClasses = (student.classes || []).map((c) => {
       const isLegacyPrivate = !c.isPrivate
         && /^Kèm 1-1\s*:/i.test(c.name || '')
-        && (c.students || []).length === 1
-        && (c.students || []).some(member => member.id === studentId)
         && Boolean(c.teacherId || c.teacher?.id);
 
       if (isLegacyPrivate) legacyPrivateTeacherIds.add(c.teacherId || c.teacher!.id);

@@ -91,6 +91,12 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
     .map(({ number }) => number);
   const requiresManualEssayGrading = manualEssayQuestionNumbers.length > 0;
 
+  // Quiz assignments must contain login-account IDs. A TeacherStudent profile
+  // has its own ID, which cannot be used by a student session to discover a quiz.
+  const linkedStudentAccountIds = new Set(
+    availableStudents.map(student => student.studentAccountId).filter(Boolean),
+  );
+
   const editorSignature = JSON.stringify({
     title, description, subject, mode, durationMinutes, totalAttempts, totalPoints,
     shuffleQuestions, shuffleAnswers, showScoreImmediately, showCorrectAnswers,
@@ -380,7 +386,11 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
       // Send an explicit null so the backend does not apply its legacy default.
       const releaseTime = requiresManualEssayGrading ? null : computeReleaseDate();
       const cleanClassId = assignMode === 'CLASS' && classId?.trim() ? classId.trim() : undefined;
-      const cleanAssignedStudentIds = assignMode === 'STUDENTS' && assignedStudentIds?.length ? assignedStudentIds : undefined;
+      const cleanAssignedStudentIds = assignMode === 'STUDENTS'
+        ? [...new Set(assignedStudentIds
+          .map(id => availableStudents.find(student => student.id === id)?.studentAccountId || id)
+          .filter(studentId => linkedStudentAccountIds.has(studentId)))]
+        : undefined;
 
       const quizInput = {
         title: title.trim(),
@@ -1013,17 +1023,24 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                   <p className="text-xs text-slate-500 text-center py-4">Chưa có học sinh 1-1 nào trong danh bạ</p>
                 ) : (
                   availableStudents.map(student => (
-                    <label key={student.id} className="flex items-center gap-2 p-2 hover:bg-white dark:hover:bg-slate-800 rounded-lg cursor-pointer">
+                    <label key={student.id} className={`flex items-center gap-2 p-2 rounded-lg ${student.studentAccountId ? 'hover:bg-white dark:hover:bg-slate-800 cursor-pointer' : 'opacity-55 cursor-not-allowed'}`}>
                       <input 
                         type="checkbox"
-                        checked={assignedStudentIds.includes(student.id)}
+                        checked={Boolean(student.studentAccountId && (
+                          assignedStudentIds.includes(student.studentAccountId) || assignedStudentIds.includes(student.id)
+                        ))}
+                        disabled={!student.studentAccountId}
                         onChange={(e) => {
-                          if (e.target.checked) setAssignedStudentIds([...assignedStudentIds, student.id]);
-                          else setAssignedStudentIds(assignedStudentIds.filter(id => id !== student.id));
+                          const accountId = student.studentAccountId;
+                          if (!accountId) return;
+                          if (e.target.checked) setAssignedStudentIds([...assignedStudentIds, accountId]);
+                          else setAssignedStudentIds(assignedStudentIds.filter(id => id !== accountId && id !== student.id));
                         }}
                         className="rounded text-sky-600 focus:ring-sky-400"
                       />
-                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">{student.name} ({student.email})</span>
+                      <span className="text-sm font-medium text-slate-700 dark:text-slate-300">
+                        {student.name} ({student.email}){!student.studentAccountId ? ' — chưa liên kết tài khoản' : ''}
+                      </span>
                     </label>
                   ))
                 )}

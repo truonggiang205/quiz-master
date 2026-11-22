@@ -6,6 +6,7 @@ import { CreateQuizDto } from './dto/create-quiz.dto.js';
 import { UpdateQuizDto } from './dto/update-quiz.dto.js';
 import { UploadService } from '../upload/upload.service.js';
 import { NotificationsService } from '../notifications/notifications.service.js';
+import { TeacherStudentEntity } from '../students/entities/teacher-student.entity.js';
 
 @Injectable()
 export class QuizzesService {
@@ -22,6 +23,8 @@ export class QuizzesService {
     private readonly classRepo: Repository<ClassEntity>,
     @InjectRepository(QuizAttemptEntity)
     private readonly attemptRepo: Repository<QuizAttemptEntity>,
+    @InjectRepository(TeacherStudentEntity)
+    private readonly teacherStudentRepo: Repository<TeacherStudentEntity>,
     private readonly uploadService: UploadService,
     private readonly notificationsService: NotificationsService,
   ) {}
@@ -46,13 +49,25 @@ export class QuizzesService {
       });
       const classIds = user?.classes?.map(c => c.id) || [];
 
+      // Early versions of the teacher UI persisted a TeacherStudent profile ID
+      // instead of the linked login-account ID. Support those already-published
+      // assignments while all new assignments use the account ID.
+      const profiles = await this.teacherStudentRepo.find({
+        where: { studentAccountId: userId },
+        select: { id: true },
+      });
+      const assignedIdentityParams = [userId, ...profiles.map(profile => profile.id)];
+      const assignedStudentCondition = assignedIdentityParams
+        .map((_, index) => `JSON_CONTAINS(quiz.assignedStudentIds, :assignedStudentId${index})`)
+        .join(' OR ');
+
       // Students only see quizzes assigned to their class or directly to them (NOT "all" mode)
       qb.andWhere(`(
         (quiz.classId IN (:...classIds)) OR
-        (JSON_CONTAINS(quiz.assignedStudentIds, :userIdStr))
+        (${assignedStudentCondition})
       )`, { 
-        classIds: classIds.length ? classIds : ['DUMMY_ID'], 
-        userIdStr: `"${userId}"` 
+        classIds: classIds.length ? classIds : ['DUMMY_ID'],
+        ...Object.fromEntries(assignedIdentityParams.map((id, index) => [`assignedStudentId${index}`, `"${id}"`])),
       });
     }
 

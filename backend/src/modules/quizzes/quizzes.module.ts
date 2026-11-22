@@ -4,11 +4,12 @@ import { UploadModule } from '../upload/upload.module.js';
 import { NotificationsModule } from '../notifications/notifications.module.js';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { QuizEntity, QuestionEntity, SubmissionEntity, UserEntity, ClassEntity, QuizAttemptEntity } from '../../entities/index.js';
+import { TeacherStudentEntity } from '../students/entities/teacher-student.entity.js';
 import { QuizzesController } from './quizzes.controller.js';
 import { QuizzesService } from './quizzes.service.js';
 
 @Module({
-  imports: [AuthModule, UploadModule, NotificationsModule, TypeOrmModule.forFeature([QuizEntity, QuestionEntity, SubmissionEntity, UserEntity, ClassEntity, QuizAttemptEntity])],
+  imports: [AuthModule, UploadModule, NotificationsModule, TypeOrmModule.forFeature([QuizEntity, QuestionEntity, SubmissionEntity, UserEntity, ClassEntity, QuizAttemptEntity, TeacherStudentEntity])],
   controllers: [QuizzesController],
   providers: [QuizzesService],
   exports: [QuizzesService, TypeOrmModule],

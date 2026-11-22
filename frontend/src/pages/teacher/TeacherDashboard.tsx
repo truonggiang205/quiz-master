@@ -105,9 +105,10 @@ export const TeacherDashboard: React.FC = () => {
         status: selectedStatus || undefined,
       });
       setData(res);
-    } catch (err) {
+    } catch (err: any) {
       console.error('Error fetching teacher dashboard:', err);
-      addToast({ type: 'error', title: 'Không thể tải số liệu bảng điều khiển' });
+      const message = err?.response?.data?.message || err?.message || 'Không thể kết nối máy chủ.';
+      addToast({ type: 'error', title: 'Không thể tải số liệu bảng điều khiển', message: Array.isArray(message) ? message.join(', ') : message });
     } finally {
       setLoading(false);
     }

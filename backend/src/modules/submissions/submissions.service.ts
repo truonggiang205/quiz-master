@@ -483,7 +483,12 @@ export class SubmissionsService {
     });
     if (!saved) throw new BadRequestException('Đã hết thời gian làm bài');
     const answerReleased = isAnswerReleased(attemptSnapshot.answerReleaseAt);
-    return answerReleased ? saved : { ...saved, answers: saved.answers.map(answer => this.maskAnswerForStudent(answer)) };
+    const canViewCorrectAnswers = answerReleased && attemptSnapshot.showCorrectAnswers;
+    if (!canViewCorrectAnswers) return { ...saved, answers: saved.answers.map(answer => this.maskAnswerForStudent(answer)) };
+    if (!attemptSnapshot.showExplanation) {
+      return { ...saved, answers: saved.answers.map(({ questionExplanation: _explanation, ...answer }) => answer) };
+    }
+    return saved;
   }
 
   async getSubmissionById(id: string, userRole?: string, userId?: string) {
@@ -501,7 +506,16 @@ export class SubmissionsService {
     }
 
     const isTeacher = userRole === 'TEACHER' || userRole === 'ADMIN';
-    const canViewAnswers = isTeacher || isAnswerReleased(sub.answerReleaseAt ?? quiz?.answerReleaseAt);
+    const attempt = await this.attemptRepo.findOneBy({ submissionId: sub.id });
+    const snapshot = attempt && quiz ? this.getAttemptSnapshot(attempt, quiz) : undefined;
+    const answerReleased = isAnswerReleased(sub.answerReleaseAt ?? snapshot?.answerReleaseAt ?? quiz?.answerReleaseAt);
+    const canViewAnswers = isTeacher || (answerReleased && (snapshot?.showCorrectAnswers ?? quiz?.showCorrectAnswers ?? true));
+    const canViewExplanation = isTeacher || (answerReleased && (snapshot?.showExplanation ?? quiz?.showExplanation ?? true));
+    const studentVisibleAnswers = !canViewAnswers
+      ? sub.answers.map(answer => this.maskAnswerForStudent(answer))
+      : !canViewExplanation
+        ? sub.answers.map(({ questionExplanation: _explanation, ...answer }) => answer)
+        : sub.answers;
 
     const detailedAnswers = sub.answers.map((ans) => {
       // New submissions carry a full immutable question snapshot.  Old rows keep
@@ -523,18 +537,18 @@ export class SubmissionsService {
           text: opt.text,
           isCorrect: canViewAnswers ? opt.isCorrect : undefined,
         })),
-        explanation: canViewAnswers ? q.explanation : undefined,
+        explanation: canViewExplanation ? q.explanation : undefined,
         essayRubric: canViewAnswers ? q.essayRubric : undefined,
       };
     });
 
     return {
       ...sub,
-      answers: canViewAnswers ? sub.answers : sub.answers.map(answer => this.maskAnswerForStudent(answer)),
+      answers: studentVisibleAnswers,
       quiz,
       detailedAnswers,
-      isAnswerReleased: canViewAnswers,
-      answerReleaseAt: quiz?.answerReleaseAt,
+      isAnswerReleased: answerReleased,
+      answerReleaseAt: sub.answerReleaseAt ?? snapshot?.answerReleaseAt ?? quiz?.answerReleaseAt,
     };
   }
 

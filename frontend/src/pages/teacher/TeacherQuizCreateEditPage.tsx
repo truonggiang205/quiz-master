@@ -10,7 +10,7 @@ import { Question } from '../../types/question';
 import { QuestionBuilder } from '../../components/teacher/QuestionBuilder';
 import { useUiStore } from '../../stores/ui.store';
 import { uploadService } from '../../services/upload.service';
-import { ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Calendar, Users, Database, Search, ExternalLink, BookmarkPlus } from 'lucide-react';
+import { ArrowLeft, Save, Sparkles, CheckCircle2, Clock, Calendar, Users, Database, Search, ExternalLink, BookmarkPlus, AlertTriangle } from 'lucide-react';
 import Latex from 'react-latex-next';
 import { rebalance } from '../../utils/points.util';
 import { NumberInput } from '../../components/common/NumberInput';
@@ -52,8 +52,9 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
   const [startTime, setStartTime] = useState('');
   const [endTime, setEndTime] = useState('');
 
-  // Answer release options: 'IMMEDIATE', 'AFTER_30M', 'AFTER_1D', 'CUSTOM'
-  const [releaseMode, setReleaseMode] = useState<'IMMEDIATE' | 'AFTER_30M' | 'AFTER_1D' | 'CUSTOM'>('AFTER_30M');
+  // The API persists a concrete release timestamp. These choices map to stable
+  // timestamps instead of recalculating a relative time every time the quiz is saved.
+  const [releaseMode, setReleaseMode] = useState<'AFTER_SUBMISSION' | 'AFTER_CLOSE' | 'CUSTOM'>('AFTER_SUBMISSION');
   const [customReleaseDate, setCustomReleaseDate] = useState('');
 
   const [questions, setQuestions] = useState<Question[]>([]);
@@ -71,6 +72,18 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
   const [isSaving, setIsSaving] = useState(false);
   const [hasSubmissions, setHasSubmissions] = useState(false);
   const [submissionsCount, setSubmissionsCount] = useState(0);
+  const [isEditorReady, setIsEditorReady] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const savedSignatureRef = useRef<string>('');
+  const hasCheckedLocalDraftRef = useRef(false);
+  const localDraftKey = `quiz-authoring-draft:${id || 'new'}`;
+
+  const editorSignature = JSON.stringify({
+    title, description, subject, mode, durationMinutes, totalAttempts, totalPoints,
+    shuffleQuestions, shuffleAnswers, showScoreImmediately, showCorrectAnswers,
+    showExplanation, assignMode, classId, assignedStudentIds, startTime, endTime,
+    releaseMode, customReleaseDate, questions,
+  });
 
   useEffect(() => {
     if (isEditing && id) {
@@ -118,12 +131,19 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
           }
 
           if (quiz.answerReleaseAt) {
-            setReleaseMode('CUSTOM');
-            setCustomReleaseDate(new Date(quiz.answerReleaseAt).toISOString().slice(0, 16));
+            const releaseAt = new Date(quiz.answerReleaseAt).toISOString().slice(0, 16);
+            const quizEnd = quiz.endTime ? new Date(quiz.endTime).toISOString().slice(0, 16) : '';
+            if (quizEnd && releaseAt === quizEnd) setReleaseMode('AFTER_CLOSE');
+            else if (new Date(quiz.answerReleaseAt) <= new Date()) setReleaseMode('AFTER_SUBMISSION');
+            else {
+              setReleaseMode('CUSTOM');
+              setCustomReleaseDate(releaseAt);
+            }
           }
         }
         initialQuestionsRef.current = JSON.parse(JSON.stringify(qs));
         setQuestions(qs);
+        setIsEditorReady(true);
       };
       
       const loadOptions = async () => {
@@ -150,41 +170,73 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         } catch (e) {}
       };
       loadOptions();
-      // Default initial 1 question for convenience
-      setQuestions([
-        {
-          id: `q-${Date.now()}-1`,
-          quizId: '',
-          content: 'Nội dung câu hỏi số 1...',
-          type: 'SINGLE_CHOICE',
-          score: 2,
-          points: 1000,
-          isLocked: false,
-          explanation: 'Lời giải chi tiết câu hỏi...',
-          order: 1,
-          options: [
-            { id: `opt-1`, text: 'Lựa chọn A', isCorrect: true },
-            { id: `opt-2`, text: 'Lựa chọn B', isCorrect: false },
-            { id: `opt-3`, text: 'Lựa chọn C', isCorrect: false },
-            { id: `opt-4`, text: 'Lựa chọn D', isCorrect: false },
-          ],
-        },
-      ]);
+      // Start with an intentional empty state. A pre-filled question can otherwise
+      // be published accidentally without the teacher replacing its placeholder text.
+      setQuestions([]);
+      setIsEditorReady(true);
     }
   }, [id, isEditing]);
 
+  useEffect(() => {
+    if (!isEditorReady) return;
+    if (!savedSignatureRef.current) {
+      savedSignatureRef.current = editorSignature;
+      return;
+    }
+    setHasUnsavedChanges(editorSignature !== savedSignatureRef.current);
+  }, [editorSignature, isEditorReady]);
+
+  useEffect(() => {
+    if (!isEditorReady || hasCheckedLocalDraftRef.current) return;
+    hasCheckedLocalDraftRef.current = true;
+    try {
+      const rawDraft = window.localStorage.getItem(localDraftKey);
+      if (!rawDraft) return;
+      const draft = JSON.parse(rawDraft);
+      if (!draft?.savedAt || !draft?.data || !window.confirm(`Có bản nháp cục bộ được lưu lúc ${new Date(draft.savedAt).toLocaleString('vi-VN')}. Khôi phục bản nháp này?`)) return;
+      const data = draft.data;
+      setTitle(data.title || ''); setDescription(data.description || ''); setSubject(data.subject || '');
+      setMode(data.mode || 'QUIZ'); setDurationMinutes(data.durationMinutes || 45);
+      setTotalAttempts(data.totalAttempts || 1); setTotalPoints(data.totalPoints || 1000);
+      setShuffleQuestions(!!data.shuffleQuestions); setShuffleAnswers(!!data.shuffleAnswers);
+      setShowScoreImmediately(!!data.showScoreImmediately); setShowCorrectAnswers(!!data.showCorrectAnswers); setShowExplanation(!!data.showExplanation);
+      setAssignMode(data.assignMode || 'CLASS'); setClassId(data.classId || ''); setAssignedStudentIds(data.assignedStudentIds || []);
+      setStartTime(data.startTime || ''); setEndTime(data.endTime || ''); setReleaseMode(data.releaseMode || 'AFTER_SUBMISSION');
+      setCustomReleaseDate(data.customReleaseDate || ''); setQuestions(data.questions || []);
+      setHasUnsavedChanges(true);
+    } catch {
+      // A malformed or quota-truncated draft must never prevent the editor opening.
+      window.localStorage.removeItem(localDraftKey);
+    }
+  }, [isEditorReady, localDraftKey]);
+
+  useEffect(() => {
+    if (!isEditorReady || !hasUnsavedChanges) return;
+    try {
+      const data = JSON.parse(editorSignature);
+      window.localStorage.setItem(localDraftKey, JSON.stringify({ savedAt: new Date().toISOString(), data }));
+    } catch {
+      // Image-heavy drafts can exceed browser quota; the on-screen unsaved state remains accurate.
+    }
+  }, [editorSignature, hasUnsavedChanges, isEditorReady, localDraftKey]);
+
+  useEffect(() => {
+    const warnBeforeLeaving = (event: BeforeUnloadEvent) => {
+      if (!hasUnsavedChanges || isSaving) return;
+      event.preventDefault();
+      event.returnValue = '';
+    };
+    window.addEventListener('beforeunload', warnBeforeLeaving);
+    return () => window.removeEventListener('beforeunload', warnBeforeLeaving);
+  }, [hasUnsavedChanges, isSaving]);
+
   const computeReleaseDate = (): string => {
-    const now = Date.now();
-    if (releaseMode === 'IMMEDIATE') {
-      return new Date(now - 1000).toISOString();
-    } else if (releaseMode === 'AFTER_30M') {
-      return new Date(now + 30 * 60 * 1000).toISOString();
-    } else if (releaseMode === 'AFTER_1D') {
-      return new Date(now + 24 * 60 * 60 * 1000).toISOString();
-    } else if (customReleaseDate) {
+    if (releaseMode === 'AFTER_SUBMISSION') return new Date(Date.now() - 1000).toISOString();
+    if (releaseMode === 'AFTER_CLOSE' && endTime) return new Date(endTime).toISOString();
+    if (releaseMode === 'CUSTOM' && customReleaseDate) {
       return new Date(customReleaseDate).toISOString();
     }
-    return new Date(now + 30 * 60 * 1000).toISOString();
+    return '';
   };
 
   const handleSave = async (publishImmediately = false) => {
@@ -199,6 +251,37 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         title: 'Chưa có câu hỏi',
         message: 'Vui lòng thêm ít nhất 1 câu hỏi cho bài kiểm tra.',
       });
+      return;
+    }
+
+    const currentTotalPoints = questions.reduce((sum, question) => sum + (question.points || 0), 0);
+    if (publishImmediately && currentTotalPoints !== Number(totalPoints)) {
+      const difference = Math.abs(Number(totalPoints) - currentTotalPoints) / 100;
+      addToast({
+        type: 'error',
+        title: 'Chưa thể xuất bản vì thang điểm chưa khớp',
+        message: `Tổng điểm câu hỏi đang ${currentTotalPoints > Number(totalPoints) ? 'vượt' : 'thiếu'} ${difference.toFixed(2)} điểm. Hãy chia lại điểm trước khi xuất bản.`,
+      });
+      return;
+    }
+
+    const hasAudience = assignMode === 'CLASS' ? Boolean(classId) : assignedStudentIds.length > 0;
+    if (publishImmediately && !hasAudience) {
+      addToast({
+        type: 'error',
+        title: 'Chưa chọn người nhận đề',
+        message: 'Hãy chọn một lớp hoặc ít nhất một học sinh trước khi xuất bản.',
+      });
+      return;
+    }
+
+    if (releaseMode === 'AFTER_CLOSE' && !endTime) {
+      addToast({ type: 'error', title: 'Thiếu thời điểm đóng đề', message: 'Chọn hạn chót nộp bài để công bố đáp án khi đề đóng.' });
+      return;
+    }
+
+    if (releaseMode === 'CUSTOM' && (!customReleaseDate || Number.isNaN(new Date(customReleaseDate).getTime()))) {
+      addToast({ type: 'error', title: 'Thời điểm công bố không hợp lệ', message: 'Hãy chọn ngày và giờ công bố đáp án.' });
       return;
     }
 
@@ -449,6 +532,9 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
       }
 
       setSaveStatus('saved');
+      savedSignatureRef.current = editorSignature;
+      setHasUnsavedChanges(false);
+      window.localStorage.removeItem(localDraftKey);
 
       if (publishImmediately && currentQuizId) {
         await quizService.publishQuiz(currentQuizId);
@@ -461,7 +547,9 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
           ? 'Đã cập nhật bài thi và tự động chấm điểm cho học sinh!'
           : (publishImmediately ? 'Bài thi đã được xuất bản cho học sinh!' : 'Đã lưu vào danh sách bản thảo.'),
       });
-      navigate('/teacher/quizzes');
+      if (!isEditing && currentQuizId) {
+        navigate(`/teacher/quizzes/${currentQuizId}/edit`, { replace: true });
+      }
     } catch (err: any) {
       console.error('Lỗi khi lưu bài kiểm tra:', err);
       const rawMsg = err?.response?.data?.message || err?.message || 'Có lỗi xảy ra khi lưu bài kiểm tra. Vui lòng kiểm tra lại kết nối.';
@@ -684,6 +772,12 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400 flex items-center gap-1 mr-1">
               <CheckCircle2 className="w-3.5 h-3.5" />
               Đã lưu
+            </span>
+          )}
+          {hasUnsavedChanges && !isSaving && (
+            <span className="text-[11px] font-semibold text-amber-700 dark:text-amber-300 flex items-center gap-1 mr-1">
+              <AlertTriangle className="w-3.5 h-3.5" />
+              Có thay đổi chưa lưu
             </span>
           )}
 
@@ -920,6 +1014,11 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                 )}
               </div>
             )}
+            <p className={`text-[11px] leading-relaxed ${(assignMode === 'CLASS' ? classId : assignedStudentIds.length) ? 'text-slate-500 dark:text-slate-400' : 'text-amber-700 dark:text-amber-300'}`}>
+              {assignMode === 'CLASS'
+                ? (classId ? `Đề sẽ được giao cho lớp ${availableClasses.find(item => item.id === classId)?.name || 'đã chọn'}.` : 'Bạn chưa chọn lớp; đề chưa thể xuất bản.')
+                : (assignedStudentIds.length ? `Đề sẽ được giao cho ${assignedStudentIds.length} học sinh đã chọn.` : 'Bạn chưa chọn học sinh; đề chưa thể xuất bản.')}
+            </p>
           </div>
 
           <div className="space-y-4">
@@ -959,39 +1058,28 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             </h3>
           </div>
 
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               type="button"
-              onClick={() => setReleaseMode('IMMEDIATE')}
+              onClick={() => setReleaseMode('AFTER_SUBMISSION')}
               className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${
-                releaseMode === 'IMMEDIATE'
+                releaseMode === 'AFTER_SUBMISSION'
                   ? 'bg-sky-600 text-white border-sky-600'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
             >
-              Ngay sau khi nộp
+              Sau khi nộp bài
             </button>
             <button
               type="button"
-              onClick={() => setReleaseMode('AFTER_30M')}
+              onClick={() => setReleaseMode('AFTER_CLOSE')}
               className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${
-                releaseMode === 'AFTER_30M'
+                releaseMode === 'AFTER_CLOSE'
                   ? 'bg-sky-600 text-white border-sky-600'
                   : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
               }`}
             >
-              Sau 30 phút
-            </button>
-            <button
-              type="button"
-              onClick={() => setReleaseMode('AFTER_1D')}
-              className={`p-2.5 rounded-xl border text-xs font-bold transition-colors ${
-                releaseMode === 'AFTER_1D'
-                  ? 'bg-sky-600 text-white border-sky-600'
-                  : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-              }`}
-            >
-              Sau 1 ngày
+              Khi đề đóng
             </button>
             <button
               type="button"
@@ -1018,6 +1106,13 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
                 className="px-3 py-1.5 rounded-xl text-xs border border-sky-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-slate-800 dark:text-white"
               />
             </div>
+          )}
+          {releaseMode !== 'CUSTOM' && (
+            <p className="text-[11px] leading-relaxed text-sky-700 dark:text-sky-300">
+              {releaseMode === 'AFTER_SUBMISSION'
+                ? 'Học sinh được xem nội dung bạn cho phép ngay sau khi nộp bài.'
+                : (endTime ? `Đáp án và lời giải sẽ công bố khi đề đóng: ${new Date(endTime).toLocaleString('vi-VN')}.` : 'Hãy đặt hạn chót nộp bài để sử dụng lựa chọn này.')}
+            </p>
           )}
         </div>
 
@@ -1049,6 +1144,24 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               className="rounded-md text-sky-600 focus:ring-sky-400"
             />
             <span>Hiển thị điểm ngay sau nộp</span>
+          </label>
+          <label className="flex items-center gap-2 text-slate-700 dark:text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showCorrectAnswers}
+              onChange={(e) => setShowCorrectAnswers(e.target.checked)}
+              className="rounded-md text-sky-600 focus:ring-sky-400"
+            />
+            <span>Cho xem đáp án đúng khi công bố</span>
+          </label>
+          <label className="flex items-center gap-2 text-slate-700 dark:text-slate-300 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={showExplanation}
+              onChange={(e) => setShowExplanation(e.target.checked)}
+              className="rounded-md text-sky-600 focus:ring-sky-400"
+            />
+            <span>Cho xem lời giải khi công bố</span>
           </label>
         </div>
       </div>

@@ -1,6 +1,6 @@
 import React from 'react';
 import { Question, QuestionType, AnswerOption, EssayRubric } from '../../types/question';
-import { Plus, Trash2, Copy, CheckCircle, Circle, Square, CheckSquare, Upload, Image as ImageIcon, X, Save, RefreshCw, Lock, Unlock, AlertTriangle, Sparkles } from 'lucide-react';
+import { Plus, Trash2, Copy, CheckCircle, Circle, Square, CheckSquare, Upload, Image as ImageIcon, X, Save, RefreshCw, Lock, Unlock, AlertTriangle, Sparkles, ChevronDown, ChevronUp } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { uploadService } from '../../services/upload.service';
 import { rebalance } from '../../utils/points.util';
@@ -29,7 +29,14 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
   onImportFromDocx,
 }) => {
   const [uploadingImageFor, setUploadingImageFor] = React.useState<number | null>(null);
+  const [activeQuestionId, setActiveQuestionId] = React.useState<string | null>(questions[0]?.id ?? null);
   const { addToast } = useUiStore();
+
+  React.useEffect(() => {
+    if (questions.length > 0 && !questions.some(question => question.id === activeQuestionId)) {
+      setActiveQuestionId(questions[0].id);
+    }
+  }, [activeQuestionId, questions]);
 
   const safeRebalance = (qs: Question[]) => {
     if (hasSubmissions) {
@@ -44,8 +51,9 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
   };
 
   const handleAddQuestion = () => {
+    const questionId = `q-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
     const newQ: Question = {
-      id: `q-${Date.now()}`,
+      id: questionId,
       quizId: '',
       content: '',
       type: 'SINGLE_CHOICE',
@@ -62,6 +70,15 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
       ],
     };
     onChange(safeRebalance([...questions, newQ]));
+    setActiveQuestionId(questionId);
+
+    // Teachers commonly add the next question while they are already at the
+    // bottom of a long exam. Keep the newly created card in view and ready to edit.
+    window.setTimeout(() => {
+      const card = document.getElementById(`question-card-${questionId}`);
+      card?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      card?.querySelector<HTMLTextAreaElement>('textarea[aria-label="Nội dung câu hỏi"]')?.focus();
+    }, 0);
   };
 
   const handleUpdateQuestion = (index: number, updated: Partial<Question>) => {
@@ -149,7 +166,9 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
     let newOptions: AnswerOption[] = [...q.options];
 
     if (newType === 'MULTIPLE_TRUE_FALSE') {
-      newOptions = Array.from({ length: 4 }, () => ({ id: crypto.randomUUID(), text: '', isCorrect: true }));
+      // Deliberately leave each statement unconfigured. The save validation
+      // requires a boolean value, preventing accidental "all true" questions.
+      newOptions = Array.from({ length: 4 }, () => ({ id: crypto.randomUUID(), text: '', isCorrect: undefined }));
     } else if (newType === 'TRUE_FALSE') {
       newOptions = [
         { id: `opt-${Date.now()}-1`, text: 'Đúng (True)', isCorrect: true },
@@ -215,6 +234,24 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
   const currentTotalPoints = questions.reduce((sum, q) => sum + (q.points || 0), 0);
   const isPointsBalanced = currentTotalPoints === totalPoints;
   const pointDiff = totalPoints - currentTotalPoints;
+  const questionIssue = (question: Question): string | null => {
+    if (!question.content.trim()) return 'Thiếu nội dung';
+    if (question.type === 'MULTIPLE_TRUE_FALSE') {
+      if (question.options.some(option => !option.text.trim())) return 'Thiếu nhận định';
+      if (question.options.some(option => typeof option.isCorrect !== 'boolean')) return 'Chưa chọn Đúng/Sai';
+      return null;
+    }
+    if (question.type !== 'ESSAY') {
+      if (question.options.filter(option => option.text.trim()).length < 2) return 'Thiếu đáp án';
+      if (!question.options.some(option => option.isCorrect)) return 'Chưa chọn đáp án đúng';
+    }
+    return null;
+  };
+
+  const openQuestion = (id: string) => {
+    setActiveQuestionId(id);
+    window.setTimeout(() => document.getElementById(`question-card-${id}`)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 0);
+  };
 
   return (
     <div className="space-y-6">
@@ -330,13 +367,37 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
         </div>
       </div>
 
+      {questions.length > 1 && (
+        <nav aria-label="Điều hướng câu hỏi" className="sticky top-20 z-30 flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white/95 p-3 shadow-sm backdrop-blur dark:border-slate-700 dark:bg-slate-800/95">
+          <span className="self-center mr-1 text-xs font-bold text-slate-500 dark:text-slate-400">Đi tới:</span>
+          {questions.map((question, index) => {
+            const issue = questionIssue(question);
+            const isActive = activeQuestionId === question.id;
+            return (
+              <button
+                type="button"
+                key={question.id}
+                onClick={() => openQuestion(question.id)}
+                title={issue ? `Câu ${index + 1}: ${issue}` : `Mở câu ${index + 1}`}
+                className={`min-w-8 rounded-lg px-2 py-1.5 text-xs font-bold transition-colors ${isActive ? 'bg-sky-600 text-white' : issue ? 'bg-amber-50 text-amber-800 ring-1 ring-amber-300 dark:bg-amber-950/40 dark:text-amber-200' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200'}`}
+              >
+                {index + 1}
+              </button>
+            );
+          })}
+        </nav>
+      )}
+
       <AnimatePresence>
         {questions.map((q, qIndex) => {
           const isMultiple = q.type === 'MULTIPLE_CHOICE';
+          const isExpanded = activeQuestionId === q.id;
+          const issue = questionIssue(q);
 
           return (
             <motion.div
               key={q.id || qIndex}
+              id={`question-card-${q.id}`}
               initial={{ opacity: 0, y: 10 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95 }}
@@ -349,6 +410,15 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                     {qIndex + 1}
                   </span>
 
+                  <button
+                    type="button"
+                    onClick={() => setActiveQuestionId(isExpanded ? null : q.id)}
+                    aria-expanded={isExpanded}
+                    className="flex items-center gap-1 rounded-lg px-1.5 py-1 text-xs font-bold text-slate-500 hover:bg-slate-100 dark:text-slate-300 dark:hover:bg-slate-700"
+                  >
+                    {isExpanded ? <ChevronUp className="w-4 h-4" /> : <ChevronDown className="w-4 h-4" />}
+                    {isExpanded ? 'Thu gọn' : 'Mở'}
+                  </button>
                   {/* Question Type Select */}
                   <select
                     value={q.type}
@@ -361,6 +431,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                     <option value="MULTIPLE_TRUE_FALSE">Trắc nghiệm Đúng/Sai nhiều nhận định</option>
                     <option value="ESSAY">Tự luận (Tải ảnh)</option>
                   </select>
+                  {issue && <span className="rounded-md bg-amber-50 px-2 py-1 text-[11px] font-semibold text-amber-800 dark:bg-amber-950/40 dark:text-amber-200">{issue}</span>}
                 </div>
 
                   <div className="flex items-center gap-2">
@@ -413,32 +484,36 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                     type="button"
                     onClick={() => handleDuplicateQuestion(qIndex)}
                     title="Nhân bản câu hỏi"
-                    className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
+                    className="inline-flex items-center gap-1 p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700"
                   >
                     <Copy className="w-4 h-4" />
+                      <span className="hidden sm:inline">Nhân bản</span>
                   </button>
                   <button
                     type="button"
                     disabled={hasSubmissions}
                     onClick={() => handleDeleteQuestion(qIndex)}
                     title={hasSubmissions ? "Bài thi đã có học sinh làm bài, không thể xóa câu hỏi" : "Xóa câu hỏi"}
-                    className={`p-1.5 rounded-xl ${hasSubmissions ? 'opacity-30 cursor-not-allowed text-slate-400' : 'text-rose-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40'}`}
+                    className={`inline-flex items-center gap-1 p-1.5 rounded-xl ${hasSubmissions ? 'opacity-30 cursor-not-allowed text-slate-400' : 'text-rose-600 hover:text-rose-600 hover:bg-rose-50 dark:hover:bg-rose-950/40'}`}
                   >
                     <Trash2 className="w-4 h-4" />
+                    <span className="hidden sm:inline">Xóa</span>
                   </button>
                   {onSaveToBank && (
                     <button
                       type="button"
                       onClick={() => onSaveToBank(qIndex)}
                       title="Lưu vào ngân hàng câu hỏi"
-                      className="p-1.5 rounded-xl text-sky-600 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/40 ml-2 border-l border-slate-200 dark:border-slate-700 pl-3"
+                      className="inline-flex items-center gap-1 p-1.5 rounded-xl text-sky-600 hover:text-sky-600 hover:bg-sky-50 dark:hover:bg-sky-900/40 ml-2 border-l border-slate-200 dark:border-slate-700 pl-3"
                     >
                       <Save className="w-4 h-4" />
+                      <span className="hidden sm:inline">Ngân hàng</span>
                     </button>
                   )}
                 </div>
               </div>
 
+              {isExpanded && <>
               {/* Question Content TextArea */}
               <div>
                 <label className="block text-xs font-semibold text-slate-600 dark:text-slate-300 mb-1.5">
@@ -499,7 +574,8 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                       <button type="button" disabled={q.options.length <= 2} onClick={() => handleUpdateQuestion(qIndex, { options: q.options.filter(item => item.id !== statement.id) })} aria-label={`Xóa nhận định ${statementLabel(index)}`} className="p-2 disabled:opacity-30"><Trash2 className="h-4 w-4" /></button>
                     </div>
                   ))}
-                  <button type="button" onClick={() => handleUpdateQuestion(qIndex, { options: [...q.options, { id: crypto.randomUUID(), text: '', isCorrect: true }] })} className="text-sm font-semibold text-sky-600">Thêm nhận định</button>
+                  <p className="text-xs text-slate-500 dark:text-slate-400">{q.options.filter(option => typeof option.isCorrect === 'boolean').length}/{q.options.length} nhận định đã chọn đáp án.</p>
+                  <button type="button" onClick={() => handleUpdateQuestion(qIndex, { options: [...q.options, { id: crypto.randomUUID(), text: '', isCorrect: undefined }] })} className="text-sm font-semibold text-sky-600">Thêm nhận định</button>
                 </div>
               )}
               {q.type !== 'ESSAY' && q.type !== 'MULTIPLE_TRUE_FALSE' && (
@@ -757,6 +833,7 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
                   className="w-full rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/50 dark:bg-slate-900/50 p-2.5 text-xs text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-300"
                 />
               </div>
+              </>}
             </motion.div>
           );
         })}
@@ -765,8 +842,30 @@ export const QuestionBuilder: React.FC<QuestionBuilderProps> = ({
       {questions.length === 0 && (
         <div className="p-8 text-center rounded-3xl border border-dashed border-slate-300 dark:border-slate-700">
           <p className="text-sm text-slate-500 dark:text-slate-400">
-            Chưa có câu hỏi nào. Nhấn "Thêm câu hỏi" để bắt đầu soạn đề thi.
+            Chưa có câu hỏi nào. Bắt đầu bằng câu hỏi đầu tiên của bạn.
           </p>
+          <button
+            type="button"
+            onClick={handleAddQuestion}
+            className="inline-flex items-center gap-2 mt-4 px-4 py-2.5 rounded-xl text-xs font-bold bg-sky-600 hover:bg-sky-700 text-white shadow-sm"
+          >
+            <Plus className="w-4 h-4" />
+            Thêm câu hỏi đầu tiên
+          </button>
+        </div>
+      )}
+
+      {questions.length > 0 && (
+        <div className="flex flex-col items-center gap-2 py-2">
+          <button
+            type="button"
+            onClick={handleAddQuestion}
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-2xl text-sm font-bold text-sky-700 dark:text-sky-300 bg-sky-50 dark:bg-sky-950/40 border border-sky-200 dark:border-sky-800 hover:bg-sky-100 dark:hover:bg-sky-900/50 transition-colors"
+          >
+            <Plus className="w-4 h-4" />
+            Thêm câu hỏi tiếp theo
+          </button>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400">Câu hỏi mới sẽ được thêm ở cuối đề.</p>
         </div>
       )}
     </div>

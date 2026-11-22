@@ -4,8 +4,7 @@ import { quizService } from '../../services/quiz.service';
 import { Quiz } from '../../types/quiz';
 import { Question } from '../../types/question';
 import { QuestionCard } from '../../components/quiz/QuestionCard';
-import { ArrowLeft, ArrowRight, Eye, Sparkles } from 'lucide-react';
-import { Badge } from '../../components/common/Badge';
+import { ArrowLeft, ArrowRight, Eye, Clock, Shuffle, ListChecks } from 'lucide-react';
 
 export const TeacherQuizPreviewPage: React.FC = () => {
   const { id } = useParams<{ id: string }>();
@@ -98,6 +97,27 @@ export const TeacherQuizPreviewPage: React.FC = () => {
           Trở về chỉnh sửa
         </Link>
       </div>
+
+      <section className="grid grid-cols-2 md:grid-cols-4 gap-3 rounded-2xl border border-slate-200 bg-white p-4 text-xs dark:border-slate-700 dark:bg-slate-800">
+        <div><p className="text-slate-500">Số câu</p><p className="mt-1 font-bold text-slate-900 dark:text-white">{questions.length} câu</p></div>
+        <div><p className="text-slate-500">Thời lượng</p><p className="mt-1 flex items-center gap-1 font-bold text-slate-900 dark:text-white"><Clock className="w-3.5 h-3.5" />{quiz.durationMinutes} phút</p></div>
+        <div><p className="text-slate-500">Thang điểm</p><p className="mt-1 font-bold text-slate-900 dark:text-white">{(quiz.totalPoints / 100).toFixed(2)}</p></div>
+        <div><p className="text-slate-500">Thứ tự</p><p className="mt-1 flex items-center gap-1 font-bold text-slate-900 dark:text-white"><Shuffle className="w-3.5 h-3.5" />{quiz.shuffleQuestions ? 'Có xáo trộn' : 'Giữ nguyên'}</p></div>
+      </section>
+
+      <nav aria-label="Xem nhanh các câu hỏi" className="flex flex-wrap items-center gap-2 rounded-2xl border border-slate-200 bg-white p-3 dark:border-slate-700 dark:bg-slate-800">
+        <ListChecks className="w-4 h-4 text-sky-600" />
+        {questions.map((question, index) => (
+          <button
+            type="button"
+            key={question.id}
+            onClick={() => setCurrentIndex(index)}
+            className={`h-8 min-w-8 rounded-lg px-2 text-xs font-bold ${index === currentIndex ? 'bg-sky-600 text-white' : 'bg-slate-100 text-slate-600 hover:bg-slate-200 dark:bg-slate-700 dark:text-slate-200'}`}
+          >
+            {index + 1}
+          </button>
+        ))}
+      </nav>
 
       <QuestionCard
         question={currentQ}

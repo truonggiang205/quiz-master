@@ -104,6 +104,7 @@ export const StudentHistoryPage: React.FC = () => {
               };
 
               const isFullyGraded = sub.isFullyGraded ?? true;
+              const canViewScore = sub.canViewScore !== false;
 
               return (
                 <motion.div
@@ -131,7 +132,7 @@ export const StudentHistoryPage: React.FC = () => {
                       <Clock className="w-4 h-4 text-slate-400" />
                       <span>{formatTime(sub.timeUsedSeconds)}</span>
                     </div>
-                    {isFullyGraded && (
+                    {isFullyGraded && canViewScore && (
                       <div className="flex items-center gap-1.5 col-span-2">
                         <CheckCircle2 className="w-4 h-4 text-emerald-500" />
                         <span className="text-emerald-700 dark:text-emerald-400">Đúng {sub.correctCount} câu</span>
@@ -149,13 +150,13 @@ export const StudentHistoryPage: React.FC = () => {
                         <span className="text-[10px] font-bold text-sky-600 dark:text-sky-400 uppercase leading-none">Điểm</span>
                       </div>
                       <div>
-                        {isFullyGraded ? (
+                        {isFullyGraded && canViewScore ? (
                           <div className="text-2xl font-black text-slate-800 dark:text-white leading-none">
                             {(sub.score / 100).toFixed(2)}<span className="text-sm font-semibold text-slate-500 dark:text-slate-400">/{((sub.maxScore || 1000) / 100).toFixed(2)}</span>
                           </div>
                         ) : (
                           <div className="text-2xl font-black text-amber-600 dark:text-amber-500 leading-none">
-                            ...<span className="text-sm font-semibold text-slate-500 dark:text-slate-400">/{((sub.maxScore || 1000) / 100).toFixed(2)}</span>
+                            ...<span className="text-sm font-semibold text-slate-500 dark:text-slate-400">{isFullyGraded ? ' chưa công bố' : ' chờ chấm'}</span>
                           </div>
                         )}
                       </div>

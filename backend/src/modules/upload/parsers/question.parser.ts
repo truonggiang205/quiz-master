@@ -25,6 +25,14 @@ const OPTION_REGEX = /^([A-F])\s*[.:\-\)]\s*(.*)/i;
 const ANSWER_REGEX = /^(đáp\s*án|đáp\s*án\s*đúng|answer|correct\s*answer)\s*[:\-]?\s*([A-F])\s*$/i;
 const ANSWER_KEY_REGEX = /^(Câu\s*\d+|\d+)\s*[:\-]\s*([A-F])\s*$/i;
 const SPLIT_OPTIONS_REGEX = /\s+([A-F]\s*[.:\-\)])\s+/i;
+const QUESTION_RANGE_HEADING_REGEX = /^(?:phần\s*\d+\s*\/\s*\d+\s*[•\-–—]?\s*)?câu\s*\d+\s*[\-–—]\s*\d+\s*$/i;
+
+function isSectionHeading(text: string): boolean {
+  if (QUESTION_RANGE_HEADING_REGEX.test(text)) return true;
+
+  const letters = text.replace(/[^\p{L}]/gu, '');
+  return letters.length >= 5 && letters === letters.toLocaleUpperCase('vi-VN');
+}
 
 function preprocessLines(inputLines: ParsedLine[]): ParsedLine[] {
   const newLines: ParsedLine[] = [];
@@ -57,6 +65,7 @@ export function parseQuestions(lines: ParsedLine[]): ParsedQuestion[] {
   const questions: ParsedQuestion[] = [];
   let currentQuestion: ParsedQuestion | null = null;
   let currentOption: ParsedOption | null = null;
+  let isSkippingSectionMetadata = false;
 
   function flush() {
     if (!currentQuestion) return;
@@ -82,6 +91,15 @@ export function parseQuestions(lines: ParsedLine[]): ParsedQuestion[] {
   for (const line of processedLines) {
     const text = (line.text || '').trim();
     if (!text) continue;
+
+    // Documents often insert a title/"Phần x/x • Câu y–z" between questions.
+    // It is neither a question nor an option, and must not become part of the
+    // preceding option's answer text.
+    if (!OPTION_REGEX.test(text) && isSectionHeading(text)) {
+      currentOption = null;
+      isSkippingSectionMetadata = true;
+      continue;
+    }
 
     // Check answer key pattern (e.g. "1: A" or "Câu 1: B")
     const ansKeyMatch = ANSWER_KEY_REGEX.exec(text);
@@ -126,6 +144,7 @@ export function parseQuestions(lines: ParsedLine[]): ParsedQuestion[] {
         warnings: [],
       };
       currentOption = null;
+      isSkippingSectionMetadata = false;
       continue;
     }
 
@@ -140,6 +159,7 @@ export function parseQuestions(lines: ParsedLine[]): ParsedQuestion[] {
 
       currentOption = { label, text: optText, isCorrect };
       currentQuestion.options.push(currentOption);
+      isSkippingSectionMetadata = false;
 
       if (isCorrect && !currentQuestion.correctAnswer) {
         currentQuestion.correctAnswer = label;
@@ -148,6 +168,8 @@ export function parseQuestions(lines: ParsedLine[]): ParsedQuestion[] {
     }
 
     // Continuation line
+    if (isSkippingSectionMetadata) continue;
+
     if (currentOption) {
       currentOption.text += ' ' + text;
     } else {

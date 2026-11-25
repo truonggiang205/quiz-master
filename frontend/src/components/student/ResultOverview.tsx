@@ -15,8 +15,9 @@ export const ResultOverview: React.FC<ResultOverviewProps> = ({ submission }) =>
   };
 
   const isFullyGraded = submission.isFullyGraded ?? true;
-  const isHigh = isFullyGraded && submission.percentage >= 80;
-  const isPass = isFullyGraded && submission.percentage >= 50;
+  const canViewScore = submission.canViewScore !== false;
+  const isHigh = canViewScore && isFullyGraded && (submission.percentage || 0) >= 80;
+  const isPass = canViewScore && isFullyGraded && (submission.percentage || 0) >= 50;
 
   return (
     <div className="bg-white/90 dark:bg-slate-800/90 rounded-3xl p-6 md:p-8 border border-slate-200/80 dark:border-slate-700/80 shadow-sm backdrop-blur-sm">
@@ -32,7 +33,7 @@ export const ResultOverview: React.FC<ResultOverviewProps> = ({ submission }) =>
             animate={{ scale: 1, opacity: 1 }}
             transition={{ duration: 0.5, type: 'spring' }}
           >
-            {isFullyGraded ? (
+            {isFullyGraded && canViewScore ? (
               <>
                 <span className="text-4xl md:text-5xl font-black text-slate-900 dark:text-white tracking-tight">
                   {(submission.score / 100).toFixed(2)}
@@ -44,15 +45,24 @@ export const ResultOverview: React.FC<ResultOverviewProps> = ({ submission }) =>
             )}
           </motion.div>
 
-          <div className={`mt-2 text-xs font-bold tracking-wider px-3 py-1 rounded-full ${isFullyGraded
+          <div className={`mt-2 text-xs font-bold tracking-wider px-3 py-1 rounded-full ${isFullyGraded && canViewScore
             ? 'uppercase text-sky-600 dark:text-sky-400 bg-sky-100/70 dark:bg-sky-950/80'
             : 'text-amber-700 dark:text-amber-300 bg-amber-100/70 dark:bg-amber-950/60'}`}>
-            {isFullyGraded ? `Đạt ${submission.percentage}%` : 'Giáo viên sẽ công bố điểm sau khi chấm xong'}
+            {isFullyGraded && canViewScore
+              ? `Đạt ${submission.percentage}%`
+              : isFullyGraded
+                ? 'Giáo viên chưa công bố điểm'
+                : 'Giáo viên sẽ công bố điểm sau khi chấm xong'}
           </div>
         </div>
 
         {/* Right: Metrics Grid */}
         <div className="md:col-span-2 grid grid-cols-2 gap-3.5">
+          {!canViewScore ? (
+            <div className="col-span-2 p-4 rounded-2xl bg-slate-50 dark:bg-slate-700/40 border border-slate-200/80 dark:border-slate-700/60 text-sm text-slate-500 dark:text-slate-400">
+              Điểm, số câu đúng và số câu sai sẽ hiển thị khi giáo viên công bố.
+            </div>
+          ) : <>
           <div className="p-4 rounded-2xl bg-emerald-50/60 dark:bg-emerald-950/30 border border-emerald-100/80 dark:border-emerald-900/40 flex items-center gap-3">
             <CheckCircle className="w-5 h-5 text-emerald-500 flex-shrink-0" />
             <div>
@@ -88,6 +98,7 @@ export const ResultOverview: React.FC<ResultOverviewProps> = ({ submission }) =>
               </span>
             </div>
           </div>
+          </>}
 
           <div className="p-4 rounded-2xl bg-sky-50/60 dark:bg-sky-950/30 border border-sky-100/80 dark:border-sky-900/40 flex items-center gap-3">
             <Clock className="w-5 h-5 text-sky-500 flex-shrink-0" />

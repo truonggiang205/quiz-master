@@ -47,4 +47,35 @@ describe('manual essay answer-release policy', () => {
     expect(snapshot.answerReleaseAt).toBe(quiz.answerReleaseAt);
     expect(snapshot.showCorrectAnswers).toBe(true);
   });
+
+  it('uses the latest teacher visibility policy without mutating the attempt questions', () => {
+    const instance = service();
+    const startedWith: any = {
+      ...quiz,
+      answerReleaseAt: '2099-01-01T00:00:00.000Z',
+      showScoreImmediately: false,
+      showCorrectAnswers: false,
+      showExplanation: false,
+    };
+    const question: any = {
+      id: 'choice-1', type: 'SINGLE_CHOICE', content: 'Nội dung ban đầu',
+      options: [{ id: 'a', text: 'A', isCorrect: true }], points: 100, score: 1, order: 1,
+    };
+    const quizSnapshot = (instance as any).createAttemptSnapshot(startedWith, [question]);
+    const currentQuiz: any = {
+      ...startedWith,
+      answerReleaseAt: '2026-01-01T00:00:00.000Z',
+      showScoreImmediately: true,
+      showCorrectAnswers: true,
+      showExplanation: true,
+    };
+
+    const resolved = (instance as any).getAttemptSnapshot({ quizSnapshot }, currentQuiz);
+
+    expect(resolved.questions).toEqual(quizSnapshot.questions);
+    expect(resolved.answerReleaseAt).toBe(currentQuiz.answerReleaseAt);
+    expect(resolved.showScoreImmediately).toBe(true);
+    expect(resolved.showCorrectAnswers).toBe(true);
+    expect(resolved.showExplanation).toBe(true);
+  });
 });

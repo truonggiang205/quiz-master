@@ -428,16 +428,20 @@ export const StudentDashboard: React.FC = () => {
                 <div className="flex items-center gap-3 text-xs text-slate-400 mt-0.5">
                   <span>Nộp lúc: {sub.submittedAt ? new Date(sub.submittedAt).toLocaleString('vi-VN') : 'Mới đây'}</span>
                   <span>•</span>
-                  <span>{sub.correctCount} câu đúng</span>
+                  <span>{sub.canViewScore === false ? 'Điểm chưa công bố' : `${sub.correctCount} câu đúng`}</span>
                 </div>
               </div>
 
               <div className="flex items-center gap-4 self-end sm:self-auto">
                 <div className="text-right">
-                  <span className="text-base font-bold text-sky-600 dark:text-sky-400">
-                    {((Number(sub.percentage) || 0) / 10).toFixed(2)}
-                  </span>
-                  <span className="text-xs text-slate-400 font-normal"> / 10.00</span>
+                  {sub.canViewScore === false ? (
+                    <span className="text-xs font-semibold text-slate-400">Chưa công bố</span>
+                  ) : <>
+                    <span className="text-base font-bold text-sky-600 dark:text-sky-400">
+                      {((Number(sub.percentage) || 0) / 10).toFixed(2)}
+                    </span>
+                    <span className="text-xs text-slate-400 font-normal"> / 10.00</span>
+                  </>}
                 </div>
 
                 <Link

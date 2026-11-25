@@ -73,8 +73,11 @@ export class SubmissionsService {
     return {
       version: 1, quizId: quiz.id, quizTitle: quiz.title, durationMinutes: quiz.durationMinutes,
       totalPoints: quiz.totalPoints, answerReleaseAt: requiresManualEssayGrading ? null : quiz.answerReleaseAt,
-      showScoreImmediately: quiz.showScoreImmediately, showCorrectAnswers: requiresManualEssayGrading ? false : quiz.showCorrectAnswers,
-      showExplanation: requiresManualEssayGrading ? false : quiz.showExplanation,
+      showScoreImmediately: quiz.showScoreImmediately,
+      // Manual essays remain locked until every essay is graded. Preserve the
+      // teacher's post-grading visibility choice in the immutable snapshot.
+      showCorrectAnswers: quiz.showCorrectAnswers,
+      showExplanation: quiz.showExplanation,
       requiresManualEssayGrading, questions: snapshotQuestions,
     };
   }
@@ -87,8 +90,8 @@ export class SubmissionsService {
         ...attempt.quizSnapshot,
         requiresManualEssayGrading,
         answerReleaseAt: requiresManualEssayGrading ? null : attempt.quizSnapshot.answerReleaseAt,
-        showCorrectAnswers: requiresManualEssayGrading ? false : attempt.quizSnapshot.showCorrectAnswers,
-        showExplanation: requiresManualEssayGrading ? false : attempt.quizSnapshot.showExplanation,
+        showCorrectAnswers: attempt.quizSnapshot.showCorrectAnswers,
+        showExplanation: attempt.quizSnapshot.showExplanation,
       };
     }
     const requiresManualEssayGrading = this.requiresManualEssayGrading(attempt.questionSnapshot || []);
@@ -97,8 +100,8 @@ export class SubmissionsService {
       totalPoints: quiz.totalPoints,
       answerReleaseAt: requiresManualEssayGrading ? null : quiz.answerReleaseAt,
       showScoreImmediately: quiz.showScoreImmediately,
-      showCorrectAnswers: requiresManualEssayGrading ? false : quiz.showCorrectAnswers,
-      showExplanation: requiresManualEssayGrading ? false : quiz.showExplanation,
+      showCorrectAnswers: quiz.showCorrectAnswers,
+      showExplanation: quiz.showExplanation,
       requiresManualEssayGrading,
       questions: attempt.questionSnapshot || [],
     };
@@ -543,10 +546,13 @@ export class SubmissionsService {
     const snapshot = attempt && quiz ? this.getAttemptSnapshot(attempt, quiz) : undefined;
     const requiresManualEssayGrading = snapshot?.requiresManualEssayGrading
       ?? this.requiresManualEssayGrading(snapshot?.questions || []);
+    const isFullyGraded = !sub.answers.some(answer => answer.questionType === 'ESSAY' && answer.isCorrect === undefined);
     const answerReleaseAt = requiresManualEssayGrading
       ? null
       : (snapshot?.answerReleaseAt ?? quiz?.answerReleaseAt);
-    const answerReleased = !requiresManualEssayGrading && isAnswerReleased(answerReleaseAt);
+    const answerReleased = requiresManualEssayGrading
+      ? isFullyGraded
+      : isAnswerReleased(answerReleaseAt);
     const canViewAnswers = isTeacher || (answerReleased && (snapshot?.showCorrectAnswers ?? quiz?.showCorrectAnswers ?? true));
     const canViewExplanation = isTeacher || (answerReleased && (snapshot?.showExplanation ?? quiz?.showExplanation ?? true));
     const studentVisibleAnswers = !canViewAnswers
@@ -586,8 +592,10 @@ export class SubmissionsService {
       quiz,
       detailedAnswers,
       isAnswerReleased: answerReleased,
+      canViewCorrectAnswers: canViewAnswers,
+      canViewExplanation,
       answerReleaseAt,
-      isFullyGraded: !sub.answers.some(answer => answer.questionType === 'ESSAY' && answer.isCorrect === undefined),
+      isFullyGraded,
     };
   }
 

@@ -8,7 +8,7 @@ import { useUiStore } from '../../stores/ui.store';
 import { Submission } from '../../types/submission';
 import { ResultOverview } from '../../components/student/ResultOverview';
 import { AnswerReleaseCountdown } from '../../components/quiz/AnswerReleaseCountdown';
-import { ArrowLeft, CheckCircle2, XCircle, Sparkles, BookOpen, AlertCircle, X, Clock } from 'lucide-react';
+import { ArrowLeft, CheckCircle2, XCircle, Sparkles, BookOpen, AlertCircle, X, Clock, Lock } from 'lucide-react';
 import { Badge } from '../../components/common/Badge';
 import { Modal } from '../../components/common/Modal';
 import Latex from 'react-latex-next';
@@ -80,7 +80,8 @@ export const StudentQuizResultPage: React.FC = () => {
     );
   }
 
-  const isReleased = submission.isAnswerReleased;
+  const canReviewAnswers = submission.canViewCorrectAnswers === true;
+  const isFullyGraded = submission.isFullyGraded ?? true;
 
   return (
     <div className="space-y-6 max-w-4xl mx-auto pb-16">
@@ -127,8 +128,28 @@ export const StudentQuizResultPage: React.FC = () => {
         />
       )}
 
+      {!submission.answerReleaseAt && !isFullyGraded && (
+        <div className="p-4 rounded-2xl bg-amber-50/80 dark:bg-amber-950/40 border border-amber-200/80 dark:border-amber-800/60 flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-900/60 text-amber-700 dark:text-amber-300"><Clock className="w-5 h-5" /></div>
+          <div>
+            <h4 className="text-sm font-bold text-amber-900 dark:text-amber-200">Đang chờ giáo viên chấm bài</h4>
+            <p className="text-xs text-amber-700 dark:text-amber-300 mt-0.5">Đáp án và lời giải chỉ có thể được xem sau khi giáo viên hoàn tất chấm, nếu giáo viên cho phép công bố.</p>
+          </div>
+        </div>
+      )}
+
+      {isFullyGraded && !canReviewAnswers && !submission.answerReleaseAt && (
+        <div className="p-4 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-700 flex items-start gap-3">
+          <div className="p-2 rounded-xl bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300"><Lock className="w-5 h-5" /></div>
+          <div>
+            <h4 className="text-sm font-bold text-slate-800 dark:text-white">Đáp án chưa được công bố</h4>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Giáo viên đã thiết lập không công bố đáp án hoặc lời giải cho bài này.</p>
+          </div>
+        </div>
+      )}
+
       {/* Detailed Question Reviews */}
-      {isReleased && submission.detailedAnswers && (
+      {canReviewAnswers && submission.detailedAnswers && (
         <div className="space-y-6 pt-4">
           <div className="flex items-center justify-between pb-2 border-b border-slate-200 dark:border-slate-800">
             <h3 className="text-base font-bold text-slate-800 dark:text-white flex items-center gap-2">
@@ -262,6 +283,15 @@ export const StudentQuizResultPage: React.FC = () => {
                       );
                     })}
                   </div>
+
+                  {item.questionType === 'ESSAY' && Array.isArray(item.essayRubric?.acceptedAnswers) && item.essayRubric.acceptedAnswers.length > 0 && (
+                    <div className="p-4 rounded-2xl bg-emerald-50/70 dark:bg-emerald-950/30 border border-emerald-100 dark:border-emerald-900/60 text-xs">
+                      <span className="font-bold text-emerald-900 dark:text-emerald-200 block mb-1">Đáp án tham khảo của giáo viên</span>
+                      <ul className="list-disc pl-4 space-y-1 text-emerald-800 dark:text-emerald-300">
+                        {item.essayRubric.acceptedAnswers.map((answer: string, answerIndex: number) => <li key={answerIndex}><Latex>{answer}</Latex></li>)}
+                      </ul>
+                    </div>
+                  )}
 
                   {/* Explanation Note */}
                   {item.explanation && (

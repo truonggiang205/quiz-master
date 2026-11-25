@@ -12,7 +12,7 @@ describe('manual essay answer-release policy', () => {
     {} as any, {} as any, {} as any, {} as any, {} as any, {} as any, {} as any,
   );
 
-  it('disables the answer-release policy when any essay has no automatic rubric', () => {
+  it('waits for manual grading while preserving the teacher visibility choices', () => {
     const instance = service();
     const question: any = {
       id: 'essay-1', type: 'ESSAY', content: 'Trình bày lời giải', options: [],
@@ -23,8 +23,8 @@ describe('manual essay answer-release policy', () => {
 
     expect(snapshot.requiresManualEssayGrading).toBe(true);
     expect(snapshot.answerReleaseAt).toBeNull();
-    expect(snapshot.showCorrectAnswers).toBe(false);
-    expect(snapshot.showExplanation).toBe(false);
+    expect(snapshot.showCorrectAnswers).toBe(true);
+    expect(snapshot.showExplanation).toBe(true);
 
     const publicAttempt = (instance as any).publicAttempt({
       quizSnapshot: snapshot, startedAt: '2026-01-01T00:00:00.000Z',

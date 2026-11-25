@@ -403,8 +403,8 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
         shuffleQuestions,
         shuffleAnswers,
         showScoreImmediately,
-        showCorrectAnswers: requiresManualEssayGrading ? false : showCorrectAnswers,
-        showExplanation: requiresManualEssayGrading ? false : showExplanation,
+        showCorrectAnswers,
+        showExplanation,
         answerReleaseAt: releaseTime,
         startTime: parsedStartTime,
         endTime: parsedEndTime,
@@ -1101,7 +1101,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             </div>
           )}
 
-          <div className={`grid grid-cols-1 sm:grid-cols-3 gap-2 ${requiresManualEssayGrading ? 'opacity-45' : ''}`}>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
             <button
               type="button"
               onClick={() => setReleaseMode('AFTER_SUBMISSION')}
@@ -1196,20 +1196,18 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
               type="checkbox"
               checked={showCorrectAnswers}
               onChange={(e) => setShowCorrectAnswers(e.target.checked)}
-              disabled={requiresManualEssayGrading}
               className="rounded-md text-sky-600 focus:ring-sky-400"
             />
-            <span>Cho xem đáp án đúng khi công bố</span>
+            <span>{requiresManualEssayGrading ? 'Cho xem đáp án sau khi chấm xong' : 'Cho xem đáp án đúng khi công bố'}</span>
           </label>
-          <label className={`flex items-center gap-2 ${requiresManualEssayGrading ? 'cursor-not-allowed text-slate-400 dark:text-slate-500' : 'cursor-pointer text-slate-700 dark:text-slate-300'}`}>
+          <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300">
             <input
               type="checkbox"
               checked={showExplanation}
               onChange={(e) => setShowExplanation(e.target.checked)}
-              disabled={requiresManualEssayGrading}
               className="rounded-md text-sky-600 focus:ring-sky-400"
             />
-            <span>Cho xem lời giải khi công bố</span>
+            <span>{requiresManualEssayGrading ? 'Cho xem lời giải sau khi chấm xong' : 'Cho xem lời giải khi công bố'}</span>
           </label>
         </div>
       </div>

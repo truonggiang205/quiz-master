@@ -100,6 +100,7 @@ export class QuizzesService {
   }
 
   async createQuiz(dto: CreateQuizDto, teacher: { id: string; name: string }) {
+    if (dto.classId) await this.assertGroupClassAssignment(dto.classId, teacher.id);
     const now = new Date().toISOString();
     const newQuiz = this.quizRepo.create({
       id: `quiz-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
@@ -141,6 +142,16 @@ export class QuizzesService {
     }
   }
 
+  private async assertGroupClassAssignment(classId: string, teacherId: string) {
+    const classroom = await this.classRepo.findOneBy({ id: classId });
+    if (!classroom || classroom.teacherId !== teacherId) {
+      throw new ForbiddenException('Bạn không có quyền giao đề cho lớp này');
+    }
+    if (classroom.isPrivate || classroom.id.startsWith('private-')) {
+      throw new BadRequestException('Học sinh kèm 1-1 phải được giao đề ở chế độ “Học sinh 1-1”, không phải “Theo lớp”');
+    }
+  }
+
   private isAssetInQuizFolder(url: string, quizFolder: string): boolean {
     if (!url?.includes('cloudinary.com')) return false;
     const match = url.match(/\/upload\/(?:v\d+\/)?(.+)$/);
@@ -165,6 +176,7 @@ export class QuizzesService {
     }
 
     this.assertQuizManager(quiz, user);
+    if (dto.classId) await this.assertGroupClassAssignment(dto.classId, user.id!);
     const { teacherId: _teacherId, teacherName: _teacherName, ...safeDto } = dto as any;
     Object.assign(quiz, safeDto);
     return this.quizRepo.save(quiz);

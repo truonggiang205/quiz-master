@@ -210,6 +210,12 @@ export const TeacherSchedulePage: React.FC = () => {
   const [selectedLesson, setSelectedLesson] = useState<Lesson | null>(null);
   const [isDetailModalOpen, setIsDetailModalOpen] = useState(false);
   const [isEditModalOpen, setIsEditModalOpen] = useState(false);
+  const [editData, setEditData] = useState({
+    title: '', date: '', startTime: '', endTime: '', feePerLesson: 0,
+    content: '', homework: '', notes: '',
+  });
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
+  const [editError, setEditError] = useState<string | null>(null);
 
   // Form states for creating lesson
   const [formData, setFormData] = useState({
@@ -630,6 +636,44 @@ export const TeacherSchedulePage: React.FC = () => {
   const handleOpenDetail = (lesson: Lesson) => {
     setSelectedLesson(lesson);
     setIsDetailModalOpen(true);
+  };
+
+  const handleOpenEdit = () => {
+    if (!selectedLesson) return;
+    setEditData({
+      title: selectedLesson.title || '', date: selectedLesson.date, startTime: selectedLesson.startTime,
+      endTime: selectedLesson.endTime, feePerLesson: Number(selectedLesson.feePerLesson || 0),
+      content: selectedLesson.content || '', homework: selectedLesson.homework || '', notes: selectedLesson.notes || '',
+    });
+    setEditError(null);
+    setIsDetailModalOpen(false);
+    setIsEditModalOpen(true);
+  };
+
+  const handleEditSubmit = async (event: React.FormEvent) => {
+    event.preventDefault();
+    if (!selectedLesson) return;
+    setIsSavingEdit(true);
+    setEditError(null);
+    try {
+      const updated = await TeachingService.updateLesson(selectedLesson.id, {
+        title: editData.title.trim() || undefined,
+        date: editData.date,
+        startTime: editData.startTime,
+        endTime: editData.endTime,
+        feePerLesson: Number(editData.feePerLesson) || 0,
+        content: editData.content.trim() || undefined,
+        homework: editData.homework.trim() || undefined,
+        notes: editData.notes.trim() || undefined,
+      });
+      setSelectedLesson(updated);
+      setIsEditModalOpen(false);
+      await fetchLessons();
+    } catch (err: any) {
+      setEditError(err.response?.data?.message || 'Không thể cập nhật buổi học');
+    } finally {
+      setIsSavingEdit(false);
+    }
   };
 
   // Update participant attendance in Detail modal
@@ -1683,6 +1727,56 @@ export const TeacherSchedulePage: React.FC = () => {
         </div>
       </Modal>
 
+      {/* EDIT LESSON MODAL */}
+      <Modal
+        isOpen={isEditModalOpen && !!selectedLesson}
+        onClose={() => setIsEditModalOpen(false)}
+        title="Chỉnh sửa buổi học"
+        icon={<div className="p-2 bg-sky-50 dark:bg-sky-950/60 text-sky-600 rounded-xl"><Edit2 className="w-5 h-5" /></div>}
+        maxWidth="xl"
+        onSubmit={handleEditSubmit}
+        footer={
+          <>
+            <button type="button" onClick={() => setIsEditModalOpen(false)} className="px-4 py-2.5 rounded-xl text-sm font-medium text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-800">Hủy</button>
+            <button type="submit" disabled={isSavingEdit} className="px-5 py-2.5 rounded-xl text-sm font-semibold bg-sky-600 hover:bg-sky-700 text-white disabled:opacity-50 shadow-sm">
+              {isSavingEdit ? 'Đang lưu...' : 'Lưu thay đổi'}
+            </button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          {editError && <div className="p-3 rounded-xl bg-rose-50 text-rose-700 border border-rose-200 text-xs">{editError}</div>}
+          <p className="text-xs text-slate-500 dark:text-slate-400">Lớp/học sinh của buổi học giữ nguyên để bảo toàn điểm danh và học phí.</p>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Tên buổi học</label>
+            <input value={editData.title} onChange={e => setEditData({ ...editData, title: e.target.value })} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ngày học</label>
+              <input type="date" required value={editData.date} onChange={e => setEditData({ ...editData, date: e.target.value })} className="w-full px-3 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm" />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Bắt đầu</label>
+              <TimePicker24h value={editData.startTime} onChange={startTime => setEditData({ ...editData, startTime })} required />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Kết thúc</label>
+              <TimePicker24h value={editData.endTime} onChange={endTime => setEditData({ ...editData, endTime })} startTimeReference={editData.startTime} required />
+            </div>
+          </div>
+          <div>
+            <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Học phí / buổi (VNĐ)</label>
+            <input type="number" min="0" step="5000" value={editData.feePerLesson} onChange={e => setEditData({ ...editData, feePerLesson: Number(e.target.value) })} className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm" />
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Nội dung</label><textarea rows={3} value={editData.content} onChange={e => setEditData({ ...editData, content: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm resize-y" /></div>
+            <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Bài tập về nhà</label><textarea rows={3} value={editData.homework} onChange={e => setEditData({ ...editData, homework: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm resize-y" /></div>
+          </div>
+          <div><label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1">Ghi chú</label><textarea rows={2} value={editData.notes} onChange={e => setEditData({ ...editData, notes: e.target.value })} className="w-full px-3 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800 text-sm resize-y" /></div>
+        </div>
+      </Modal>
+
       {/* LESSON DETAILS MODAL */}
       <Modal
         isOpen={isDetailModalOpen && !!selectedLesson}
@@ -1711,13 +1805,18 @@ export const TeacherSchedulePage: React.FC = () => {
                 <Trash2 className="w-4 h-4" />
                 Xóa buổi học
               </button>
-              <button
-                type="button"
-                onClick={() => setIsDetailModalOpen(false)}
-                className="px-5 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition-colors"
-              >
-                Đóng
-              </button>
+              <div className="flex items-center gap-2">
+                <button type="button" onClick={handleOpenEdit} className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl text-sm font-semibold bg-sky-600 hover:bg-sky-700 text-white transition-colors">
+                  <Edit2 className="w-4 h-4" /> Chỉnh sửa
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsDetailModalOpen(false)}
+                  className="px-5 py-2 rounded-xl text-sm font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-200 hover:bg-slate-200 transition-colors"
+                >
+                  Đóng
+                </button>
+              </div>
             </div>
           ) : null
         }

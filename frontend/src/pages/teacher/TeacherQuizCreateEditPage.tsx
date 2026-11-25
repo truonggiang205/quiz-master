@@ -96,6 +96,12 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
   const linkedStudentAccountIds = new Set(
     availableStudents.map(student => student.studentAccountId).filter(Boolean),
   );
+  // 1-1 tutoring entries are represented as private/virtual classes for
+  // scheduling. Quiz distribution must use the explicit student audience so a
+  // teacher cannot accidentally turn a 1-1 relationship into a class quiz.
+  const availableGroupClasses = availableClasses.filter(classroom =>
+    !classroom.isPrivate && !classroom.id.startsWith('private-'),
+  );
 
   const editorSignature = JSON.stringify({
     title, description, subject, mode, durationMinutes, totalAttempts, totalPoints,
@@ -106,7 +112,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
 
   useEffect(() => {
     if (isEditing && id) {
-      const loadExisting = async () => {
+      const loadExisting = async (students: Awaited<ReturnType<typeof StudentService.getMyStudents>>) => {
         const [quiz, qs, results] = await Promise.all([
           quizService.getQuizById(id),
           quizService.getQuestions(id, false),
@@ -133,8 +139,25 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
           setShowExplanation(quiz.showExplanation);
 
           if (quiz.classId) {
-            setAssignMode('CLASS');
-            setClassId(quiz.classId);
+            // Earlier versions represented a 1-1 relationship as a virtual
+            // private classroom. Keep old quizzes editable, but move that
+            // audience to the explicit 1-1 assignment mode instead of showing
+            // a virtual class in the group-class picker.
+            const privateStudentId = quiz.classId.startsWith('private-')
+              ? quiz.classId.slice('private-'.length)
+              : null;
+            const privateStudent = privateStudentId
+              ? students.find(student => student.id === privateStudentId || student.studentAccountId === privateStudentId)
+              : null;
+
+            if (privateStudent?.studentAccountId) {
+              setAssignMode('STUDENTS');
+              setClassId('');
+              setAssignedStudentIds([privateStudent.studentAccountId]);
+            } else {
+              setAssignMode('CLASS');
+              setClassId(quiz.classId);
+            }
           } else if (quiz.assignedStudentIds && quiz.assignedStudentIds.length > 0) {
             setAssignMode('STUDENTS');
             setAssignedStudentIds(quiz.assignedStudentIds);
@@ -173,7 +196,9 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
           ]);
           setAvailableClasses(classes);
           setAvailableStudents(students);
+          return students;
         } catch (e) {}
+        return [];
       };
 
       loadOptions().then(loadExisting);
@@ -994,26 +1019,38 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             <div className="flex gap-2 mb-2">
               <button
                 type="button"
-                onClick={() => setAssignMode('CLASS')}
+                onClick={() => {
+                  setAssignMode('CLASS');
+                  setAssignedStudentIds([]);
+                }}
                 className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${assignMode === 'CLASS' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
               >Theo Lớp</button>
               <button
                 type="button"
-                onClick={() => setAssignMode('STUDENTS')}
+                onClick={() => {
+                  setAssignMode('STUDENTS');
+                  setClassId('');
+                }}
                 className={`flex-1 py-2 px-3 text-xs font-bold rounded-lg border transition-colors ${assignMode === 'STUDENTS' ? 'bg-sky-600 text-white border-sky-600' : 'bg-white text-slate-600 border-slate-200 hover:bg-slate-50 dark:bg-slate-800 dark:border-slate-700 dark:text-slate-300'}`}
               >Học sinh 1-1</button>
             </div>
 
             {assignMode === 'CLASS' && (
               <div>
-                <select
-                  value={classId}
-                  onChange={e => setClassId(e.target.value)}
-                  className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-900 dark:text-white focus:outline-none"
-                >
-                  <option value="">-- Chọn lớp học --</option>
-                  {availableClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-                </select>
+                {availableGroupClasses.length > 0 ? (
+                  <select
+                    value={classId}
+                    onChange={e => setClassId(e.target.value)}
+                    className="w-full px-3.5 py-2 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900/50 text-xs text-slate-900 dark:text-white focus:outline-none"
+                  >
+                    <option value="">-- Chọn lớp học --</option>
+                    {availableGroupClasses.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                  </select>
+                ) : (
+                  <p className="rounded-xl border border-dashed border-slate-300 dark:border-slate-700 px-3.5 py-3 text-xs text-slate-500 dark:text-slate-400">
+                    Chưa có lớp học nhóm. Hãy chọn “Học sinh 1-1” để giao đề riêng, việc này không tạo thêm lớp.
+                  </p>
+                )}
               </div>
             )}
 
@@ -1048,7 +1085,7 @@ export const TeacherQuizCreateEditPage: React.FC = () => {
             )}
             <p className={`text-[11px] leading-relaxed ${(assignMode === 'CLASS' ? classId : assignedStudentIds.length) ? 'text-slate-500 dark:text-slate-400' : 'text-amber-700 dark:text-amber-300'}`}>
               {assignMode === 'CLASS'
-                ? (classId ? `Đề sẽ được giao cho lớp ${availableClasses.find(item => item.id === classId)?.name || 'đã chọn'}.` : 'Bạn chưa chọn lớp; đề chưa thể xuất bản.')
+                ? (classId ? `Đề sẽ được giao cho lớp ${availableGroupClasses.find(item => item.id === classId)?.name || 'đã chọn'}.` : 'Bạn chưa chọn lớp; đề chưa thể xuất bản.')
                 : (assignedStudentIds.length ? `Đề sẽ được giao cho ${assignedStudentIds.length} học sinh đã chọn.` : 'Bạn chưa chọn học sinh; đề chưa thể xuất bản.')}
             </p>
           </div>

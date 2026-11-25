@@ -89,9 +89,13 @@ export class SubmissionsService {
       return {
         ...attempt.quizSnapshot,
         requiresManualEssayGrading,
-        answerReleaseAt: requiresManualEssayGrading ? null : attempt.quizSnapshot.answerReleaseAt,
-        showCorrectAnswers: attempt.quizSnapshot.showCorrectAnswers,
-        showExplanation: attempt.quizSnapshot.showExplanation,
+        // Question content, answers, scores and duration must stay immutable
+        // once an attempt starts. Visibility, however, is a teacher-controlled
+        // publishing policy and must reflect the current quiz configuration.
+        answerReleaseAt: requiresManualEssayGrading ? null : quiz.answerReleaseAt,
+        showScoreImmediately: quiz.showScoreImmediately,
+        showCorrectAnswers: quiz.showCorrectAnswers,
+        showExplanation: quiz.showExplanation,
       };
     }
     const requiresManualEssayGrading = this.requiresManualEssayGrading(attempt.questionSnapshot || []);
@@ -104,6 +108,37 @@ export class SubmissionsService {
       showExplanation: quiz.showExplanation,
       requiresManualEssayGrading,
       questions: attempt.questionSnapshot || [],
+    };
+  }
+
+  private getSubmissionVisibility(
+    snapshot: AttemptQuizSnapshot | undefined,
+    quiz: QuizEntity | null | undefined,
+    submission: SubmissionEntity,
+    isTeacher: boolean,
+  ) {
+    const isFullyGraded = !submission.answers.some(answer =>
+      answer.questionType === 'ESSAY' && answer.isCorrect === undefined,
+    );
+    const requiresManualEssayGrading = snapshot?.requiresManualEssayGrading
+      ?? (!isFullyGraded && submission.answers.some(answer => answer.questionType === 'ESSAY'));
+    const answerReleaseAt = requiresManualEssayGrading
+      ? null
+      : (snapshot?.answerReleaseAt ?? quiz?.answerReleaseAt ?? null);
+    const answerReleased = requiresManualEssayGrading
+      ? isFullyGraded
+      : isAnswerReleased(answerReleaseAt);
+    const showScoreImmediately = snapshot?.showScoreImmediately ?? quiz?.showScoreImmediately ?? true;
+    const showCorrectAnswers = snapshot?.showCorrectAnswers ?? quiz?.showCorrectAnswers ?? true;
+    const showExplanation = snapshot?.showExplanation ?? quiz?.showExplanation ?? true;
+
+    return {
+      isFullyGraded,
+      answerReleaseAt,
+      answerReleased,
+      canViewScore: isTeacher || (isFullyGraded && (showScoreImmediately || answerReleased)),
+      canViewAnswers: isTeacher || (answerReleased && showCorrectAnswers),
+      canViewExplanation: isTeacher || (answerReleased && showExplanation),
     };
   }
 
@@ -518,13 +553,22 @@ export class SubmissionsService {
       return result;
     });
     if (!saved) throw new BadRequestException('Đã hết thời gian làm bài');
-    const answerReleased = !attemptSnapshot.requiresManualEssayGrading && isAnswerReleased(attemptSnapshot.answerReleaseAt);
-    const canViewCorrectAnswers = answerReleased && attemptSnapshot.showCorrectAnswers;
-    if (!canViewCorrectAnswers) return { ...saved, answers: saved.answers.map(answer => this.maskAnswerForStudent(answer)) };
-    if (!attemptSnapshot.showExplanation) {
-      return { ...saved, answers: saved.answers.map(({ questionExplanation: _explanation, ...answer }) => answer) };
+    const visibility = this.getSubmissionVisibility(attemptSnapshot, quiz, saved, false);
+    const hiddenScore = visibility.canViewScore ? {} : {
+      score: undefined, maxScore: undefined, percentage: undefined,
+      correctCount: undefined, wrongCount: undefined, unansweredCount: undefined,
+    };
+    if (!visibility.canViewAnswers) return {
+      ...saved, ...hiddenScore, canViewScore: visibility.canViewScore,
+      answers: saved.answers.map(answer => this.maskAnswerForStudent(answer)),
+    };
+    if (!visibility.canViewExplanation) {
+      return {
+        ...saved, ...hiddenScore, canViewScore: visibility.canViewScore,
+        answers: saved.answers.map(({ questionExplanation: _explanation, ...answer }) => answer),
+      };
     }
-    return saved;
+    return { ...saved, ...hiddenScore, canViewScore: visibility.canViewScore };
   }
 
   async getSubmissionById(id: string, userRole?: string, userId?: string) {
@@ -544,20 +588,10 @@ export class SubmissionsService {
     const isTeacher = userRole === 'TEACHER' || userRole === 'ADMIN';
     const attempt = await this.attemptRepo.findOneBy({ submissionId: sub.id });
     const snapshot = attempt && quiz ? this.getAttemptSnapshot(attempt, quiz) : undefined;
-    const requiresManualEssayGrading = snapshot?.requiresManualEssayGrading
-      ?? this.requiresManualEssayGrading(snapshot?.questions || []);
-    const isFullyGraded = !sub.answers.some(answer => answer.questionType === 'ESSAY' && answer.isCorrect === undefined);
-    const answerReleaseAt = requiresManualEssayGrading
-      ? null
-      : (snapshot?.answerReleaseAt ?? quiz?.answerReleaseAt);
-    const answerReleased = requiresManualEssayGrading
-      ? isFullyGraded
-      : isAnswerReleased(answerReleaseAt);
-    const canViewAnswers = isTeacher || (answerReleased && (snapshot?.showCorrectAnswers ?? quiz?.showCorrectAnswers ?? true));
-    const canViewExplanation = isTeacher || (answerReleased && (snapshot?.showExplanation ?? quiz?.showExplanation ?? true));
-    const studentVisibleAnswers = !canViewAnswers
+    const visibility = this.getSubmissionVisibility(snapshot, quiz, sub, isTeacher);
+    const studentVisibleAnswers = !visibility.canViewAnswers
       ? sub.answers.map(answer => this.maskAnswerForStudent(answer))
-      : !canViewExplanation
+      : !visibility.canViewExplanation
         ? sub.answers.map(({ questionExplanation: _explanation, ...answer }) => answer)
         : sub.answers;
 
@@ -568,10 +602,10 @@ export class SubmissionsService {
         content: ans.questionContent, imageUrl: ans.questionImageUrl, type: ans.questionType,
         points: ans.questionPoints, options: ans.questionOptions || [], explanation: ans.questionExplanation, essayRubric: ans.questionEssayRubric,
       } : undefined;
-      if (!q) return canViewAnswers ? ans : this.maskAnswerForStudent(ans);
+      if (!q) return visibility.canViewAnswers ? ans : this.maskAnswerForStudent(ans);
 
       return {
-        ...(canViewAnswers ? ans : this.maskAnswerForStudent(ans)),
+        ...(visibility.canViewAnswers ? ans : this.maskAnswerForStudent(ans)),
         questionContent: q.content,
         questionImageUrl: q.imageUrl,
         questionType: q.type,
@@ -579,23 +613,28 @@ export class SubmissionsService {
         options: (q.options || []).map((opt) => ({
           id: opt.id,
           text: opt.text,
-          isCorrect: canViewAnswers ? opt.isCorrect : undefined,
+          isCorrect: visibility.canViewAnswers ? opt.isCorrect : undefined,
         })),
-        explanation: canViewExplanation ? q.explanation : undefined,
-        essayRubric: canViewAnswers ? q.essayRubric : undefined,
+        explanation: visibility.canViewExplanation ? q.explanation : undefined,
+        essayRubric: visibility.canViewAnswers ? q.essayRubric : undefined,
       };
     });
 
     return {
       ...sub,
+      ...(visibility.canViewScore ? {} : {
+        score: undefined, maxScore: undefined, percentage: undefined,
+        correctCount: undefined, wrongCount: undefined, unansweredCount: undefined,
+      }),
       answers: studentVisibleAnswers,
       quiz,
       detailedAnswers,
-      isAnswerReleased: answerReleased,
-      canViewCorrectAnswers: canViewAnswers,
-      canViewExplanation,
-      answerReleaseAt,
-      isFullyGraded,
+      isAnswerReleased: visibility.answerReleased,
+      canViewScore: visibility.canViewScore,
+      canViewCorrectAnswers: visibility.canViewAnswers,
+      canViewExplanation: visibility.canViewExplanation,
+      answerReleaseAt: visibility.answerReleaseAt,
+      isFullyGraded: visibility.isFullyGraded,
     };
   }
 
@@ -682,14 +721,27 @@ export class SubmissionsService {
     const result = [];
     for (const sub of submissions) {
       const quiz = await this.quizRepo.findOneBy({ id: sub.quizId });
-      const hasUngradedEssay = sub.answers?.some(a => a.questionType === 'ESSAY' && a.isCorrect === undefined);
+      const attempt = await this.attemptRepo.findOneBy({ submissionId: sub.id });
+      const snapshot = attempt && quiz ? this.getAttemptSnapshot(attempt, quiz) : undefined;
+      const visibility = this.getSubmissionVisibility(snapshot, quiz, sub, false);
       result.push({
         ...sub,
-        answers: !hasUngradedEssay && isAnswerReleased(quiz?.answerReleaseAt)
-          ? sub.answers
-          : sub.answers.map(answer => this.maskAnswerForStudent(answer)),
+        ...(visibility.canViewScore ? {} : {
+          score: undefined, maxScore: undefined, percentage: undefined,
+          correctCount: undefined, wrongCount: undefined, unansweredCount: undefined,
+        }),
+        answers: !visibility.canViewAnswers
+          ? sub.answers.map(answer => this.maskAnswerForStudent(answer))
+          : !visibility.canViewExplanation
+            ? sub.answers.map(({ questionExplanation: _explanation, ...answer }) => answer)
+            : sub.answers,
         quizType: quiz?.mode || 'QUIZ',
-        isFullyGraded: !hasUngradedEssay,
+        isFullyGraded: visibility.isFullyGraded,
+        isAnswerReleased: visibility.answerReleased,
+        canViewScore: visibility.canViewScore,
+        canViewCorrectAnswers: visibility.canViewAnswers,
+        canViewExplanation: visibility.canViewExplanation,
+        answerReleaseAt: visibility.answerReleaseAt,
       });
     }
     return result;

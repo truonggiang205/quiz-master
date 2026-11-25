@@ -43,6 +43,7 @@ export interface Submission {
   timeUsedSeconds: number;
   answers: StudentAnswer[];
   isAnswerReleased?: boolean;
+  canViewScore?: boolean;
   canViewCorrectAnswers?: boolean;
   canViewExplanation?: boolean;
   answerReleaseAt?: string | null;

@@ -191,7 +191,9 @@ export const StudentQuizTakingPage: React.FC = () => {
       addToast({
         type: 'success',
         title: 'Nộp bài thi thành công!',
-        message: `Bạn đạt ${submission.score} điểm (${submission.percentage}%)`,
+        message: submission.canViewScore === false
+          ? 'Giáo viên sẽ công bố điểm theo thiết lập của bài kiểm tra.'
+          : `Bạn đạt ${submission.score} điểm (${submission.percentage}%)`,
       });
 
       resetExam();
@@ -240,7 +242,7 @@ export const StudentQuizTakingPage: React.FC = () => {
   return (
     <div className="space-y-5 max-w-7xl mx-auto pb-10">
       {/* Top Bar: Title, Progress & Timer */}
-      <div className="bg-white/95 dark:bg-slate-800/95 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-xs backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
+      <div className="sticky top-0 z-20 bg-white/95 dark:bg-slate-800/95 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-md backdrop-blur-md flex flex-wrap items-center justify-between gap-4">
         <div>
           <span className="text-[10px] uppercase font-bold text-sky-500 tracking-wider">
             {currentQuiz.subject}

@@ -424,7 +424,15 @@ export class DashboardService {
     const submissionQuizzes = submissionQuizIds.length
       ? (await this.quizRepo.find({ where: { id: In(submissionQuizIds) } })) || []
       : [];
-    const releaseByQuizId = new Map(submissionQuizzes.map(quiz => [quiz.id, quiz.answerReleaseAt]));
+    const submissionQuizById = new Map(submissionQuizzes.map(quiz => [quiz.id, quiz]));
+    const isFullyGraded = (submission: any) => !submission.answers?.some((answer: any) =>
+      answer.questionType === 'ESSAY' && answer.isCorrect === undefined,
+    );
+    const canViewScore = (submission: any) => {
+      const quiz = submissionQuizById.get(submission.quizId);
+      return isFullyGraded(submission) && Boolean(quiz?.showScoreImmediately !== false || isAnswerReleased(quiz?.answerReleaseAt));
+    };
+    const visibleScoreSubmissions = mySubmissions.filter(canViewScore);
 
     const submissionCounts = mySubmissions.reduce(
       (acc, sub) => {
@@ -442,15 +450,15 @@ export class DashboardService {
     let avgScore: number | null = null;
     let highestScore: number | null = null;
 
-    if (totalCompleted > 0) {
-      const totalPerc = mySubmissions.reduce((sum, s) => sum + Number(s.percentage || 0), 0);
-      avgScore = Number(((totalPerc / totalCompleted) / 10).toFixed(2));
-      const maxPerc = Math.max(...mySubmissions.map((s) => Number(s.percentage || 0)));
+    if (visibleScoreSubmissions.length > 0) {
+      const totalPerc = visibleScoreSubmissions.reduce((sum, s) => sum + Number(s.percentage || 0), 0);
+      avgScore = Number(((totalPerc / visibleScoreSubmissions.length) / 10).toFixed(2));
+      const maxPerc = Math.max(...visibleScoreSubmissions.map((s) => Number(s.percentage || 0)));
       highestScore = Number(((maxPerc / 10)).toFixed(2));
     }
 
     // Progress trend: chronological order for chart
-    const progressTrend = [...mySubmissions]
+    const progressTrend = [...visibleScoreSubmissions]
       .reverse()
       .slice(-15)
       .map((s) => ({
@@ -464,9 +472,11 @@ export class DashboardService {
 
     // Subject performance breakdown
     const subjectMap = new Map<string, { totalPerc: number; count: number }>();
-    const quizMap = new Map(quizzes.map((q) => [q.id, q]));
+    // The published quiz list also supplies subject labels for older submissions
+    // when a fixture or deleted quiz is absent from the secondary lookup.
+    const quizMap = new Map([...quizzes, ...submissionQuizzes].map(quiz => [quiz.id, quiz]));
 
-    for (const sub of mySubmissions) {
+    for (const sub of visibleScoreSubmissions) {
       const q = quizMap.get(sub.quizId);
       const subj = q?.subject || 'Khác';
       const existing = subjectMap.get(subj) || { totalPerc: 0, count: 0 };
@@ -495,9 +505,15 @@ export class DashboardService {
       availableQuizzes: availableQuizzes.slice(0, 6),
       recentSubmissions: mySubmissions.slice(0, 6).map(submission => ({
         ...submission,
+        ...(canViewScore(submission) ? {} : {
+          score: undefined, percentage: undefined, correctCount: undefined,
+          wrongCount: undefined, unansweredCount: undefined,
+        }),
+        canViewScore: canViewScore(submission),
         // Dashboard is a student endpoint and must never bypass answer-release
         // filtering through nested submission snapshots.
-        answers: isAnswerReleased(releaseByQuizId.get(submission.quizId))
+        answers: isAnswerReleased(submissionQuizById.get(submission.quizId)?.answerReleaseAt)
+          && submissionQuizById.get(submission.quizId)?.showCorrectAnswers
           ? submission.answers
           : submission.answers?.map(answer => sanitizeStudentAnswerData(answer)),
       })),

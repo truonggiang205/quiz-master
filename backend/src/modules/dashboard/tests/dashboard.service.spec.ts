@@ -99,7 +99,29 @@ describe('DashboardService', () => {
       // Filter options
       expect(result.filterOptions.subjects).toEqual(['Toán', 'Văn']);
       expect(result.filterOptions.quizzes).toHaveLength(2);
+      expect(mockQuizQb.andWhere).toHaveBeenCalledWith('quiz.mode = :mode', { mode: 'QUIZ' });
     });
+  });
+
+  it('scopes practice analytics to PRACTICE instead of combining them with tests', async () => {
+    const mockQuizQb = {
+      where: vi.fn().mockReturnThis(), andWhere: vi.fn().mockReturnThis(), orderBy: vi.fn().mockReturnThis(),
+      getManyAndCount: vi.fn().mockResolvedValue([[], 0]),
+    };
+    const mockSubQb = {
+      innerJoin: vi.fn().mockReturnThis(), where: vi.fn().mockReturnThis(), andWhere: vi.fn().mockReturnThis(),
+      select: vi.fn().mockReturnThis(), addSelect: vi.fn().mockReturnThis(), groupBy: vi.fn().mockReturnThis(),
+      orderBy: vi.fn().mockReturnThis(), take: vi.fn().mockReturnThis(),
+      getRawOne: vi.fn().mockResolvedValue({}), getRawMany: vi.fn().mockResolvedValue([]), getMany: vi.fn().mockResolvedValue([]),
+    };
+    mockQuizRepo.createQueryBuilder.mockReturnValue(mockQuizQb);
+    mockQuizRepo.find.mockResolvedValue([]);
+    mockSubmissionRepo.createQueryBuilder.mockReturnValue(mockSubQb);
+
+    await service.getTeacherDashboard('teacher-1', { mode: 'PRACTICE' });
+
+    expect(mockQuizQb.andWhere).toHaveBeenCalledWith('quiz.mode = :mode', { mode: 'PRACTICE' });
+    expect(mockSubQb.andWhere).toHaveBeenCalledWith('quiz.mode = :mode', { mode: 'PRACTICE' });
   });
 
   describe('getTeacherSubmissions', () => {

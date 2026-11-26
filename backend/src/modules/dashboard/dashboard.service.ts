@@ -41,13 +41,16 @@ export class DashboardService {
   }
 
   async getTeacherDashboard(teacherId: string, query: TeacherDashboardQueryDto = {}) {
-    const { periodDays = 7, quizId, subject, classId, status, from, to } = query;
+    const { periodDays = 7, quizId, subject, classId, status, from, to, mode = 'QUIZ' } = query;
 
     // 1. Quizzes query
     const quizQb = this.quizRepo
       .createQueryBuilder('quiz')
       .where('quiz.teacherId = :teacherId', { teacherId });
 
+    // Assessment and practice have different teaching purposes. Keep their
+    // KPI/score analytics separate instead of silently blending the results.
+    quizQb.andWhere('quiz.mode = :mode', { mode });
     if (quizId) quizQb.andWhere('quiz.id = :quizId', { quizId });
     if (subject) quizQb.andWhere('quiz.subject = :subject', { subject });
     if (classId) quizQb.andWhere('quiz.classId = :classId', { classId });
@@ -61,8 +64,8 @@ export class DashboardService {
 
     // Available subjects and quizzes for filter options
     const allTeacherQuizzes = await this.quizRepo.find({
-      where: { teacherId },
-      select: { id: true, title: true, subject: true, status: true },
+      where: { teacherId, mode },
+      select: { id: true, title: true, subject: true, status: true, mode: true },
       order: { createdAt: 'DESC' },
     });
     const availableSubjects = Array.from(
@@ -96,6 +99,7 @@ export class DashboardService {
       .innerJoin(QuizEntity, 'quiz', 'quiz.id = sub.quizId')
       .where('quiz.teacherId = :teacherId', { teacherId });
 
+    subQb.andWhere('quiz.mode = :mode', { mode });
     if (quizId) subQb.andWhere('sub.quizId = :quizId', { quizId });
     if (subject) subQb.andWhere('quiz.subject = :subject', { subject });
     if (classId) subQb.andWhere('quiz.classId = :classId', { classId });
@@ -172,6 +176,7 @@ export class DashboardService {
       .innerJoin(QuizEntity, 'quiz', 'quiz.id = sub.quizId')
       .where('quiz.teacherId = :teacherId', { teacherId });
 
+    trendQb.andWhere('quiz.mode = :mode', { mode });
     if (quizId) trendQb.andWhere('sub.quizId = :quizId', { quizId });
     if (subject) trendQb.andWhere('quiz.subject = :subject', { subject });
     if (classId) trendQb.andWhere('quiz.classId = :classId', { classId });
@@ -220,6 +225,7 @@ export class DashboardService {
       .createQueryBuilder('sub')
       .innerJoin(QuizEntity, 'quiz', 'quiz.id = sub.quizId')
       .where('quiz.teacherId = :teacherId', { teacherId })
+      .andWhere('quiz.mode = :mode', { mode })
       .orderBy('sub.createdAt', 'DESC')
       .take(5)
       .getMany();
@@ -256,6 +262,7 @@ export class DashboardService {
       page = 1,
       limit = 10,
       sort = 'time_desc',
+      mode,
     } = query;
 
     const qb = this.submissionRepo
@@ -263,6 +270,7 @@ export class DashboardService {
       .innerJoin(QuizEntity, 'quiz', 'quiz.id = sub.quizId')
       .where('quiz.teacherId = :teacherId', { teacherId });
 
+    if (mode) qb.andWhere('quiz.mode = :mode', { mode });
     if (quizId) {
       qb.andWhere('sub.quizId = :quizId', { quizId });
     }
@@ -314,13 +322,14 @@ export class DashboardService {
   }
 
   async getTeacherStudents(teacherId: string, query: TeacherStudentsQueryDto = {}) {
-    const { search, page = 1, limit = 20 } = query;
+    const { search, page = 1, limit = 20, mode } = query;
 
     const qb = this.submissionRepo
       .createQueryBuilder('sub')
       .innerJoin(QuizEntity, 'quiz', 'quiz.id = sub.quizId')
       .where('quiz.teacherId = :teacherId', { teacherId });
 
+    if (mode) qb.andWhere('quiz.mode = :mode', { mode });
     if (search && search.trim()) {
       qb.andWhere('(sub.studentName LIKE :search OR sub.studentEmail LIKE :search)', {
         search: `%${search.trim()}%`,

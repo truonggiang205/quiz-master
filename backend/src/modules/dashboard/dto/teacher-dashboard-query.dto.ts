@@ -1,8 +1,13 @@
-import { IsOptional, IsString, IsNumber, Min, Max } from 'class-validator';
+import { IsOptional, IsString, IsNumber, Min, Max, IsIn } from 'class-validator';
 import { Type } from 'class-transformer';
 import { ApiPropertyOptional } from '@nestjs/swagger';
 
 export class TeacherDashboardQueryDto {
+  @ApiPropertyOptional({ description: 'Ngữ cảnh thống kê: QUIZ (kiểm tra) hoặc PRACTICE (ôn tập)', enum: ['QUIZ', 'PRACTICE'], default: 'QUIZ' })
+  @IsOptional()
+  @IsIn(['QUIZ', 'PRACTICE'])
+  mode?: 'QUIZ' | 'PRACTICE';
+
   @ApiPropertyOptional({ description: 'Khoảng thời gian thống kê tính theo ngày (7, 30, 90 hoặc 0 = tất cả)', default: 7 })
   @IsOptional()
   @Type(() => Number)
@@ -41,6 +46,11 @@ export class TeacherDashboardQueryDto {
 }
 
 export class TeacherSubmissionsQueryDto {
+  @ApiPropertyOptional({ description: 'Lọc theo loại bài: QUIZ hoặc PRACTICE', enum: ['QUIZ', 'PRACTICE'] })
+  @IsOptional()
+  @IsIn(['QUIZ', 'PRACTICE'])
+  mode?: 'QUIZ' | 'PRACTICE';
+
   @ApiPropertyOptional({ description: 'ID đề thi' })
   @IsOptional()
   @IsString()
@@ -95,6 +105,11 @@ export class TeacherSubmissionsQueryDto {
 }
 
 export class TeacherStudentsQueryDto {
+  @ApiPropertyOptional({ description: 'Lọc theo loại bài: QUIZ hoặc PRACTICE', enum: ['QUIZ', 'PRACTICE'] })
+  @IsOptional()
+  @IsIn(['QUIZ', 'PRACTICE'])
+  mode?: 'QUIZ' | 'PRACTICE';
+
   @ApiPropertyOptional({ description: 'Tìm kiếm theo tên hoặc email học sinh' })
   @IsOptional()
   @IsString()

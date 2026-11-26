@@ -42,6 +42,12 @@ export const TeacherDashboard: React.FC = () => {
   const selectedSubject = searchParams.get('subject') || '';
   const selectedQuizId = searchParams.get('quizId') || '';
   const selectedStatus = searchParams.get('status') || '';
+  // Dashboard analytics are intentionally scoped to one learning purpose.
+  // A practice score should not quietly affect an assessment average.
+  const selectedMode: 'QUIZ' | 'PRACTICE' = searchParams.get('mode') === 'PRACTICE' ? 'PRACTICE' : 'QUIZ';
+  const isPracticeMode = selectedMode === 'PRACTICE';
+  const contentLabel = isPracticeMode ? 'bài ôn tập' : 'bài kiểm tra';
+  const contentLabelCapitalized = isPracticeMode ? 'Bài ôn tập' : 'Bài kiểm tra';
 
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -87,6 +93,15 @@ export const TeacherDashboard: React.FC = () => {
     setSearchParams(new URLSearchParams());
   };
 
+  const switchMode = (mode: 'QUIZ' | 'PRACTICE') => {
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('mode', mode);
+    // A selected item belongs to the previous context and could otherwise
+    // make the newly selected dashboard look empty.
+    nextParams.delete('quizId');
+    setSearchParams(nextParams);
+  };
+
   const hasActiveFilters = Boolean(
     searchParams.get('period') ||
     selectedSubject ||
@@ -99,6 +114,7 @@ export const TeacherDashboard: React.FC = () => {
     setLoading(true);
     try {
       const res = await dashboardService.getTeacherDashboard({
+        mode: selectedMode,
         periodDays,
         subject: selectedSubject || undefined,
         quizId: selectedQuizId || undefined,
@@ -112,7 +128,7 @@ export const TeacherDashboard: React.FC = () => {
     } finally {
       setLoading(false);
     }
-  }, [periodDays, selectedSubject, selectedQuizId, selectedStatus, addToast]);
+  }, [periodDays, selectedSubject, selectedQuizId, selectedStatus, selectedMode, addToast]);
 
   useEffect(() => {
     fetchDashboard();
@@ -123,6 +139,7 @@ export const TeacherDashboard: React.FC = () => {
     setSubmissionsLoading(true);
     try {
       const res = await dashboardService.getTeacherSubmissions({
+        mode: selectedMode,
         page,
         limit: 10,
         scoreMin: submissionsFilter.scoreMin,
@@ -140,7 +157,7 @@ export const TeacherDashboard: React.FC = () => {
     } finally {
       setSubmissionsLoading(false);
     }
-  }, [submissionsFilter, selectedQuizId, submissionsSearch, addToast]);
+  }, [submissionsFilter, selectedQuizId, selectedMode, submissionsSearch, addToast]);
 
   useEffect(() => {
     if (showSubmissionsModal) {
@@ -153,6 +170,7 @@ export const TeacherDashboard: React.FC = () => {
     setStudentsLoading(true);
     try {
       const res = await dashboardService.getTeacherStudents({
+        mode: selectedMode,
         page,
         limit: 10,
         search: search.trim() || undefined,
@@ -165,7 +183,7 @@ export const TeacherDashboard: React.FC = () => {
     } finally {
       setStudentsLoading(false);
     }
-  }, [studentsSearch, addToast]);
+  }, [selectedMode, studentsSearch, addToast]);
 
   useEffect(() => {
     if (showStudentsModal) {
@@ -254,8 +272,8 @@ export const TeacherDashboard: React.FC = () => {
           </h1>
           <p className="text-sky-100 text-xs sm:text-sm mt-1.5 leading-relaxed">
             {stats.totalQuizzes > 0
-              ? `Hệ thống hiện có ${stats.totalQuizzes} bài kiểm tra và ${stats.totalSubmissions} lượt nộp bài thi.`
-              : 'Hệ thống hiện chưa có đề thi nào. Hãy bắt đầu bằng cách tạo bài kiểm tra đầu tiên!'}
+              ? `Hiện có ${stats.totalQuizzes} ${contentLabel} và ${stats.totalSubmissions} ${isPracticeMode ? 'lượt hoàn thành' : 'lượt nộp bài'}.`
+              : `Chưa có ${contentLabel} nào. Hãy bắt đầu bằng cách tạo bài mới!`}
           </p>
 
           <div className="mt-5 flex flex-wrap gap-3">
@@ -265,13 +283,13 @@ export const TeacherDashboard: React.FC = () => {
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-white text-sky-700 hover:bg-sky-50 font-bold text-xs shadow-sm transition-transform hover:scale-105"
             >
               <Plus className="w-4 h-4" />
-              Tạo bài thi mới
+              Tạo bài mới
             </Link>
             <Link
               to="/teacher/quizzes"
               className="inline-flex items-center gap-2 px-5 py-2.5 rounded-2xl bg-sky-700/60 hover:bg-sky-700 text-white font-bold text-xs border border-white/20 transition-colors"
             >
-              Quản lý đề thi
+              Quản lý bài làm
             </Link>
             <Link
               to="/teacher/schedule"
@@ -292,6 +310,36 @@ export const TeacherDashboard: React.FC = () => {
 
         <div className="absolute -right-10 -bottom-10 w-64 h-64 rounded-full bg-white/10 blur-2xl pointer-events-none" />
       </div>
+
+      {/* Analytics scope: never blend assessment and practice metrics. */}
+      <section className="bg-white/90 dark:bg-slate-800/90 rounded-3xl p-3 sm:p-4 border border-slate-200/80 dark:border-slate-700/80 shadow-sm backdrop-blur-sm">
+        <div className="flex flex-col sm:flex-row sm:items-center gap-3 sm:justify-between">
+          <div>
+            <h2 className="text-sm font-bold text-slate-800 dark:text-white">Góc nhìn kết quả học tập</h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">Điểm kiểm tra và kết quả ôn tập được theo dõi riêng.</p>
+          </div>
+          <div className="grid grid-cols-2 gap-1.5 p-1 bg-slate-100 dark:bg-slate-700/70 rounded-2xl" role="tablist" aria-label="Loại bài làm">
+            <button
+              type="button"
+              role="tab"
+              aria-selected={!isPracticeMode}
+              onClick={() => switchMode('QUIZ')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${!isPracticeMode ? 'bg-white dark:bg-slate-800 text-sky-700 dark:text-sky-300 shadow-sm' : 'text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white'}`}
+            >
+              Bài kiểm tra
+            </button>
+            <button
+              type="button"
+              role="tab"
+              aria-selected={isPracticeMode}
+              onClick={() => switchMode('PRACTICE')}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${isPracticeMode ? 'bg-white dark:bg-slate-800 text-emerald-700 dark:text-emerald-300 shadow-sm' : 'text-slate-500 dark:text-slate-300 hover:text-slate-800 dark:hover:text-white'}`}
+            >
+              Ôn tập & luyện tập
+            </button>
+          </div>
+        </div>
+      </section>
 
       {/* Filter Bar */}
       <div className="bg-white/90 dark:bg-slate-800/90 rounded-3xl p-4 sm:p-5 border border-slate-200/80 dark:border-slate-700/80 shadow-sm backdrop-blur-sm">
@@ -352,14 +400,14 @@ export const TeacherDashboard: React.FC = () => {
           {/* Quiz selector */}
           <div className="space-y-1">
             <label className="text-[11px] font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider flex items-center gap-1">
-              <Layers className="w-3 h-3" /> Đề thi cụ thể
+              <Layers className="w-3 h-3" /> {contentLabelCapitalized} cụ thể
             </label>
             <select
               value={selectedQuizId}
               onChange={(e) => updateFilter('quizId', e.target.value)}
               className="w-full px-3 py-2 text-xs rounded-xl bg-slate-50 dark:bg-slate-700/60 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white focus:outline-none focus:ring-2 focus:ring-sky-400"
             >
-              <option value="">Tất cả đề thi</option>
+              <option value="">Tất cả {contentLabel}</option>
               {filterOptions.quizzes.map((q: any) => (
                 <option key={q.id} value={q.id}>
                   {q.title}
@@ -390,9 +438,9 @@ export const TeacherDashboard: React.FC = () => {
       {/* KPI Stats (Clickable) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-4">
         <StatCard
-          title="Tổng bài kiểm tra"
+          title={isPracticeMode ? 'Tổng bài ôn tập' : 'Tổng bài kiểm tra'}
           value={stats.totalQuizzes}
-          subtitle="Bao gồm cả bản thảo"
+          subtitle={isPracticeMode ? 'Bao gồm cả bài luyện tập' : 'Bao gồm cả bản thảo'}
           clickableHint="Xem danh sách"
           onClick={() => navigate('/teacher/quizzes')}
           icon={<FileQuestion className="w-5 h-5" />}
@@ -400,9 +448,9 @@ export const TeacherDashboard: React.FC = () => {
           delay={0.05}
         />
         <StatCard
-          title="Bài đang hoạt động"
+          title={isPracticeMode ? 'Bài sẵn sàng luyện' : 'Bài kiểm tra đang mở'}
           value={stats.activeQuizzes}
-          subtitle="Học sinh có thể truy cập"
+          subtitle={isPracticeMode ? 'Học sinh có thể bắt đầu ôn tập' : 'Học sinh có thể làm bài'}
           clickableHint="Xem đề đang mở"
           onClick={() => navigate('/teacher/quizzes?status=PUBLISHED')}
           icon={<CheckCircle className="w-5 h-5" />}
@@ -412,7 +460,7 @@ export const TeacherDashboard: React.FC = () => {
         <StatCard
           title="Học sinh tham gia"
           value={stats.totalStudents}
-          subtitle="Học sinh đã nộp bài"
+          subtitle={isPracticeMode ? 'Đã hoàn thành bài ôn tập' : 'Đã nộp bài kiểm tra'}
           clickableHint="Bảng xếp hạng"
           onClick={() => setShowStudentsModal(true)}
           icon={<Users className="w-5 h-5" />}
@@ -420,9 +468,9 @@ export const TeacherDashboard: React.FC = () => {
           delay={0.15}
         />
         <StatCard
-          title="Điểm trung bình"
+          title={isPracticeMode ? 'Điểm TB ôn tập' : 'Điểm TB kiểm tra'}
           value={`${stats.averageScore.toFixed(2)}/10.00`}
-          subtitle="Thang điểm chuẩn 10"
+          subtitle={isPracticeMode ? 'Chỉ tính lượt ôn tập' : 'Chỉ tính bài kiểm tra'}
           clickableHint="Xem bài nộp"
           onClick={handleOpenAllSubmissions}
           icon={<Award className="w-5 h-5" />}
@@ -430,9 +478,9 @@ export const TeacherDashboard: React.FC = () => {
           delay={0.2}
         />
         <StatCard
-          title="Tổng lượt nộp"
+          title={isPracticeMode ? 'Lượt hoàn thành' : 'Tổng lượt nộp'}
           value={stats.totalSubmissions}
-          subtitle="Lượt nộp đã ghi nhận"
+          subtitle={isPracticeMode ? 'Lượt ôn tập đã hoàn thành' : 'Lượt nộp đã ghi nhận'}
           clickableHint="Chi tiết bài làm"
           onClick={handleOpenAllSubmissions}
           icon={<Sparkles className="w-5 h-5" />}
@@ -454,6 +502,7 @@ export const TeacherDashboard: React.FC = () => {
           onPeriodChange={(days) => updateFilter('period', days)}
           onSelectScoreRange={handleOpenScoreRange}
           onSelectDate={handleOpenDateTrend}
+          mode={selectedMode}
         />
       )}
 
@@ -462,10 +511,10 @@ export const TeacherDashboard: React.FC = () => {
         <div className="flex items-center justify-between gap-4 mb-4 pb-3 border-b border-slate-100 dark:border-slate-700">
           <div>
             <h3 className="text-base font-bold text-slate-800 dark:text-white">
-              Đề thi gần đây
+              {isPracticeMode ? 'Bài ôn tập gần đây' : 'Bài kiểm tra gần đây'}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Danh sách các bài kiểm tra được tạo gần đây
+              {isPracticeMode ? 'Danh sách các bài luyện tập được tạo gần đây' : 'Danh sách các bài kiểm tra được tạo gần đây'}
             </p>
           </div>
           <Link
@@ -479,12 +528,12 @@ export const TeacherDashboard: React.FC = () => {
 
         {recentQuizzes.length === 0 ? (
           <div className="py-12 text-center text-xs text-slate-400">
-            Chưa có bài thi nào trong hệ thống. Nhấn{' '}
+            Chưa có {contentLabel} nào trong hệ thống. Nhấn{' '}
             <Link
               to="/teacher/quizzes/create"
               className="font-bold text-sky-600 dark:text-sky-400 hover:underline"
             >
-              "Tạo bài thi mới"
+              "Tạo bài mới"
             </Link>{' '}
             để bắt đầu soạn đề.
           </div>
@@ -498,7 +547,7 @@ export const TeacherDashboard: React.FC = () => {
                 <div>
                   <div className="flex items-center gap-2 mb-1">
                     <Badge variant={quiz.status === 'PUBLISHED' ? 'mint' : 'slate'} size="sm">
-                      {quiz.status === 'PUBLISHED' ? 'Đang mở' : 'Bản thảo'}
+                      {quiz.status === 'PUBLISHED' ? (isPracticeMode ? 'Sẵn sàng luyện' : 'Đang mở') : 'Bản thảo'}
                     </Badge>
                     <span className="text-xs text-slate-400 font-medium">
                       {quiz.subject}
@@ -519,7 +568,7 @@ export const TeacherDashboard: React.FC = () => {
                     to={`/teacher/quizzes/${quiz.id}/results`}
                     className="px-3 py-1.5 rounded-xl text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors"
                   >
-                    Kết quả
+                    {isPracticeMode ? 'Tiến độ' : 'Kết quả'}
                   </Link>
                   <Link
                     to={`/teacher/quizzes/${quiz.id}/edit`}

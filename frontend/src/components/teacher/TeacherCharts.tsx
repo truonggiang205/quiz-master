@@ -28,6 +28,7 @@ export interface ActivityTrendItem {
 }
 
 interface TeacherChartsProps {
+  mode?: 'QUIZ' | 'PRACTICE';
   scoreDistribution?: ScoreDistributionItem[];
   activityTrend?: ActivityTrendItem[];
   periodDays?: number;
@@ -37,6 +38,7 @@ interface TeacherChartsProps {
 }
 
 export const TeacherCharts: React.FC<TeacherChartsProps> = ({
+  mode = 'QUIZ',
   scoreDistribution = [],
   activityTrend = [],
   periodDays = 7,
@@ -44,6 +46,9 @@ export const TeacherCharts: React.FC<TeacherChartsProps> = ({
   onSelectScoreRange,
   onSelectDate,
 }) => {
+  const isPracticeMode = mode === 'PRACTICE';
+  const workLabel = isPracticeMode ? 'ôn tập' : 'kiểm tra';
+  const submissionLabel = isPracticeMode ? 'Lượt hoàn thành' : 'Lượt nộp';
   const safeScoreDistribution = scoreDistribution.length > 0
     ? scoreDistribution
     : [
@@ -75,13 +80,15 @@ export const TeacherCharts: React.FC<TeacherChartsProps> = ({
         <div className="mb-4 flex items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-slate-800 dark:text-white flex items-center gap-2">
-              <span>Phổ điểm thi học sinh</span>
+              <span>{isPracticeMode ? 'Kết quả ôn tập của học sinh' : 'Phổ điểm bài kiểm tra'}</span>
               <span className="text-[11px] font-normal text-slate-400 bg-slate-100 dark:bg-slate-700 px-2 py-0.5 rounded-full">
                 Bấm cột để lọc
               </span>
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Phân bố số lượng và tỷ lệ học sinh theo từng thang điểm
+              {isPracticeMode
+                ? 'Phân bố kết quả từ các lượt hoàn thành bài ôn tập'
+                : 'Phân bố số lượng và tỷ lệ học sinh theo từng thang điểm'}
             </p>
           </div>
         </div>
@@ -121,7 +128,7 @@ export const TeacherCharts: React.FC<TeacherChartsProps> = ({
                           Khoảng điểm: {data.range}
                         </div>
                         <div className="flex items-center gap-2 text-sky-600 dark:text-sky-400 font-semibold">
-                          <span>Số bài nộp:</span>
+                          <span>{submissionLabel}:</span>
                           <span className="text-sm font-bold">{data.count}</span>
                           {data.percentage !== undefined && (
                             <span className="text-slate-400 font-normal">
@@ -157,10 +164,10 @@ export const TeacherCharts: React.FC<TeacherChartsProps> = ({
         <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
           <div>
             <h3 className="text-sm font-bold text-slate-800 dark:text-white">
-              Xu hướng nộp bài & Điểm TB
+              {isPracticeMode ? 'Xu hướng ôn tập & Điểm TB' : 'Xu hướng nộp bài & Điểm TB'}
             </h3>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Lượt nộp (cột xanh) và Điểm trung bình (đường cam)
+              {submissionLabel} (cột xanh) và Điểm trung bình (đường cam)
             </p>
           </div>
 
@@ -234,7 +241,7 @@ export const TeacherCharts: React.FC<TeacherChartsProps> = ({
                           {data.day} {data.date ? `(${data.date})` : ''}
                         </div>
                         <div className="flex items-center gap-2 text-emerald-600 font-semibold">
-                          <span>Lượt nộp:</span>
+                          <span>{submissionLabel}:</span>
                           <span className="font-bold">{data.submissions}</span>
                         </div>
                         <div className="flex items-center gap-2 text-amber-500 font-semibold mt-0.5">
@@ -245,7 +252,7 @@ export const TeacherCharts: React.FC<TeacherChartsProps> = ({
                         </div>
                         {data.submissions > 0 && (
                           <div className="text-[11px] text-slate-400 mt-1 italic">
-                            Click để xem bài nộp ngày này
+                            Click để xem các lượt {workLabel} trong ngày này
                           </div>
                         )}
                       </div>
@@ -257,7 +264,7 @@ export const TeacherCharts: React.FC<TeacherChartsProps> = ({
               <Bar
                 yAxisId="left"
                 dataKey="submissions"
-                name="Lượt nộp"
+                name={submissionLabel}
                 fill="#38bdf8"
                 radius={[6, 6, 0, 0]}
                 cursor="pointer"

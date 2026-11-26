@@ -1,6 +1,7 @@
 import { apiClient } from './api';
 
 export interface TeacherDashboardParams {
+  mode?: 'QUIZ' | 'PRACTICE';
   periodDays?: number;
   quizId?: string;
   subject?: string;
@@ -11,6 +12,7 @@ export interface TeacherDashboardParams {
 }
 
 export interface TeacherSubmissionsParams {
+  mode?: 'QUIZ' | 'PRACTICE';
   quizId?: string;
   studentId?: string;
   scoreMin?: number;
@@ -23,6 +25,7 @@ export interface TeacherSubmissionsParams {
 }
 
 export interface TeacherStudentsParams {
+  mode?: 'QUIZ' | 'PRACTICE';
   search?: string;
   page?: number;
   limit?: number;

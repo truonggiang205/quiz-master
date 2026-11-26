@@ -29,6 +29,10 @@ export class MailerService {
     });
   }
 
+  private wait(milliseconds: number) {
+    return new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
+  }
+
   async sendMail(email: string, subject: string, html: string) {
     if (!this.transporter || !this.from) {
       this.logger.error('SMTP is not configured; unable to send email.');
@@ -81,21 +85,30 @@ export class MailerService {
       this.logger.error('SMTP is not configured; unable to deliver OTP email.');
       return false;
     }
-    try {
-      await this.transporter.sendMail({
-        from: `"QuizMaster" <${this.from}>`,
-        to: email,
-        subject,
-        text,
-        html,
-      });
-      
-      this.logger.log('OTP email sent.');
-      
-      return true;
-    } catch {
-      this.logger.error('Error sending OTP email.');
-      return false;
+    // Render and SMTP providers can have a transient connection failure while
+    // an instance is starting. Retry the same OTP; never generate a second
+    // code between attempts, otherwise a delayed first email becomes invalid.
+    for (let attempt = 1; attempt <= 3; attempt += 1) {
+      try {
+        await this.transporter.sendMail({
+          from: `"QuizMaster" <${this.from}>`,
+          to: email,
+          subject,
+          text,
+          html,
+        });
+
+        this.logger.log(`OTP email sent on attempt ${attempt}.`);
+        return true;
+      } catch {
+        if (attempt < 3) {
+          this.logger.warn(`OTP email delivery failed (attempt ${attempt}/3); retrying.`);
+          await this.wait(attempt * 750);
+        }
+      }
     }
+
+    this.logger.error('OTP email delivery failed after 3 attempts.');
+    return false;
   }
 }

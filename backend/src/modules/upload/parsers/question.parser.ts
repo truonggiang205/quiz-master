@@ -21,11 +21,12 @@ export interface ParsedQuestion {
 
 // Regex patterns
 const QUESTION_REGEX = /^(Câu\s*hỏi\s*(\d+)|Câu\s*(\d+)|Question\s*(\d+)|\b(\d+)\s*[.:\-\)])\s*(.*)/i;
-const OPTION_REGEX = /^([A-F])\s*[.:\-\)]\s*(.*)/i;
+const OPTION_REGEX = /^([A-F])\s*[.:\-\)]\s*(.*)/;
 const ANSWER_REGEX = /^(đáp\s*án|đáp\s*án\s*đúng|answer|correct\s*answer)\s*[:\-]?\s*([A-F])\s*$/i;
 const ANSWER_KEY_REGEX = /^(Câu\s*\d+|\d+)\s*[:\-]\s*([A-F])\s*$/i;
-const SPLIT_OPTIONS_REGEX = /\s+([A-F]\s*[.:\-\)])\s+/i;
+const SPLIT_OPTIONS_REGEX = /\s+([A-F]\s*[.:\-\)])\s+/;
 const QUESTION_RANGE_HEADING_REGEX = /^(?:phần\s*\d+\s*\/\s*\d+\s*[•\-–—]?\s*)?câu\s*\d+\s*[\-–—]\s*\d+\s*$/i;
+const EXPLANATION_PREFIX_REGEX = /^(?:[→➜]\s*|(?:giải\s*thích|lời\s*giải|explanation)\b)/i;
 
 function isSectionHeading(text: string): boolean {
   if (QUESTION_RANGE_HEADING_REGEX.test(text)) return true;
@@ -96,6 +97,14 @@ export function parseQuestions(lines: ParsedLine[]): ParsedQuestion[] {
     // It is neither a question nor an option, and must not become part of the
     // preceding option's answer text.
     if (!OPTION_REGEX.test(text) && isSectionHeading(text)) {
+      currentOption = null;
+      isSkippingSectionMetadata = true;
+      continue;
+    }
+
+    // Answer explanations in source worksheets commonly start with an arrow.
+    // They describe the preceding question but are not part of its last option.
+    if (EXPLANATION_PREFIX_REGEX.test(text)) {
       currentOption = null;
       isSkippingSectionMetadata = true;
       continue;

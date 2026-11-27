@@ -10,6 +10,7 @@ interface StyledCharacter {
 }
 
 const OPTION_MARKER = /(^|\s)([A-F])\s*[.:\-)]/gi;
+const OPTION_PREFIX = /^\s*[A-F]\s*[.:\-)]\s*/i;
 
 function isBoldElement(tagName: string, style: string): boolean {
   return tagName === 'strong' || tagName === 'b' || /font-weight\s*:\s*(bold|[6-9]00)/i.test(style);
@@ -59,14 +60,25 @@ function collectStyledCharacters(
 }
 
 function pushLine(lines: ParsedLine[], characters: StyledCharacter[]) {
-  const text = characters.map(({ character }) => character).join('').replace(/\s+/g, ' ').trim();
+  const rawText = characters.map(({ character }) => character).join('');
+  const text = rawText.replace(/\s+/g, ' ').trim();
   if (!text) return;
+
+  // In many Word templates the A./B./C./D. labels are bold for readability.
+  // That formatting is not an answer key. For an option, only consider
+  // formatting applied to its content (not its label) when inferring the key.
+  const optionPrefix = OPTION_PREFIX.exec(rawText);
+  const formattedCharacters = optionPrefix
+    ? characters.slice(optionPrefix[0].length)
+    : characters;
 
   lines.push({
     text,
-    // Formatting is evaluated only inside this logical line/option.
-    isBold: characters.some(({ isBold }) => isBold),
-    isHighlight: characters.some(({ isHighlight }) => isHighlight),
+    // Ignore whitespace formatting so a bold separator cannot mark an answer.
+    isBold: formattedCharacters.some(({ character, isBold }) => isBold && !/\s/.test(character)),
+    isHighlight: formattedCharacters.some(
+      ({ character, isHighlight }) => isHighlight && !/\s/.test(character),
+    ),
   });
 }
 
@@ -102,7 +114,13 @@ export function parseDocxHtml(html: string): ParsedLine[] {
   const lines: ParsedLine[] = [];
   const $ = load(html);
 
-  $('p, li, td, th').each((_, element) => {
+  // Mammoth puts table cells' text inside paragraphs. Processing both the
+  // cell and its descendant paragraph duplicates every value; processing the
+  // table paragraphs also makes answer grids look like A/B/C/D choices.
+  // The document importer currently imports ordinary A–F multiple-choice
+  // blocks, so leave tables out rather than create incorrect questions.
+  $('p, li').each((_, element) => {
+    if ($(element).parents('table').length > 0) return;
     const characters: StyledCharacter[] = [];
     for (const child of $(element).contents().toArray()) {
       collectStyledCharacters(child, characters);
